@@ -110,7 +110,11 @@ fn cmd_train(args: &[String], device: &Device) -> Result<()> {
             }
             "--viscosity" => {
                 if i + 1 < args.len() {
-                    config.nca.viscosity = args[i + 1].parse()?;
+                    let v: f32 = args[i + 1].parse()?;
+                    if v < 0.0 {
+                        anyhow::bail!("Viscosity nu must be non-negative, got {}", v);
+                    }
+                    config.nca.viscosity = v;
                     i += 1;
                 }
             }
@@ -427,13 +431,21 @@ fn cmd_ns_probe(args: &[String], device: &Device) -> Result<()> {
             }
             "--forcing-amp" => {
                 if i + 1 < args.len() {
-                    forcing_amp = args[i + 1].parse()?;
+                    let a: f32 = args[i + 1].parse()?;
+                    if a < 0.0 {
+                        anyhow::bail!("Forcing amplitude A must be non-negative, got {}", a);
+                    }
+                    forcing_amp = a;
                     i += 1;
                 }
             }
             "--viscosity" => {
                 if i + 1 < args.len() {
-                    viscosity = args[i + 1].parse()?;
+                    let v: f32 = args[i + 1].parse()?;
+                    if v < 0.0 {
+                        anyhow::bail!("Viscosity nu must be non-negative, got {}", v);
+                    }
+                    viscosity = v;
                     i += 1;
                 }
             }

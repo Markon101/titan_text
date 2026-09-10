@@ -77,7 +77,8 @@ impl MorphogenicField {
     }
 
     /// 1D Discrete Fourier spatial frequency decomposition of state energy.
-    /// Partitions energy into Low (k in [0, L/6]), Mid (k in (L/6, L/3]), High (k in (L/3, L/2]).
+    /// Partitions physical energy into Low (k in [0, L/6]), Mid (k in (L/6, L/3]), High (k in (L/3, L/2]).
+    /// Satisfies Parseval's theorem: low_energy + mid_energy + high_energy == field.energy().
     pub fn spatial_frequency_decomposition(&self) -> Result<FrequencyDecomposition> {
         let (b, l, c) = self.x.dims3()?;
         let flat = self.x.to_vec3::<f32>()?;
@@ -90,6 +91,7 @@ impl MorphogenicField {
         let mut high_pow = 0.0f64;
 
         let two_pi = 2.0 * std::f64::consts::PI;
+        let norm_factor = 2.0 * (l * l) as f64 * (b * c) as f64;
 
         for batch_idx in 0..b {
             for ch in 0..c {
@@ -102,7 +104,8 @@ impl MorphogenicField {
                         re += val * angle.cos();
                         im -= val * angle.sin();
                     }
-                    let power = (re * re + im * im) / (l as f64);
+                    let weight = if k == 0 || (l % 2 == 0 && k == half_l) { 1.0 } else { 2.0 };
+                    let power = (re * re + im * im) * weight / norm_factor;
                     if k <= low_cutoff {
                         low_pow += power;
                     } else if k <= mid_cutoff {
@@ -229,8 +232,9 @@ impl MorphogenicField {
     }
 
     /// Detailed Fourier spectral cascade analysis across wavenumbers k in 0..=L/2.
-    /// Computes power spectrum E(k), enstrophy spectrum Omega(k) = k^2 E(k),
-    /// spectral centroid, power-law slope beta (E(k) ~ k^(-beta)), and dissipation scale.
+    /// Strictly satisfies Parseval's identity: sum_{k=0}^{L/2} E(k) == field.energy().
+    /// Computes one-sided energy spectrum E(k), enstrophy spectrum Omega(k) = (2*pi*k/L)^2 * E(k),
+    /// spectral centroid, inertial range power-law slope beta (E(k) ~ k^(-beta)), and dissipation scale.
     pub fn spectral_cascade_analysis(&self) -> Result<SpectralCascadeReport> {
         let (b, l, c) = self.x.dims3()?;
         let flat = self.x.to_vec3::<f32>()?;
@@ -239,6 +243,7 @@ impl MorphogenicField {
 
         let mut spectrum = vec![0.0f32; half_l + 1];
         let mut enstrophy_spectrum = vec![0.0f32; half_l + 1];
+        let norm_factor = 2.0 * (l * l) as f64 * (b * c) as f64;
 
         for k in 0..=half_l {
             let mut total_power = 0.0f64;
@@ -252,12 +257,15 @@ impl MorphogenicField {
                         re += val * angle.cos();
                         im -= val * angle.sin();
                     }
-                    total_power += (re * re + im * im) / (l as f64);
+                    total_power += re * re + im * im;
                 }
             }
-            let avg_power = (total_power / (b * c) as f64) as f32;
-            spectrum[k] = avg_power;
-            enstrophy_spectrum[k] = (k as f32) * (k as f32) * avg_power;
+            // Parseval one-sided weighting: weight = 1 for DC (k=0) and Nyquist (k=L/2), weight = 2 for interior modes
+            let weight = if k == 0 || (l % 2 == 0 && k == half_l) { 1.0 } else { 2.0 };
+            let e_k = (total_power * weight / norm_factor) as f32;
+            let k_phys = (two_pi as f32 * k as f32) / (l as f32);
+            spectrum[k] = e_k;
+            enstrophy_spectrum[k] = k_phys * k_phys * e_k;
         }
 
         // Spectral centroid bar{k} = sum(k * E(k)) / sum(E(k))
@@ -268,7 +276,11 @@ impl MorphogenicField {
             0.0
         };
 
-        // Linear regression fit for spectral slope: ln(E(k)) = -beta * ln(k) + c for k >= 1
+        // Linear regression fit for spectral slope: ln(E(k)) = -beta * ln(k) + c for active inertial modes
+        // Filter out modes near the numerical noise floor to prevent false flat regression lines
+        let max_power = spectrum[1..].iter().cloned().fold(0.0f32, f32::max);
+        let active_threshold = (max_power * 1e-4).max(1e-9);
+
         let mut sum_x = 0.0f64;
         let mut sum_y = 0.0f64;
         let mut sum_xx = 0.0f64;
@@ -276,19 +288,21 @@ impl MorphogenicField {
         let mut count = 0.0f64;
 
         for k in 1..=half_l {
-            let p = spectrum[k].max(1e-12) as f64;
-            let x = (k as f64).ln();
-            let y = p.ln();
-            sum_x += x;
-            sum_y += y;
-            sum_xx += x * x;
-            sum_xy += x * y;
-            count += 1.0;
+            let p = spectrum[k];
+            if p >= active_threshold {
+                let x = (k as f64).ln();
+                let y = (p as f64).ln();
+                sum_x += x;
+                sum_y += y;
+                sum_xx += x * x;
+                sum_xy += x * y;
+                count += 1.0;
+            }
         }
 
-        let spectral_slope = if count > 1.0 && (count * sum_xx - sum_x * sum_x).abs() > 1e-12 {
+        let spectral_slope = if count >= 3.0 && (count * sum_xx - sum_x * sum_x).abs() > 1e-12 {
             let slope = (count * sum_xy - sum_x * sum_y) / (count * sum_xx - sum_x * sum_x);
-            (-slope) as f32 // beta is positive when spectrum decays with k
+            (-slope) as f32 // beta is positive when spectrum decays with k (E(k) ~ k^(-beta))
         } else {
             0.0
         };
@@ -378,6 +392,46 @@ mod tests {
         // Dominant power should be at k = 1
         assert!(cascade.spectrum[1] > cascade.spectrum[0]);
         assert!(cascade.spectrum[1] > cascade.spectrum[2]);
+
+        // Spectral sum should match field energy by Parseval's identity
+        let spectral_sum: f32 = cascade.spectrum.iter().sum();
+        assert!((e - spectral_sum).abs() < 1e-4, "Sinusoid energy {} != spectral sum {}", e, spectral_sum);
+        Ok(())
+    }
+
+    #[test]
+    fn test_parseval_identity_energy_conservation() -> Result<()> {
+        let dev = Device::Cpu;
+        let seq_len = 32;
+        let channels = 3;
+        let cfg = FieldConfig { seq_len, channels, periodic_boundary: true };
+
+        // Multi-mode field with DC + multiple AC Fourier modes
+        let mut data = vec![vec![vec![0.0f32; channels]; seq_len]; 1];
+        let two_pi = 2.0 * std::f32::consts::PI;
+        for i in 0..seq_len {
+            let x1 = (two_pi * 1.0 * (i as f32) / (seq_len as f32)).sin();
+            let x3 = (two_pi * 3.0 * (i as f32) / (seq_len as f32)).cos() * 0.5;
+            let val = x1 + x3 + 1.2; // include DC component
+            for c in 0..channels {
+                data[0][i][c] = val * ((c + 1) as f32 * 0.5);
+            }
+        }
+        let t = Tensor::new(data, &dev)?;
+        let field = MorphogenicField::from_tensor(t, &cfg);
+
+        let energy = field.energy()?;
+        let cascade = field.spectral_cascade_analysis()?;
+        let spectral_sum: f32 = cascade.spectrum.iter().sum();
+
+        // Exact Parseval conservation: sum(E(k)) == field.energy()
+        assert!((energy - spectral_sum).abs() < 1e-4, "Energy {} != Spectral sum {}", energy, spectral_sum);
+
+        // Spatial frequency decomposition conservation
+        let decomp = field.spatial_frequency_decomposition()?;
+        assert!((energy - decomp.total_energy).abs() < 1e-4, "Energy {} != Decomp total {}", energy, decomp.total_energy);
+        assert!(((decomp.pct_low + decomp.pct_mid + decomp.pct_high) - 100.0).abs() < 1e-3);
+
         Ok(())
     }
 }

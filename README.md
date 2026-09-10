@@ -93,14 +93,17 @@ $$\partial_t \mathbf{x} = \mathcal{N}_\theta(\mathbf{x}, \nabla \mathbf{x}, \Del
    - Enstrophy: $\Omega(t) = \frac{1}{2L} \sum_i \|\nabla \mathbf{x}_i\|^2$
    - Palinstrophy: $P(t) = \frac{1}{2L} \sum_i \|\Delta \mathbf{x}_i\|^2$
    - Enstrophy growth exponent $\gamma$: $\frac{d\Omega}{dt} \propto \Omega^\gamma$. For $\gamma > 1$, finite-time singularity occurs.
-3. **Viscous Dissipation ($\nu \Delta \mathbf{x}$)**:
-   Linear diffusion damping high-frequency spatial modes. For explicit integration, $\nu \in (0, 0.25]$ provides strictly dissipative regularization.
-4. **Smooth External Forcing ($C^\infty$)**:
-   Testing whether coarse-scale, smooth multi-mode forcing $\mathbf{f}(s, t) = A(t) \sum_{m=1}^3 \frac{1}{m^2} \sin(2\pi m s / L + \dots)$ triggers fine-scale gradient divergence.
+3. **Viscous Dissipation ($\nu \Delta \mathbf{x}$) & Adaptive Substepping**:
+   Linear diffusion damping high-frequency spatial modes. For forward Euler integration, the discrete diffusion number is $D = \alpha \nu$. To guarantee unconditional von Neumann stability for arbitrarily high viscosities without numerical high-frequency oscillation ($|1 - 4D| \le 1$), Titan Text applies adaptive substepping: when $D > 0.25$, it partitions the diffusion into $N = \lceil D / 0.25 \rceil$ substeps of size $D / N \le 0.25$.
+4. **Parseval-Normalized Energy & Enstrophy Cascades**:
+   - Discrete Fourier energy spectrum $E(k)$ strictly satisfies Parseval's identity: $\sum_{k=0}^{\lfloor L/2 \rfloor} E(k) = E(t) = \frac{1}{2} \text{mean}(\|\mathbf{x}\|^2)$.
+   - Continuum enstrophy spectrum $\Omega(k) = \left(\frac{2\pi k}{L}\right)^2 E(k)$ with inertial-range power-law slope fit $E(k) \propto k^{-\beta}$ fitted strictly over active modes above the numerical noise floor.
+5. **Smooth External Forcing ($C^\infty$)**:
+   Testing whether coarse-scale, smooth multi-mode forcing $\mathbf{f}(s, t) = A(t) \sum_{m=1}^3 \frac{1}{m^2} \sin(2\pi m s / L + \dots)$ with strict zero-mean projection ($\sum_s \mathbf{f} \equiv 0$) triggers fine-scale gradient divergence.
 
 ### Experimental Findings
 - **Inviscid Limit ($\nu = 0$)**: Without physical dissipation, autonomous and smoothly forced rollouts exhibit enstrophy blowup ($\Omega$ surges from $1.07$ to $65.28$, BKM norm from $14.12$ to $122.15$, Palinstrophy from $17.46$ to $1074.97$).
-- **Viscous Regularization**: Introducing Navier-Stokes dissipation with critical viscosity $\nu^* \approx 0.050$ successfully arrests the singularity, damping enstrophy to $1.74$ and regularizing the flow while preserving high sequence modeling accuracy (>80%).
+- **Viscous Regularization**: Introducing Navier-Stokes dissipation with critical viscosity $\nu^* \approx 0.050$ successfully arrests the singularity, damping enstrophy to $1.74$ and regularizing the flow while preserving high sequence modeling accuracy (>80%). Under adaptive substepping, stability is maintained unconditionally for any $\nu \ge 0$.
 
 ## CLI Usage & Exact Commands
 

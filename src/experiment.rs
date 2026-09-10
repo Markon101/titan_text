@@ -479,6 +479,16 @@ impl ExperimentSuite {
             }
         }
 
+        // Strictly enforce spatial zero-mean across sequence dimension L for every channel
+        // Guaranteeing divergence-free zero-mean condition of Fefferman Cases C & D on T^1
+        for ch in 0..channels {
+            let ch_sum: f32 = (0..seq_len).map(|s| data[0][s][ch]).sum();
+            let ch_mean = ch_sum / seq_len as f32;
+            for s in 0..seq_len {
+                data[0][s][ch] -= ch_mean;
+            }
+        }
+
         Tensor::new(data, device).map_err(|e| e.into())
     }
 
@@ -500,8 +510,9 @@ impl ExperimentSuite {
         let mut current = initial_field.clone();
 
         let initial_enstrophy = current.enstrophy()?;
+        let initial_bkm = current.bkm_norm()?;
         let mut max_enstrophy = initial_enstrophy;
-        let mut max_bkm_norm = current.bkm_norm()?;
+        let mut max_bkm_norm = initial_bkm;
         let mut max_velocity = current.max_amplitude()?;
         let mut accumulated_bkm = 0.0f32;
         let mut blowup_detected = false;
@@ -527,8 +538,21 @@ impl ExperimentSuite {
                 max_velocity = vel;
             }
 
-            // Singularity check: BKM divergence or enstrophy blowup (> 25x initial and > 25.0, or > 100.0, or NaN)
-            if !blowup_detected && (bkm_norm > 25.0 || enstrophy > 50.0 || vel > 40.0 || enstrophy.is_nan()) {
+            // Singularity check: Beale-Kato-Majda divergence or enstrophy/velocity blow-up
+            // Requires BOTH large relative surge (>25x initial) AND high absolute threshold (>25.0),
+            // OR absolute catastrophic explosion (>100.0 enstrophy, >80.0 velocity, or NaN).
+            let rel_ens_surge = enstrophy / initial_enstrophy.max(1e-4);
+            let rel_bkm_surge = bkm_norm / initial_bkm.max(1e-4);
+            let is_blowup = enstrophy.is_nan()
+                || vel.is_nan()
+                || bkm_norm.is_nan()
+                || vel > 80.0
+                || enstrophy > 100.0
+                || bkm_norm > 100.0
+                || (rel_ens_surge > 25.0 && enstrophy > 25.0)
+                || (rel_bkm_surge > 25.0 && bkm_norm > 25.0);
+
+            if !blowup_detected && is_blowup {
                 blowup_detected = true;
                 singularity_step = Some(step);
             }
@@ -559,7 +583,7 @@ impl ExperimentSuite {
             });
 
             // If catastrophic divergence occurred, stop rollout early
-            if vel > 200.0 || enstrophy > 500.0 || enstrophy.is_nan() {
+            if vel > 200.0 || enstrophy > 500.0 || enstrophy.is_nan() || vel.is_nan() {
                 break;
             }
 
@@ -571,12 +595,17 @@ impl ExperimentSuite {
         let final_enstrophy = traces.last().map(|t| t.enstrophy).unwrap_or(0.0);
 
         // Estimate enstrophy growth exponent gamma: dOmega/dt ~ Omega^gamma
+        // Strictly fit during the active cascade / blow-up growth window (up to singularity step or peak enstrophy)
+        // to avoid dilution from grid saturation / post-breakdown flattening.
+        let eval_limit = singularity_step.unwrap_or(traces.len().saturating_sub(1)).max(1);
         let mut log_omega_pairs = Vec::new();
-        for i in 1..traces.len() {
+        for i in 1..=eval_limit.min(traces.len().saturating_sub(1)) {
             let delta_omega = traces[i].enstrophy - traces[i - 1].enstrophy;
             let avg_omega = 0.5 * (traces[i].enstrophy + traces[i - 1].enstrophy);
             if delta_omega > 1e-4 && avg_omega > 1e-4 {
-                log_omega_pairs.push((avg_omega.ln(), delta_omega.ln()));
+                let dt = active_nca.nca_cfg.step_size;
+                let rate = delta_omega / dt;
+                log_omega_pairs.push((avg_omega.ln(), rate.ln()));
             }
         }
 
@@ -647,8 +676,12 @@ impl ExperimentSuite {
             device,
         )?;
 
-        // 3. Viscosity regularization sweep
-        let sweep_viscosities = [0.0f32, 0.005, 0.02, 0.05, 0.10, 0.20];
+        // 3. Viscosity regularization sweep (including base_viscosity and up to 0.40)
+        let mut sweep_viscosities = vec![0.0f32, 0.005, 0.02, 0.05, 0.10, 0.20, 0.40];
+        if base_viscosity > 0.0 && !sweep_viscosities.iter().any(|&v| (v - base_viscosity).abs() < 1e-4) {
+            sweep_viscosities.push(base_viscosity);
+            sweep_viscosities.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        }
         let mut sweep_results = Vec::new();
         let mut critical_viscosity = None;
 
@@ -719,12 +752,17 @@ mod tests {
     #[test]
     fn test_smooth_forcing_spatial_zero_mean() -> Result<()> {
         let dev = Device::Cpu;
-        let seq_len = 32;
-        let channels = 4;
-        let forcing = ExperimentSuite::generate_smooth_forcing(seq_len, channels, 10, 64, 0.5, &dev)?;
-        assert_eq!(forcing.dims3()?, (1, seq_len, channels));
-        let mean = forcing.mean_all()?.to_scalar::<f32>()?;
-        assert!(mean.abs() < 1e-5, "Smooth forcing must be spatially zero-mean, got {}", mean);
+        for &seq_len in &[7, 13, 16, 32] {
+            for &channels in &[1, 4, 8] {
+                let forcing = ExperimentSuite::generate_smooth_forcing(seq_len, channels, 10, 64, 0.5, &dev)?;
+                assert_eq!(forcing.dims3()?, (1, seq_len, channels));
+                let f_vec = forcing.to_vec3::<f32>()?;
+                for ch in 0..channels {
+                    let sum: f32 = (0..seq_len).map(|s| f_vec[0][s][ch]).sum();
+                    assert!(sum.abs() < 1e-5, "Smooth forcing must be strictly zero-mean for L={}, ch={}, sum={}", seq_len, ch, sum);
+                }
+            }
+        }
         Ok(())
     }
 
