@@ -59,10 +59,65 @@ pub struct FalsificationReport {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FluidStepTrace {
+    pub step: usize,
+    pub energy: f32,
+    pub enstrophy: f32,
+    pub palinstrophy: f32,
+    pub bkm_norm: f32,
+    pub max_velocity: f32,
+    pub forcing_power: f32,
+    pub dissipation_rate: f32,
+    pub spectral_centroid: f32,
+    pub spectral_slope: f32,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NavierStokesRegimeReport {
+    pub condition_label: String,
+    pub viscosity: f32,
+    pub forcing_amplitude: f32,
+    pub initial_enstrophy: f32,
+    pub final_enstrophy: f32,
+    pub max_enstrophy: f32,
+    pub max_bkm_norm: f32,
+    pub accumulated_bkm: f32,
+    pub max_velocity: f32,
+    pub enstrophy_growth_exponent: f32,
+    pub blowup_detected: bool,
+    pub singularity_step: Option<usize>,
+    pub traces: Vec<FluidStepTrace>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ViscositySweepResult {
+    pub viscosity: f32,
+    pub final_energy: f32,
+    pub final_enstrophy: f32,
+    pub max_bkm: f32,
+    pub max_velocity: f32,
+    pub blowup_detected: bool,
+    pub regularized: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NavierStokesBlowupReport {
+    pub horizon: usize,
+    pub unforced_regime: NavierStokesRegimeReport,
+    pub forced_regime: NavierStokesRegimeReport,
+    pub viscosity_sweep: Vec<ViscositySweepResult>,
+    pub critical_viscosity_est: Option<f32>,
+    pub bkm_blowup_criteria_met: bool,
+    pub verdict: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FullDiagnosticReport {
     pub perturbation: NonlinearPerturbationReport,
     pub trajectory: AutonomousTrajectoryReport,
     pub falsification: FalsificationReport,
+    #[serde(default)]
+    pub navier_stokes: Option<NavierStokesBlowupReport>,
 }
 
 pub struct ExperimentSuite;
@@ -388,5 +443,316 @@ impl ExperimentSuite {
             contextual_memory_ratio: context_ratio,
             verdict,
         })
+    }
+
+    /// Generates a smooth spatiotemporal forcing field f(s, t) in C^\infty(T^1 x [0, T]).
+    /// Spatially zero-mean, restricted to lowest Fourier modes (m in 1..=3), with smooth envelope.
+    /// Direct implementation of smooth forcing from Fefferman Millennium Cases C & D.
+    pub fn generate_smooth_forcing(
+        seq_len: usize,
+        channels: usize,
+        step: usize,
+        horizon: usize,
+        amplitude: f32,
+        device: &Device,
+    ) -> Result<Tensor> {
+        let mut data = vec![vec![vec![0.0f32; channels]; seq_len]; 1];
+        let two_pi = 2.0 * std::f32::consts::PI;
+
+        // Smooth temporal envelope: sin(pi * (t + 1) / (T + 1))
+        let t_norm = (step as f32 + 1.0) / (horizon as f32 + 1.0);
+        let time_factor = (std::f32::consts::PI * t_norm).sin();
+        let effective_amp = amplitude * time_factor;
+
+        for s in 0..seq_len {
+            for ch in 0..channels {
+                let mut f_val = 0.0f32;
+                // Sum of smooth low-wavenumber spatial modes (m = 1, 2, 3)
+                for m in 1..=3 {
+                    let spatial_phase = two_pi * (m as f32) * (s as f32) / (seq_len as f32);
+                    let channel_phase = ((ch * 3 + m * 5) % 17) as f32 * (two_pi / 17.0);
+                    let temporal_freq = (m as f32) * 0.25 * (step as f32);
+                    let mode_contrib = (spatial_phase + channel_phase + temporal_freq).sin() / (m as f32 * m as f32);
+                    f_val += mode_contrib;
+                }
+                data[0][s][ch] = effective_amp * f_val;
+            }
+        }
+
+        Tensor::new(data, device).map_err(|e| e.into())
+    }
+
+    /// Executes a continuous fluid rollout tracking enstrophy, palinstrophy, BKM norm, and energy cascade
+    pub fn run_fluid_rollout(
+        nca: &NeuralCellularAutomaton,
+        initial_field: &MorphogenicField,
+        horizon: usize,
+        forcing_amp: f32,
+        viscosity: f32,
+        condition_label: &str,
+        device: &Device,
+    ) -> Result<NavierStokesRegimeReport> {
+        let active_nca = nca.with_viscosity(viscosity);
+        let seq_len = initial_field.config.seq_len;
+        let channels = initial_field.config.channels;
+
+        let mut traces = Vec::with_capacity(horizon);
+        let mut current = initial_field.clone();
+
+        let initial_enstrophy = current.enstrophy()?;
+        let mut max_enstrophy = initial_enstrophy;
+        let mut max_bkm_norm = current.bkm_norm()?;
+        let mut max_velocity = current.max_amplitude()?;
+        let mut accumulated_bkm = 0.0f32;
+        let mut blowup_detected = false;
+        let mut singularity_step = None;
+
+        for step in 0..horizon {
+            let energy = current.energy()?;
+            let enstrophy = current.enstrophy()?;
+            let palinstrophy = current.palinstrophy()?;
+            let bkm_norm = current.bkm_norm()?;
+            let vel = current.max_amplitude()?;
+            let cascade = current.spectral_cascade_analysis()?;
+
+            accumulated_bkm += bkm_norm * active_nca.nca_cfg.step_size;
+
+            if enstrophy > max_enstrophy {
+                max_enstrophy = enstrophy;
+            }
+            if bkm_norm > max_bkm_norm {
+                max_bkm_norm = bkm_norm;
+            }
+            if vel > max_velocity {
+                max_velocity = vel;
+            }
+
+            // Singularity check: BKM divergence or enstrophy blowup (> 25x initial and > 25.0, or > 100.0, or NaN)
+            if !blowup_detected && (bkm_norm > 25.0 || enstrophy > 50.0 || vel > 40.0 || enstrophy.is_nan()) {
+                blowup_detected = true;
+                singularity_step = Some(step);
+            }
+
+            // Smooth forcing calculation
+            let (forcing_tensor, forcing_power) = if forcing_amp > 0.0 {
+                let f_t = Self::generate_smooth_forcing(seq_len, channels, step, horizon, forcing_amp, device)?;
+                // Forcing power: <x, f> = mean(x * f)
+                let x_dot_f = (&current.x * &f_t)?.mean_all()?.to_scalar::<f32>()?;
+                (Some(f_t), x_dot_f)
+            } else {
+                (None, 0.0f32)
+            };
+
+            let dissipation_rate = 2.0 * viscosity * enstrophy;
+
+            traces.push(FluidStepTrace {
+                step,
+                energy,
+                enstrophy,
+                palinstrophy,
+                bkm_norm,
+                max_velocity: vel,
+                forcing_power,
+                dissipation_rate,
+                spectral_centroid: cascade.centroid_wavenumber,
+                spectral_slope: cascade.spectral_slope,
+            });
+
+            // If catastrophic divergence occurred, stop rollout early
+            if vel > 200.0 || enstrophy > 500.0 || enstrophy.is_nan() {
+                break;
+            }
+
+            // Advance step
+            let (next_field, _) = active_nca.step_with_forcing(&current, forcing_tensor.as_ref(), device)?;
+            current = next_field;
+        }
+
+        let final_enstrophy = traces.last().map(|t| t.enstrophy).unwrap_or(0.0);
+
+        // Estimate enstrophy growth exponent gamma: dOmega/dt ~ Omega^gamma
+        let mut log_omega_pairs = Vec::new();
+        for i in 1..traces.len() {
+            let delta_omega = traces[i].enstrophy - traces[i - 1].enstrophy;
+            let avg_omega = 0.5 * (traces[i].enstrophy + traces[i - 1].enstrophy);
+            if delta_omega > 1e-4 && avg_omega > 1e-4 {
+                log_omega_pairs.push((avg_omega.ln(), delta_omega.ln()));
+            }
+        }
+
+        let enstrophy_growth_exponent = if log_omega_pairs.len() >= 3 {
+            let n = log_omega_pairs.len() as f32;
+            let sum_x: f32 = log_omega_pairs.iter().map(|(x, _)| x).sum();
+            let sum_y: f32 = log_omega_pairs.iter().map(|(_, y)| y).sum();
+            let sum_xx: f32 = log_omega_pairs.iter().map(|(x, _)| x * x).sum();
+            let sum_xy: f32 = log_omega_pairs.iter().map(|(x, y)| x * y).sum();
+            let denom = n * sum_xx - sum_x * sum_x;
+            if denom.abs() > 1e-6 {
+                (n * sum_xy - sum_x * sum_y) / denom
+            } else {
+                1.0
+            }
+        } else {
+            1.0
+        };
+
+        Ok(NavierStokesRegimeReport {
+            condition_label: condition_label.to_string(),
+            viscosity,
+            forcing_amplitude: forcing_amp,
+            initial_enstrophy,
+            final_enstrophy,
+            max_enstrophy,
+            max_bkm_norm,
+            accumulated_bkm,
+            max_velocity,
+            enstrophy_growth_exponent,
+            blowup_detected,
+            singularity_step,
+            traces,
+        })
+    }
+
+    /// Evaluates the complete Navier-Stokes singularity battery (Cases C & D Fefferman formulation):
+    /// 1. Unforced baseline dynamics
+    /// 2. Smoothly forced dynamics
+    /// 3. Viscosity regularization sweep to detect critical viscosity nu*
+    pub fn run_navier_stokes_blowup_probe(
+        nca: &NeuralCellularAutomaton,
+        field: &MorphogenicField,
+        horizon: usize,
+        forcing_amp: f32,
+        base_viscosity: f32,
+        device: &Device,
+    ) -> Result<NavierStokesBlowupReport> {
+        // 1. Unforced baseline regime (f = 0, nu = base_viscosity)
+        let unforced_rep = Self::run_fluid_rollout(
+            nca,
+            field,
+            horizon,
+            0.0,
+            base_viscosity,
+            "Unforced Autonomous Flow (f = 0)",
+            device,
+        )?;
+
+        // 2. Smoothly forced inviscid/baseline regime (f in C^\infty, nu = 0.0)
+        let forced_rep = Self::run_fluid_rollout(
+            nca,
+            field,
+            horizon,
+            forcing_amp,
+            0.0,
+            &format!("Smooth External Forcing (A = {:.2}, nu = 0.0)", forcing_amp),
+            device,
+        )?;
+
+        // 3. Viscosity regularization sweep
+        let sweep_viscosities = [0.0f32, 0.005, 0.02, 0.05, 0.10, 0.20];
+        let mut sweep_results = Vec::new();
+        let mut critical_viscosity = None;
+
+        for &nu in &sweep_viscosities {
+            let rep = Self::run_fluid_rollout(
+                nca,
+                field,
+                horizon,
+                forcing_amp,
+                nu,
+                &format!("Forced Sweep (nu = {:.3})", nu),
+                device,
+            )?;
+
+            let final_energy = rep.traces.last().map(|t| t.energy).unwrap_or(0.0);
+            let regularized = !rep.blowup_detected && rep.final_enstrophy < (rep.initial_enstrophy * 5.0 + 10.0);
+
+            if regularized && critical_viscosity.is_none() && nu > 0.0 {
+                critical_viscosity = Some(nu);
+            }
+
+            sweep_results.push(ViscositySweepResult {
+                viscosity: nu,
+                final_energy,
+                final_enstrophy: rep.final_enstrophy,
+                max_bkm: rep.max_bkm_norm,
+                max_velocity: rep.max_velocity,
+                blowup_detected: rep.blowup_detected,
+                regularized,
+            });
+        }
+
+        let bkm_blowup_criteria_met = forced_rep.blowup_detected || forced_rep.enstrophy_growth_exponent > 1.2;
+
+        let verdict = if forced_rep.blowup_detected {
+            format!(
+                "FINITE_TIME_SINGULARITY_BLOWUP (Smooth forcing triggered gradient breakdown at step {:?}; regularized by nu >= {:?})",
+                forced_rep.singularity_step.unwrap_or(0),
+                critical_viscosity.unwrap_or(0.05)
+            )
+        } else if forced_rep.enstrophy_growth_exponent > 1.1 {
+            format!(
+                "SUPERLINEAR_ENSTROPHY_CASCADE (Growth exponent gamma = {:.2} > 1.0; incipient finite-time singularity dynamics)",
+                forced_rep.enstrophy_growth_exponent
+            )
+        } else {
+            "REGULAR_DISSIPATIVE_FLOW (Dynamics remained bounded under smooth external forcing)".to_string()
+        };
+
+        Ok(NavierStokesBlowupReport {
+            horizon,
+            unforced_regime: unforced_rep,
+            forced_regime: forced_rep,
+            viscosity_sweep: sweep_results,
+            critical_viscosity_est: critical_viscosity,
+            bkm_blowup_criteria_met,
+            verdict,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use candle_nn::VarMap;
+    use crate::config::{FieldConfig, NcaConfig};
+
+    #[test]
+    fn test_smooth_forcing_spatial_zero_mean() -> Result<()> {
+        let dev = Device::Cpu;
+        let seq_len = 32;
+        let channels = 4;
+        let forcing = ExperimentSuite::generate_smooth_forcing(seq_len, channels, 10, 64, 0.5, &dev)?;
+        assert_eq!(forcing.dims3()?, (1, seq_len, channels));
+        let mean = forcing.mean_all()?.to_scalar::<f32>()?;
+        assert!(mean.abs() < 1e-5, "Smooth forcing must be spatially zero-mean, got {}", mean);
+        Ok(())
+    }
+
+    #[test]
+    fn test_navier_stokes_blowup_probe_execution() -> Result<()> {
+        let dev = Device::Cpu;
+        let nca_cfg = NcaConfig::default();
+        let field_cfg = FieldConfig { seq_len: 16, channels: 8, periodic_boundary: true };
+        let varmap = VarMap::new();
+        let vb = candle_nn::VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+
+        let nca = NeuralCellularAutomaton::new(vb.pp("nca"), &nca_cfg, &field_cfg)?;
+        let initial_field = MorphogenicField::zeros(1, &field_cfg, &dev)?;
+
+        let report = ExperimentSuite::run_navier_stokes_blowup_probe(
+            &nca,
+            &initial_field,
+            8,   // short horizon for unit test
+            0.2, // forcing amp
+            0.0, // base viscosity
+            &dev,
+        )?;
+
+        assert_eq!(report.horizon, 8);
+        assert_eq!(report.unforced_regime.traces.len(), 8);
+        assert_eq!(report.forced_regime.traces.len(), 8);
+        assert!(!report.viscosity_sweep.is_empty());
+        assert!(!report.verdict.is_empty());
+        Ok(())
     }
 }

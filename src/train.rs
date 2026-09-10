@@ -19,6 +19,9 @@ pub struct StepDiagnostics {
     pub hidden_mean: f32,
     pub hidden_var: f32,
     pub state_energy: f32,
+    pub enstrophy: f32,
+    pub palinstrophy: f32,
+    pub bkm_norm: f32,
     pub freq_decomp: FrequencyDecomposition,
 }
 
@@ -115,9 +118,12 @@ impl Trainer {
         // 6. Optimizer update step
         self.optimizer.step(&grads)?;
 
-        // 7. Field state metrics: mean, variance, energy E = 0.5 * mean(||x||^2), and frequency decomposition
+        // 7. Field state metrics: mean, variance, energy, enstrophy, palinstrophy, BKM norm, and frequency decomposition
         let (hidden_mean, hidden_var) = field.mean_and_var()?;
         let state_energy = field.energy()?;
+        let enstrophy = field.enstrophy()?;
+        let palinstrophy = field.palinstrophy()?;
+        let bkm_norm = field.bkm_norm()?;
         let freq_decomp = field.spatial_frequency_decomposition()?;
 
         // 8. Held-out validation evaluation
@@ -133,6 +139,9 @@ impl Trainer {
             hidden_mean,
             hidden_var,
             state_energy,
+            enstrophy,
+            palinstrophy,
+            bkm_norm,
             freq_decomp,
         })
     }

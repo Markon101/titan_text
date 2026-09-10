@@ -4,6 +4,7 @@ use anyhow::Result;
 use candle_core::{Device, Tensor};
 use candle_nn::{linear, Linear, Module, VarBuilder};
 
+#[derive(Clone)]
 pub struct NeuralCellularAutomaton {
     pub dense1: Linear,
     pub dense_delta: Linear,
@@ -13,6 +14,18 @@ pub struct NeuralCellularAutomaton {
 }
 
 impl NeuralCellularAutomaton {
+    /// Creates a clone of this NCA with an altered Navier-Stokes viscosity parameter
+    pub fn with_viscosity(&self, viscosity: f32) -> Self {
+        let mut cfg = self.nca_cfg.clone();
+        cfg.viscosity = viscosity;
+        Self {
+            dense1: self.dense1.clone(),
+            dense_delta: self.dense_delta.clone(),
+            dense_gate: self.dense_gate.clone(),
+            nca_cfg: cfg,
+            field_cfg: self.field_cfg.clone(),
+        }
+    }
     pub fn new(vb: VarBuilder, nca_cfg: &NcaConfig, field_cfg: &FieldConfig) -> Result<Self> {
         // Local 1D perception: [Identity (C), Gradient (C), Laplacian (C)] = 3 * C
         let in_channels = field_cfg.channels * 3;
@@ -60,10 +73,15 @@ impl NeuralCellularAutomaton {
         Ok(Tensor::cat(&[x, &grad, &laplacian], 2)?)
     }
 
-    /// Single developmental step:
-    /// x_(t+1) = x_t + alpha * (gate * delta)
+    /// Single developmental step with optional external forcing:
+    /// x_(t+1) = x_t + alpha * (gate * delta) + nu * Delta x + alpha * f
     /// Returns (new_field, update_norm)
-    pub fn step(&self, field: &MorphogenicField, device: &Device) -> Result<(MorphogenicField, f32)> {
+    pub fn step_with_forcing(
+        &self,
+        field: &MorphogenicField,
+        forcing: Option<&Tensor>,
+        device: &Device,
+    ) -> Result<(MorphogenicField, f32)> {
         let x = &field.x;
 
         // 1. Local spatial perception [B, L, 3C]
@@ -96,10 +114,25 @@ impl NeuralCellularAutomaton {
 
         // 5. Residual integration: x_(t+1) = x_t + alpha * delta
         let scaled_delta = (effective_delta * (self.nca_cfg.step_size as f64))?;
-        let new_x = (x + &scaled_delta)?;
+        let mut total_delta = scaled_delta;
+
+        // 6. Navier-Stokes physical viscous dissipation: nu * Delta x
+        if self.nca_cfg.viscosity > 0.0 {
+            let laplacian = field.spatial_laplacian()?;
+            let viscous_damping = (laplacian * (self.nca_cfg.viscosity as f64))?;
+            total_delta = (&total_delta + &viscous_damping)?;
+        }
+
+        // 7. Smooth external forcing: f(s, t) * alpha
+        if let Some(f) = forcing {
+            let scaled_f = (f * (self.nca_cfg.step_size as f64))?;
+            total_delta = (&total_delta + &scaled_f)?;
+        }
+
+        let new_x = (x + &total_delta)?;
 
         // Compute update norm ||x_(t+1) - x_t||
-        let update_sq = scaled_delta.sqr()?;
+        let update_sq = total_delta.sqr()?;
         let update_norm = update_sq.mean_all()?.to_scalar::<f32>()?.sqrt();
 
         Ok((
@@ -109,6 +142,11 @@ impl NeuralCellularAutomaton {
             },
             update_norm,
         ))
+    }
+
+    /// Single autonomous developmental step (unforced)
+    pub fn step(&self, field: &MorphogenicField, device: &Device) -> Result<(MorphogenicField, f32)> {
+        self.step_with_forcing(field, None, device)
     }
 
     /// Single step returning just field
@@ -124,5 +162,56 @@ impl NeuralCellularAutomaton {
             current = self.step_field(&current, device)?;
         }
         Ok(current)
+    }
+
+    /// Unrolls development with a sequence of external forcing tensors
+    #[allow(dead_code)]
+    pub fn develop_with_forcing(
+        &self,
+        initial: &MorphogenicField,
+        forcings: &[Tensor],
+        device: &Device,
+    ) -> Result<MorphogenicField> {
+        let mut current = initial.clone();
+        for f in forcings {
+            let (next, _) = self.step_with_forcing(&current, Some(f), device)?;
+            current = next;
+        }
+        Ok(current)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use candle_nn::VarMap;
+
+    #[test]
+    fn test_nca_step_and_viscosity() -> Result<()> {
+        let dev = Device::Cpu;
+        let mut nca_cfg = NcaConfig::default();
+        let field_cfg = FieldConfig { seq_len: 16, channels: 8, periodic_boundary: true };
+        let varmap = VarMap::new();
+        let vb = VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+
+        // 1. Without viscosity
+        let nca_inviscid = NeuralCellularAutomaton::new(vb.pp("nca"), &nca_cfg, &field_cfg)?;
+        let initial = MorphogenicField::zeros(1, &field_cfg, &dev)?;
+        let (next_field, norm) = nca_inviscid.step(&initial, &dev)?;
+        assert_eq!(next_field.x.dims3()?, (1, 16, 8));
+        assert!(norm >= 0.0);
+
+        // 2. With Navier-Stokes viscosity
+        nca_cfg.viscosity = 0.05;
+        let nca_viscous = NeuralCellularAutomaton::new(vb.pp("nca"), &nca_cfg, &field_cfg)?;
+        let (next_viscous, _) = nca_viscous.step(&initial, &dev)?;
+        assert_eq!(next_viscous.x.dims3()?, (1, 16, 8));
+
+        // 3. Forcing test
+        let forcing_t = Tensor::zeros((1, 16, 8), candle_core::DType::F32, &dev)?;
+        let (forced_field, _) = nca_viscous.step_with_forcing(&initial, Some(&forcing_t), &dev)?;
+        assert_eq!(forced_field.x.dims3()?, (1, 16, 8));
+
+        Ok(())
     }
 }

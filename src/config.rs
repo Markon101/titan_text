@@ -30,6 +30,9 @@ pub struct NcaConfig {
     pub update_rate: f32,
     /// Activation function: "gelu" or "tanh"
     pub activation: String,
+    /// Navier-Stokes physical viscous dissipation coefficient nu (nu * Laplacian)
+    #[serde(default)]
+    pub viscosity: f32,
 }
 
 impl Default for NcaConfig {
@@ -39,6 +42,7 @@ impl Default for NcaConfig {
             step_size: 0.5,
             update_rate: 1.0,
             activation: "gelu".to_string(),
+            viscosity: 0.0,
         }
     }
 }
@@ -86,6 +90,9 @@ pub struct ProbeConfig {
     pub perturbation_eps: f32,
     /// Low-pass filter window size
     pub lp_window: usize,
+    /// Smooth external forcing amplitude for Navier-Stokes singularity probe
+    #[serde(default)]
+    pub forcing_amplitude: f32,
 }
 
 impl Default for ProbeConfig {
@@ -94,6 +101,7 @@ impl Default for ProbeConfig {
             horizon: 64,
             perturbation_eps: 0.01,
             lp_window: 8,
+            forcing_amplitude: 0.2,
         }
     }
 }
