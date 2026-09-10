@@ -1,0 +1,9 @@
+/target/
+/checkpoints/
+**/*.rs.bk
+*.safetensors
+*.bin
+*.json.tmp
+.DS_Store
+*.swp
+*~
