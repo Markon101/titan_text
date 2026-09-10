@@ -20,6 +20,16 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use train::Trainer;
 use vocab::TokenInterface;
 
+fn write_output_file(path: &str, content: impl AsRef<[u8]>) -> Result<()> {
+    if let Some(parent) = std::path::Path::new(path).parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent)?;
+        }
+    }
+    std::fs::write(path, content)?;
+    Ok(())
+}
+
 fn print_help() {
     println!("TITAN TEXT v0.1.0 · Morphogenic Neural-Cellular Sequence Laboratory");
     println!("Lean experimental sequence morphogenesis exploring nonlinear cellular dynamics");
@@ -44,12 +54,15 @@ fn print_help() {
   --seq-len <NUM>      Spatial sequence length (default: 32)
   --lr <FLOAT>         Learning rate (default: 0.003)
   --viscosity <FLOAT>  Navier-Stokes viscous dissipation nu (default: 0.0)
+  --horizon <NUM>      Post-training rollout horizon steps (default: 64)
   --output <FILE>      Save post-training rollout patterns to text file
+  --patterns-only      Format post-training pattern output as raw strings
 
 OPTIONS FOR 'rollout':
   --load-dir <DIR>     Load trained model weights from checkpoint directory
   --task <NAME>        Task vocabulary ('text' or 'dyck', default: from checkpoint or 'text')
   --horizon <NUM>      Autonomous rollout horizon steps (default: 32)
+  --seq-len <NUM>      Spatial sequence length (default: from checkpoint or 32)
   --viscosity <FLOAT>  Navier-Stokes dissipation nu (default: from checkpoint or 0.0)
   --prompt <TEXT>      Optional seed prompt string to initialize lattice
   --output <FILE>      Save step-by-step decoded patterns to text file
@@ -84,6 +97,8 @@ fn cmd_train(args: &[String], device: &Device) -> Result<()> {
     let mut seq_len_opt: Option<usize> = None;
     let mut lr_opt: Option<f64> = None;
     let mut viscosity_opt: Option<f32> = None;
+    let mut horizon_opt: Option<usize> = None;
+    let mut patterns_only = false;
     let mut output_path: Option<String> = None;
 
     let mut i = 0;
@@ -141,6 +156,15 @@ fn cmd_train(args: &[String], device: &Device) -> Result<()> {
                     i += 1;
                 }
             }
+            "--horizon" => {
+                if i + 1 < args.len() {
+                    horizon_opt = Some(args[i + 1].parse()?);
+                    i += 1;
+                }
+            }
+            "--patterns-only" | "--raw" => {
+                patterns_only = true;
+            }
             "--output" => {
                 if i + 1 < args.len() {
                     output_path = Some(args[i + 1].clone());
@@ -175,6 +199,7 @@ fn cmd_train(args: &[String], device: &Device) -> Result<()> {
     if let Some(s) = seq_len_opt { config.field.seq_len = s; }
     if let Some(lr) = lr_opt { config.train.lr = lr; }
     if let Some(v) = viscosity_opt { config.nca.viscosity = v; }
+    if let Some(h) = horizon_opt { config.probe.horizon = h; }
 
     println!("╔══════════════════════════════════════════════════════════════════════════════════════╗");
     println!("║ TITAN TEXT v0 · RECURRENT CELLULAR TRAINING SESSION                                  ║");
@@ -338,14 +363,20 @@ fn cmd_train(args: &[String], device: &Device) -> Result<()> {
 
     if let Some(ref path) = output_path {
         let mut out_text = String::new();
-        out_text.push_str("# TITAN TEXT · AUTONOMOUS ROLLOUT PATTERN TRACE\n");
-        out_text.push_str(&format!("# Checkpoint: {}\n", save_dir));
-        out_text.push_str(&format!("# Task: {} | Horizon: {} steps | Viscosity (nu): {:.4}\n", task, config.probe.horizon, config.nca.viscosity));
-        out_text.push_str(&format!("# Classification: {}\n#\n", traj_rep.classification));
-        for t in &traj_rep.traces {
-            out_text.push_str(&format!("Step {:03}: {}\n", t.step, t.decoded_pattern));
+        if patterns_only {
+            for t in &traj_rep.traces {
+                out_text.push_str(&format!("{}\n", t.decoded_pattern));
+            }
+        } else {
+            out_text.push_str("# TITAN TEXT · AUTONOMOUS ROLLOUT PATTERN TRACE\n");
+            out_text.push_str(&format!("# Checkpoint: {}\n", save_dir));
+            out_text.push_str(&format!("# Task: {} | Horizon: {} steps | Viscosity (nu): {:.4}\n", task, config.probe.horizon, config.nca.viscosity));
+            out_text.push_str(&format!("# Classification: {}\n#\n", traj_rep.classification));
+            for t in &traj_rep.traces {
+                out_text.push_str(&format!("Step {:03}: {}\n", t.step, t.decoded_pattern));
+            }
         }
-        std::fs::write(path, out_text)?;
+        write_output_file(path, out_text)?;
         println!("\n✓ Post-training patterns saved to '{}'", path);
     }
 
@@ -354,7 +385,7 @@ fn cmd_train(args: &[String], device: &Device) -> Result<()> {
 
 fn cmd_probe(args: &[String], device: &Device) -> Result<()> {
     let mut load_dir: Option<String> = None;
-    let mut task = "text".to_string();
+    let mut task_opt: Option<String> = None;
     let mut eps = 0.01f32;
     let mut horizon = 64usize;
     let mut output_path: Option<String> = None;
@@ -370,7 +401,7 @@ fn cmd_probe(args: &[String], device: &Device) -> Result<()> {
             }
             "--task" => {
                 if i + 1 < args.len() {
-                    task = args[i + 1].clone();
+                    task_opt = Some(args[i + 1].clone());
                     i += 1;
                 }
             }
@@ -397,11 +428,14 @@ fn cmd_probe(args: &[String], device: &Device) -> Result<()> {
         i += 1;
     }
 
-    let config = if let Some(ref dir) = load_dir {
-        CheckpointManager::load_manifest(dir)?.config
+    let (config, default_task) = if let Some(ref dir) = load_dir {
+        let manifest = CheckpointManager::load_manifest(dir)?;
+        (manifest.config, manifest.task.clone())
     } else {
-        TitanConfig::default()
+        (TitanConfig::default(), "text".to_string())
     };
+
+    let task = task_opt.unwrap_or(if default_task.is_empty() { "text".to_string() } else { default_task });
 
     let dataset = SequenceDataset::new(&task);
     let mut varmap = candle_nn::VarMap::new();
@@ -489,7 +523,7 @@ fn cmd_probe(args: &[String], device: &Device) -> Result<()> {
             navier_stokes: None,
         };
         let json_str = serde_json::to_string_pretty(&full_report)?;
-        std::fs::write(&path, json_str)?;
+        write_output_file(&path, json_str)?;
         println!("\n✓ Scientific report saved to '{}'", path);
     }
 
@@ -498,7 +532,7 @@ fn cmd_probe(args: &[String], device: &Device) -> Result<()> {
 
 fn cmd_ns_probe(args: &[String], device: &Device) -> Result<()> {
     let mut load_dir: Option<String> = None;
-    let mut task = "text".to_string();
+    let mut task_opt: Option<String> = None;
     let mut forcing_amp = 0.2f32;
     let mut viscosity = 0.0f32;
     let mut horizon = 64usize;
@@ -515,7 +549,7 @@ fn cmd_ns_probe(args: &[String], device: &Device) -> Result<()> {
             }
             "--task" => {
                 if i + 1 < args.len() {
-                    task = args[i + 1].clone();
+                    task_opt = Some(args[i + 1].clone());
                     i += 1;
                 }
             }
@@ -556,11 +590,14 @@ fn cmd_ns_probe(args: &[String], device: &Device) -> Result<()> {
         i += 1;
     }
 
-    let mut config = if let Some(ref dir) = load_dir {
-        CheckpointManager::load_manifest(dir)?.config
+    let (mut config, default_task) = if let Some(ref dir) = load_dir {
+        let manifest = CheckpointManager::load_manifest(dir)?;
+        (manifest.config, manifest.task.clone())
     } else {
-        TitanConfig::default()
+        (TitanConfig::default(), "text".to_string())
     };
+
+    let task = task_opt.unwrap_or(if default_task.is_empty() { "text".to_string() } else { default_task });
     config.nca.viscosity = viscosity;
 
     let dataset = SequenceDataset::new(&task);
@@ -655,7 +692,7 @@ fn cmd_ns_probe(args: &[String], device: &Device) -> Result<()> {
 
     if let Some(path) = output_path {
         let json_str = serde_json::to_string_pretty(&ns_report)?;
-        std::fs::write(&path, json_str)?;
+        write_output_file(&path, json_str)?;
         println!("\n✓ Scientific report saved to '{}'", path);
     }
 
@@ -666,6 +703,7 @@ fn cmd_rollout(args: &[String], device: &Device) -> Result<()> {
     let mut load_dir: Option<String> = None;
     let mut task_opt: Option<String> = None;
     let mut horizon = 32usize;
+    let mut seq_len_opt: Option<usize> = None;
     let mut viscosity_opt: Option<f32> = None;
     let mut output_path: Option<String> = None;
     let mut prompt_opt: Option<String> = None;
@@ -686,9 +724,15 @@ fn cmd_rollout(args: &[String], device: &Device) -> Result<()> {
                     i += 1;
                 }
             }
-            "--horizon" => {
+            "--horizon" | "--steps" | "--dev-steps" => {
                 if i + 1 < args.len() {
                     horizon = args[i + 1].parse()?;
+                    i += 1;
+                }
+            }
+            "--seq-len" => {
+                if i + 1 < args.len() {
+                    seq_len_opt = Some(args[i + 1].parse()?);
                     i += 1;
                 }
             }
@@ -731,6 +775,9 @@ fn cmd_rollout(args: &[String], device: &Device) -> Result<()> {
     };
 
     let task = task_opt.unwrap_or(if default_task.is_empty() { "text".to_string() } else { default_task });
+    if let Some(s) = seq_len_opt {
+        config.field.seq_len = s;
+    }
     if let Some(v) = viscosity_opt {
         config.nca.viscosity = v;
     }
@@ -824,7 +871,7 @@ fn cmd_rollout(args: &[String], device: &Device) -> Result<()> {
             }
         }
 
-        std::fs::write(out_file, out_text)?;
+        write_output_file(out_file, out_text)?;
         if !patterns_only {
             println!("\n✓ Rollout patterns saved to '{}'", out_file);
         }

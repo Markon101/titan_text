@@ -834,4 +834,60 @@ mod tests {
         }
         Ok(())
     }
+
+    #[test]
+    fn test_rollout_prompt_and_file_export() -> Result<()> {
+        let dev = Device::Cpu;
+        let nca_cfg = NcaConfig::default();
+        let seq_len = 16;
+        let field_cfg = FieldConfig { seq_len, channels: 8, periodic_boundary: true };
+        let varmap = VarMap::new();
+        let vb = candle_nn::VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+
+        let vocab = crate::vocab::Vocab::new_ascii();
+        let nca = NeuralCellularAutomaton::new(vb.pp("nca"), &nca_cfg, &field_cfg)?;
+        let interface = TokenInterface::new(vb.pp("interface"), vocab.size(), field_cfg.channels)?;
+
+        // Test unicode prompt longer than seq_len
+        let prompt = "long prompt exceeding sequence length 🌍!";
+        let mut ids = vocab.encode(prompt);
+        if ids.len() < seq_len {
+            ids.resize(seq_len, vocab.pad_id);
+        } else {
+            ids.truncate(seq_len);
+        }
+        assert_eq!(ids.len(), seq_len);
+
+        let u32_ids: Vec<u32> = ids.into_iter().map(|id| id as u32).collect();
+        let tokens = Tensor::from_slice(&u32_ids, (1, seq_len), &dev)?;
+        let seed = interface.embed_tokens(&tokens)?;
+        let initial_field = MorphogenicField::from_tensor(seed, &field_cfg);
+
+        let report = ExperimentSuite::run_autonomous_rollout(
+            &nca,
+            &interface,
+            &vocab,
+            &initial_field,
+            3,
+            &dev,
+        )?;
+
+        assert_eq!(report.traces.len(), 3);
+        let nested_out = "checkpoints/test_nested_out_dir/patterns.txt";
+        if let Some(parent) = std::path::Path::new(nested_out).parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        let mut text = String::new();
+        for t in &report.traces {
+            text.push_str(&format!("{}\n", t.decoded_pattern));
+        }
+        std::fs::write(nested_out, &text)?;
+        assert!(std::path::Path::new(nested_out).exists());
+        let read_back = std::fs::read_to_string(nested_out)?;
+        assert_eq!(read_back.lines().count(), 3);
+
+        let _ = std::fs::remove_dir_all("checkpoints/test_nested_out_dir");
+        Ok(())
+    }
 }

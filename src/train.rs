@@ -171,6 +171,7 @@ mod tests {
             last_diag = Some(trainer1.train_step(config.train.batch_size)?);
         }
         let diag1 = last_diag.unwrap();
+        let val_eval1 = trainer1.evaluate_val(config.train.batch_size)?;
 
         // 2. Save checkpoint
         let mut manifest = ModelManifest {
@@ -196,9 +197,15 @@ mod tests {
         // 3. Resume training session in new Trainer instance
         let loaded_manifest = CheckpointManager::load_manifest(temp_dir)?;
         assert_eq!(loaded_manifest.cumulative_step, 3);
+        assert_eq!(loaded_manifest.task, "text");
 
-        let mut trainer2 = Trainer::new(loaded_manifest.config.clone(), "text", &dev)?;
+        let mut trainer2 = Trainer::new(loaded_manifest.config.clone(), &loaded_manifest.task, &dev)?;
         CheckpointManager::load_weights(temp_dir, &mut trainer2.varmap, &dev)?;
+
+        // Verify loaded weights produce identical validation loss & accuracy as trainer1
+        let val_eval2 = trainer2.evaluate_val(config.train.batch_size)?;
+        assert_eq!(val_eval1.0, val_eval2.0, "Validation loss must match exactly on resumed trainer");
+        assert_eq!(val_eval1.1, val_eval2.1, "Validation accuracy must match exactly on resumed trainer");
 
         // Train 3 more steps
         let diag2 = trainer2.train_step(config.train.batch_size)?;
