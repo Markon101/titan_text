@@ -146,3 +146,67 @@ impl Trainer {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::checkpoint::{CheckpointManager, ModelManifest, SCHEMA_VERSION};
+
+    #[test]
+    fn test_resume_training_from_checkpoint() -> Result<()> {
+        let dev = Device::Cpu;
+        let mut config = TitanConfig::default();
+        config.field.seq_len = 16;
+        config.field.channels = 16;
+        config.nca.hidden_dim = 32;
+        config.train.dev_steps = 2;
+        config.train.batch_size = 2;
+
+        let temp_dir = "checkpoints/test_resume_training_tmp";
+
+        // 1. Initial training session (3 steps)
+        let mut trainer1 = Trainer::new(config.clone(), "text", &dev)?;
+        let mut last_diag = None;
+        for _ in 0..3 {
+            last_diag = Some(trainer1.train_step(config.train.batch_size)?);
+        }
+        let diag1 = last_diag.unwrap();
+
+        // 2. Save checkpoint
+        let mut manifest = ModelManifest {
+            schema_version: SCHEMA_VERSION,
+            git_commit: "test_git".to_string(),
+            random_seed: 42,
+            cumulative_step: 3,
+            dev_steps: config.train.dev_steps,
+            train_loss: diag1.train_loss,
+            train_accuracy: diag1.train_acc,
+            val_loss: diag1.val_loss,
+            val_accuracy: diag1.val_acc,
+            grad_norm: diag1.grad_norm,
+            state_energy: diag1.state_energy,
+            param_count: 100,
+            checkpoint_hash: "".to_string(),
+            timestamp_unix: 123456,
+            config: config.clone(),
+            task: "text".to_string(),
+        };
+        CheckpointManager::save(temp_dir, &mut manifest, &trainer1.varmap)?;
+
+        // 3. Resume training session in new Trainer instance
+        let loaded_manifest = CheckpointManager::load_manifest(temp_dir)?;
+        assert_eq!(loaded_manifest.cumulative_step, 3);
+
+        let mut trainer2 = Trainer::new(loaded_manifest.config.clone(), "text", &dev)?;
+        CheckpointManager::load_weights(temp_dir, &mut trainer2.varmap, &dev)?;
+
+        // Train 3 more steps
+        let diag2 = trainer2.train_step(config.train.batch_size)?;
+        assert!(!diag2.train_loss.is_nan());
+        assert!(!diag2.grad_norm.is_nan());
+
+        // Cleanup
+        let _ = std::fs::remove_dir_all(temp_dir);
+        Ok(())
+    }
+}

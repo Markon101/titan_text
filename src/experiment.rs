@@ -33,6 +33,8 @@ pub struct TrajectoryStepTrace {
     pub pct_mid: f32,
     pub pct_high: f32,
     pub output_entropy: f32,
+    #[serde(default)]
+    pub decoded_pattern: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -252,6 +254,7 @@ impl ExperimentSuite {
     pub fn run_autonomous_rollout(
         nca: &NeuralCellularAutomaton,
         interface: &TokenInterface,
+        vocab: &crate::vocab::Vocab,
         initial_field: &MorphogenicField,
         horizon: usize,
         device: &Device,
@@ -284,6 +287,13 @@ impl ExperimentSuite {
             }
             let mean_entropy = total_entropy / probs_vec.len().max(1) as f32;
 
+            // Decode predicted token IDs across the spatial lattice cells (first batch element)
+            let preds = logits.argmax(candle_core::D::Minus1)?;
+            let pred_first = preds.narrow(0, 0, 1)?;
+            let pred_ids: Vec<u32> = pred_first.flatten_all()?.to_dtype(candle_core::DType::U32)?.to_vec1()?;
+            let ids: Vec<usize> = pred_ids.iter().map(|&id| id as usize).collect();
+            let decoded_pattern = vocab.decode(&ids);
+
             traces.push(TrajectoryStepTrace {
                 step,
                 state_norm,
@@ -293,6 +303,7 @@ impl ExperimentSuite {
                 pct_mid: decomp.pct_mid,
                 pct_high: decomp.pct_high,
                 output_entropy: mean_entropy,
+                decoded_pattern,
             });
 
             history.push(current.clone());
@@ -791,6 +802,36 @@ mod tests {
         assert_eq!(report.forced_regime.traces.len(), 8);
         assert!(!report.viscosity_sweep.is_empty());
         assert!(!report.verdict.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn test_autonomous_rollout_with_pattern_decoding() -> Result<()> {
+        let dev = Device::Cpu;
+        let nca_cfg = NcaConfig::default();
+        let field_cfg = FieldConfig { seq_len: 16, channels: 8, periodic_boundary: true };
+        let varmap = VarMap::new();
+        let vb = candle_nn::VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+
+        let vocab = crate::vocab::Vocab::new_ascii();
+        let nca = NeuralCellularAutomaton::new(vb.pp("nca"), &nca_cfg, &field_cfg)?;
+        let interface = TokenInterface::new(vb.pp("interface"), vocab.size(), field_cfg.channels)?;
+        let initial_field = MorphogenicField::zeros(1, &field_cfg, &dev)?;
+
+        let report = ExperimentSuite::run_autonomous_rollout(
+            &nca,
+            &interface,
+            &vocab,
+            &initial_field,
+            4,
+            &dev,
+        )?;
+
+        assert_eq!(report.traces.len(), 4);
+        for t in &report.traces {
+            assert_eq!(t.decoded_pattern.chars().count(), 16);
+            assert!(!t.decoded_pattern.is_empty());
+        }
         Ok(())
     }
 }

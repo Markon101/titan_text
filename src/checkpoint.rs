@@ -26,6 +26,8 @@ pub struct ModelManifest {
     pub checkpoint_hash: String,
     pub timestamp_unix: u64,
     pub config: TitanConfig,
+    #[serde(default)]
+    pub task: String,
 }
 
 pub struct CheckpointManager;
@@ -108,6 +110,85 @@ impl CheckpointManager {
             anyhow::bail!("Model file '{}' not found", model_path);
         }
         varmap.load(&model_path).with_context(|| format!("Failed to load safetensors from '{}'", model_path))?;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_manifest_backward_compatibility() -> Result<()> {
+        let json = r#"{
+            "schema_version": 1,
+            "git_commit": "abc1234",
+            "random_seed": 42,
+            "cumulative_step": 50,
+            "dev_steps": 8,
+            "train_loss": 0.05,
+            "train_accuracy": 0.95,
+            "val_loss": 0.1,
+            "val_accuracy": 0.9,
+            "grad_norm": 0.02,
+            "state_energy": 2.5,
+            "param_count": 43000,
+            "checkpoint_hash": "hash123",
+            "timestamp_unix": 1789000000,
+            "config": {
+                "field": { "seq_len": 32, "channels": 64, "periodic_boundary": true },
+                "nca": { "hidden_dim": 96, "step_size": 0.5, "update_rate": 1.0, "activation": "gelu", "viscosity": 0.01 },
+                "train": { "epochs": 50, "dev_steps": 8, "batch_size": 8, "lr": 0.003, "weight_decay": 0.01, "save_every": 50, "log_every": 10, "seed": 42 },
+                "probe": { "horizon": 64, "perturbation_eps": 0.01, "lp_window": 8, "forcing_amplitude": 0.2 }
+            }
+        }"#;
+
+        let manifest: ModelManifest = serde_json::from_str(json)?;
+        assert_eq!(manifest.cumulative_step, 50);
+        assert_eq!(manifest.config.nca.viscosity, 0.01);
+        assert_eq!(manifest.task, "");
+        Ok(())
+    }
+
+    #[test]
+    fn test_save_and_load_checkpoint_roundtrip() -> Result<()> {
+        let dev = Device::Cpu;
+        let config = TitanConfig::default();
+        let varmap = VarMap::new();
+        let vb = candle_nn::VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+        let _interface = crate::vocab::TokenInterface::new(vb.pp("test_iface"), 10, config.field.channels)?;
+
+        let temp_dir = "checkpoints/test_roundtrip_tmp";
+        let mut manifest = ModelManifest {
+            schema_version: SCHEMA_VERSION,
+            git_commit: "test_git".to_string(),
+            random_seed: 42,
+            cumulative_step: 25,
+            dev_steps: 8,
+            train_loss: 0.1,
+            train_accuracy: 0.9,
+            val_loss: 0.2,
+            val_accuracy: 0.85,
+            grad_norm: 0.05,
+            state_energy: 1.5,
+            param_count: 100,
+            checkpoint_hash: "".to_string(),
+            timestamp_unix: 123456,
+            config: config.clone(),
+            task: "text".to_string(),
+        };
+
+        CheckpointManager::save(temp_dir, &mut manifest, &varmap)?;
+        let loaded_manifest = CheckpointManager::load_manifest(temp_dir)?;
+        assert_eq!(loaded_manifest.cumulative_step, 25);
+        assert_eq!(loaded_manifest.task, "text");
+
+        let mut load_varmap = VarMap::new();
+        let vb_load = candle_nn::VarBuilder::from_varmap(&load_varmap, candle_core::DType::F32, &dev);
+        let _load_iface = crate::vocab::TokenInterface::new(vb_load.pp("test_iface"), 10, config.field.channels)?;
+        CheckpointManager::load_weights(temp_dir, &mut load_varmap, &dev)?;
+
+        let _ = std::fs::remove_dir_all(temp_dir);
         Ok(())
     }
 }
