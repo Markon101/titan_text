@@ -1,6 +1,30 @@
 # TITAN TEXT
 
-Current research assessment: [September 15 code review and controlled follow-up](reviews/2026-09-15-codex/review.md) and [September 18 system audit and research plan](reviews/2026-09-18-research-audit.md). The saved blackboard experiment does not establish arithmetic generalization or adaptive-compute advantage; see those reviews before continuing it.
+Current research assessment: [September 15 code review and controlled follow-up](reviews/2026-09-15-codex/review.md) and [September 18 system audit and research plan](reviews/2026-09-18-research-audit.md).
+
+## September 18, 2026 Breakthrough: Causal Recurrence & Controlled Dynamics
+
+Following the system audit and adversarial review, Titan Text established the minimal setup where useful sequence generalization causally depends on recurrent latent computation, solved long-horizon dynamical stability, and added microscopic trace export:
+
+1. **MaxRipple Arithmetic Bias Resolved**:
+   - Demonstrated that historical reports where "out-of-distribution carry was easier than in-distribution" were an artifact of scoring digit accuracy on zero-dominated sequences ($99..9+1=100..0$ contains $80.6\%$ zeros, giving a trivial constant-0 predictor $>75\%$ digit accuracy while scoring strictly $0.0\%$ complete-answer accuracy).
+   - Added unit tests enforcing split disjointness, exact carry depth oracle matching, and position-prior marginal controls.
+2. **Causal Necessity on Iterated Parity with Positional Readout (IPPR)**:
+   - Implemented `TaskKind::IteratedParity` (4-token chunks: 3 data bits + 1 query slot `?`), where the target is cumulative running parity.
+   - With a radius-1 receptive field ($3$ cells), it is structurally impossible for 0-tick or local feedforward models to solve chunk $k \ge 1$ without recurrent state passing.
+   - Intact NCA demonstrates compute gain peaking at $\tau=4$ latent ticks; recurrence ablation (`--lesion-state`, $\Delta x \equiv 0$) completely zeroes state displacement ($0.0000$) and locks accuracy across all ticks to $0.0\%$.
+3. **Bounded Soft RMS Stabilization (`--state-norm bounded`)**:
+   - Replaced unconstrained drift ($x_{t+1} = x_t + \alpha \Delta x$, which blew up to norm $>340$ and energy $>58,000$ at step $1024$) with soft bounded RMS normalization (threshold $1.5$) and gentle leaky contraction ($\lambda = 0.01$).
+   - Successfully stabilized rollouts over $128+$ steps at exact energy $1.1250$ while maintaining active drift velocity ($0.134\text{--}0.198$ units/step) without freezing transient dynamics.
+4. **Per-Step Activation Trace Export**:
+   - Implemented `--trace-output <FILE>` and `--record-activations` in `train`, `rollout`, `probe`, and `sweep`.
+   - Exports all per-step norms, energies, spectral decompositions, channel means, channel variances, and complete $[L, C]$ spatial activation matrices to JSON (e.g. `reports/iterated_parity_activation_traces.json`).
+5. **All-Agent Council Priority Roadmap**:
+   - Arbitrated consensus across DeepSeek subagents:
+     - **P0 (Measurement Gate)**: Ground all assertions in scalar observables with pre-registered noise bands.
+     - **P1 (Confound Control)**: Train depth-matched feedforward twins ($N$-layer untied FF) and shuffled-recurrence controls.
+     - **P2 (Causal Necessity Inversion)**: Execute state-inversion swap tests to verify directional specificity of the state carrier.
+     - **P3 (Infrastructure)**: Bounded stabilization and activation trace export established as core foundation.
 
 A lean morphogenic neural-cellular sequence laboratory exploring nonlinear local dynamics, bounded attractors, and multiscale sequence emergence.
 

@@ -1,0 +1,206 @@
+{
+  "all_monotonic": false,
+  "any_accuracy_discontinuity": false,
+  "budgets": [
+    0,
+    1,
+    2,
+    4,
+    8,
+    16
+  ],
+  "reports": [
+    {
+      "bifurcation_detected": false,
+      "budgets": [
+        {
+          "accuracy": 0.0,
+          "compute_cost_units": 0,
+          "latent_ticks": 0,
+          "loss": 4.492222309112549,
+          "mean_confidence": 0.0002990036446135491,
+          "regime": "DEGRADATION",
+          "state_displacement": 0.0
+        },
+        {
+          "accuracy": 0.123046875,
+          "compute_cost_units": 512,
+          "latent_ticks": 1,
+          "loss": 4.062314033508301,
+          "mean_confidence": 0.0005438927910290658,
+          "regime": "COMPUTE_GAIN",
+          "state_displacement": 0.2845872938632965
+        },
+        {
+          "accuracy": 0.123046875,
+          "compute_cost_units": 1024,
+          "latent_ticks": 2,
+          "loss": 3.8689279556274414,
+          "mean_confidence": 0.0013832591939717531,
+          "regime": "SATURATED",
+          "state_displacement": 0.5745143890380859
+        },
+        {
+          "accuracy": 0.13671875,
+          "compute_cost_units": 2048,
+          "latent_ticks": 4,
+          "loss": 4.209968566894531,
+          "mean_confidence": 0.013070777989923954,
+          "regime": "COMPUTE_GAIN",
+          "state_displacement": 1.1734583377838135
+        },
+        {
+          "accuracy": 0.125,
+          "compute_cost_units": 4096,
+          "latent_ticks": 8,
+          "loss": 7.042867660522461,
+          "mean_confidence": 0.03855876252055168,
+          "regime": "DEGRADATION",
+          "state_displacement": 2.4540672302246094
+        },
+        {
+          "accuracy": 0.1328125,
+          "compute_cost_units": 8192,
+          "latent_ticks": 16,
+          "loss": 16.436967849731445,
+          "mean_confidence": 0.10617538541555405,
+          "regime": "DEGRADATION",
+          "state_displacement": 5.164839267730713
+        }
+      ],
+      "monotonic_improvement": false,
+      "optimal_ticks": 4,
+      "task_name": "iterated-parity"
+    },
+    {
+      "bifurcation_detected": false,
+      "budgets": [
+        {
+          "accuracy": 0.0,
+          "compute_cost_units": 0,
+          "latent_ticks": 0,
+          "loss": 4.52042293548584,
+          "mean_confidence": 0.00030113343382254243,
+          "regime": "DEGRADATION",
+          "state_displacement": 0.0
+        },
+        {
+          "accuracy": 0.130859375,
+          "compute_cost_units": 512,
+          "latent_ticks": 1,
+          "loss": 4.11237907409668,
+          "mean_confidence": 0.0005512298666872084,
+          "regime": "COMPUTE_GAIN",
+          "state_displacement": 0.28192731738090515
+        },
+        {
+          "accuracy": 0.130859375,
+          "compute_cost_units": 1024,
+          "latent_ticks": 2,
+          "loss": 3.9317739009857178,
+          "mean_confidence": 0.0014098396059125662,
+          "regime": "SATURATED",
+          "state_displacement": 0.569787323474884
+        },
+        {
+          "accuracy": 0.12109375,
+          "compute_cost_units": 2048,
+          "latent_ticks": 4,
+          "loss": 4.294856071472168,
+          "mean_confidence": 0.013175692409276962,
+          "regime": "DEGRADATION",
+          "state_displacement": 1.1666440963745117
+        },
+        {
+          "accuracy": 0.119140625,
+          "compute_cost_units": 4096,
+          "latent_ticks": 8,
+          "loss": 7.157853603363037,
+          "mean_confidence": 0.04157501086592674,
+          "regime": "DEGRADATION",
+          "state_displacement": 2.443162202835083
+        },
+        {
+          "accuracy": 0.115234375,
+          "compute_cost_units": 8192,
+          "latent_ticks": 16,
+          "loss": 16.82023048400879,
+          "mean_confidence": 0.31351742148399353,
+          "regime": "DEGRADATION",
+          "state_displacement": 5.14398717880249
+        }
+      ],
+      "monotonic_improvement": false,
+      "optimal_ticks": 1,
+      "task_name": "iterated-parity"
+    },
+    {
+      "bifurcation_detected": false,
+      "budgets": [
+        {
+          "accuracy": 0.0,
+          "compute_cost_units": 0,
+          "latent_ticks": 0,
+          "loss": 4.58815336227417,
+          "mean_confidence": 0.0002986516337841749,
+          "regime": "DEGRADATION",
+          "state_displacement": 0.0
+        },
+        {
+          "accuracy": 0.099609375,
+          "compute_cost_units": 512,
+          "latent_ticks": 1,
+          "loss": 4.14984130859375,
+          "mean_confidence": 0.0005432533216662705,
+          "regime": "COMPUTE_GAIN",
+          "state_displacement": 0.28267520666122437
+        },
+        {
+          "accuracy": 0.099609375,
+          "compute_cost_units": 1024,
+          "latent_ticks": 2,
+          "loss": 3.9476876258850098,
+          "mean_confidence": 0.0013785880291834474,
+          "regime": "SATURATED",
+          "state_displacement": 0.570336103439331
+        },
+        {
+          "accuracy": 0.1015625,
+          "compute_cost_units": 2048,
+          "latent_ticks": 4,
+          "loss": 4.2979583740234375,
+          "mean_confidence": 0.012476310133934021,
+          "regime": "COMPUTE_GAIN",
+          "state_displacement": 1.1670942306518555
+        },
+        {
+          "accuracy": 0.109375,
+          "compute_cost_units": 4096,
+          "latent_ticks": 8,
+          "loss": 7.067503929138184,
+          "mean_confidence": 0.035844605416059494,
+          "regime": "COMPUTE_GAIN",
+          "state_displacement": 2.4413044452667236
+        },
+        {
+          "accuracy": 0.099609375,
+          "compute_cost_units": 8192,
+          "latent_ticks": 16,
+          "loss": 16.539474487304688,
+          "mean_confidence": 0.2902761995792389,
+          "regime": "DEGRADATION",
+          "state_displacement": 5.137331485748291
+        }
+      ],
+      "monotonic_improvement": false,
+      "optimal_ticks": 8,
+      "task_name": "iterated-parity"
+    }
+  ],
+  "seeds": [
+    42,
+    101,
+    777
+  ],
+  "task_name": "iterated-parity"
+}
