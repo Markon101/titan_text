@@ -1,0 +1,6 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on build directory
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.64s
+     Running `target/debug/examples/arithmetic_corpus_audit reviews/2026-09-17-next-step/corpus.json`
+wrote 960 records to reviews/2026-09-17-next-step/corpus.json

@@ -1,0 +1,235 @@
+{
+  "created_utc": "2026-09-11T08:11:59.777460+00:00",
+  "head": "0b59e11bf4c09ddd78e703e400100895d3e24a8c",
+  "git_status_before": " M README.md\n M src/config.rs\n M src/main.rs\n?? patterns.txt\n?? src/cli.rs\n?? tests/\n",
+  "files_before": {
+    "src/main.rs": "f7117ccc1c448403d50c5310cad9572637cfe6070375efb34c0e3e427b377019",
+    "src/config.rs": "cfb15567e7dc208c9f8c271bea6ac5f8b54836bda001821949c39e4a0c651645",
+    "src/vocab.rs": "f1f0ba60052a861e0d31fc13194ca0fdb0cf9d355bd42ee6014d3f05aa1aa563",
+    "src/field.rs": "d5f71b22ce2d19f8b63c50efb2a27fce0485d87b12427a6a3837114461d3b3fb",
+    "src/cli.rs": "d2610a655c2c57ead2d87961d84a1c9fb579269fbdd251940eddadbc5640327d",
+    "src/nca.rs": "0cf3af6faecf44e03890c8a71db1cd644be8b5c9783710f258eb86fbf45e87f7",
+    "src/experiment.rs": "23e3c549cd33a899ca9cd6c076c61e1e60a9582dd596e76472052857e7bc5c34",
+    "src/checkpoint.rs": "b48ab53d477feb971a30bf4d0e568a74c347a49fce7d3f63265eb5efb1f85b61",
+    "src/train.rs": "e5ebd29fe033e4e51930d4f92893fea8be2f43fd7e56c30c8bacbf0cf7b2faee",
+    "src/dataset.rs": "b6a3a1ec4da43dc14dbdbb72748348d9a6a1b9f648b4195474402ab162528107",
+    "tests/cli.rs": "3d54078a2e817d492e6b23ecfb12689fbdf1798f26e1b7566bd72b9a635b8389",
+    "README.md": "1892b83ae9df63fc92ef927372ab05491a251c07ffbe1cd3ca635727d30df793",
+    "Cargo.lock": "a14e4b2869d361caa11d483f232587fb2edc45cfb7ee779086522a01ee762d23",
+    "Cargo.toml": "ec99d71348b3fe8c0cebbf280d695dd99f9548e213cdcde64a84eb867443a84d",
+    "checkpoints/v0_text/model.safetensors": "546294af5a0263c4cef24b4097b8633f621012d119ced3dcc6047d386325f7fd",
+    "checkpoints/v0_text/manifest.json": "2220501c29152e7047370b086c8bfc7a3aa7fbd305db676539de38cbcc492e3b",
+    "checkpoints/m1_sanity/model.safetensors": "a2224b103d4756f02f874df4949c3eed1e0a89790b8b4de66dd141be4710e0cc",
+    "checkpoints/m1_sanity/manifest.json": "d4c88e3964441ef5c0b69b94e108e31ff0e2f822ddd43f7febd2512c58f40f96",
+    "checkpoints/v0_viscous/model.safetensors": "8a07b4ec03f39ecf99d2b5d1a24228a3a687addf9368ac3d43500c8330727b97",
+    "checkpoints/v0_viscous/manifest.json": "00ddaf6e3a02c7918a340a45b7c187630b24bd242bbe448082e21c0da78c1941",
+    "target/debug/titan_text": "66e8504fbd69c2b1347d563caefd408c97fe41a125d2e6dbb0ad362a4c361850",
+    "target/release/titan_text": "37d3b93c68cb24aa7d4edb557bea9add81e523f3346c72858ce5642abf90c680"
+  },
+  "checkpoint_manifests": {
+    "v0_text": {
+      "schema_version": 1,
+      "git_commit": "e6db2df",
+      "random_seed": 42,
+      "cumulative_step": 50,
+      "dev_steps": 8,
+      "train_loss": 0.0030737626,
+      "train_accuracy": 1.0,
+      "val_loss": 1.4744861,
+      "val_accuracy": 0.73046875,
+      "grad_norm": 0.0141636105,
+      "state_energy": 2.8474207,
+      "param_count": 43715,
+      "checkpoint_hash": "5757d7faa8abf32c",
+      "timestamp_unix": 1789027504,
+      "config": {
+        "field": {
+          "seq_len": 32,
+          "channels": 64,
+          "periodic_boundary": true
+        },
+        "nca": {
+          "hidden_dim": 96,
+          "step_size": 0.5,
+          "update_rate": 1.0,
+          "activation": "gelu",
+          "viscosity": 0.0
+        },
+        "train": {
+          "epochs": 50,
+          "dev_steps": 8,
+          "batch_size": 8,
+          "lr": 0.003,
+          "weight_decay": 0.01,
+          "save_every": 50,
+          "log_every": 10,
+          "seed": 42
+        },
+        "probe": {
+          "horizon": 64,
+          "perturbation_eps": 0.01,
+          "lp_window": 8,
+          "forcing_amplitude": 0.2
+        }
+      }
+    },
+    "m1_sanity": {
+      "schema_version": 1,
+      "git_commit": "b7583ad",
+      "random_seed": 42,
+      "cumulative_step": 50,
+      "dev_steps": 8,
+      "train_loss": 0.0052901544,
+      "train_accuracy": 1.0,
+      "val_loss": 1.3149971,
+      "val_accuracy": 0.7421875,
+      "grad_norm": 0.020558603,
+      "state_energy": 2.8882904,
+      "param_count": 43715,
+      "checkpoint_hash": "8e88ff063c637cf1",
+      "timestamp_unix": 1789006290,
+      "config": {
+        "field": {
+          "seq_len": 32,
+          "channels": 64,
+          "periodic_boundary": true
+        },
+        "nca": {
+          "hidden_dim": 96,
+          "step_size": 0.5,
+          "update_rate": 1.0,
+          "activation": "gelu"
+        },
+        "train": {
+          "epochs": 50,
+          "dev_steps": 8,
+          "batch_size": 8,
+          "lr": 0.003,
+          "weight_decay": 0.01,
+          "save_every": 50,
+          "log_every": 10,
+          "seed": 42
+        },
+        "probe": {
+          "horizon": 64,
+          "perturbation_eps": 0.01,
+          "lp_window": 8
+        }
+      }
+    },
+    "v0_viscous": {
+      "schema_version": 1,
+      "git_commit": "0b59e11",
+      "random_seed": 42,
+      "cumulative_step": 5706,
+      "dev_steps": 8,
+      "train_loss": 0.0,
+      "train_accuracy": 1.0,
+      "val_loss": 1.3089395,
+      "val_accuracy": 0.8203125,
+      "grad_norm": 9.329454e-10,
+      "state_energy": 3.9463296,
+      "param_count": 43715,
+      "checkpoint_hash": "d3bfc03738cd9e6e",
+      "timestamp_unix": 1789031674,
+      "config": {
+        "field": {
+          "seq_len": 32,
+          "channels": 64,
+          "periodic_boundary": true
+        },
+        "nca": {
+          "hidden_dim": 96,
+          "step_size": 0.5,
+          "update_rate": 1.0,
+          "activation": "gelu",
+          "viscosity": 0.01
+        },
+        "train": {
+          "epochs": 5000,
+          "dev_steps": 8,
+          "batch_size": 8,
+          "lr": 0.003,
+          "weight_decay": 0.01,
+          "save_every": 50,
+          "log_every": 10,
+          "seed": 42
+        },
+        "probe": {
+          "horizon": 8,
+          "perturbation_eps": 0.01,
+          "lp_window": 8,
+          "forcing_amplitude": 0.2
+        }
+      },
+      "task": "text"
+    }
+  },
+  "verified_utc": "2026-09-11T14:58:57.126426+00:00",
+  "files_after": {
+    "src/main.rs": "f7117ccc1c448403d50c5310cad9572637cfe6070375efb34c0e3e427b377019",
+    "src/config.rs": "cfb15567e7dc208c9f8c271bea6ac5f8b54836bda001821949c39e4a0c651645",
+    "src/vocab.rs": "f1f0ba60052a861e0d31fc13194ca0fdb0cf9d355bd42ee6014d3f05aa1aa563",
+    "src/field.rs": "d5f71b22ce2d19f8b63c50efb2a27fce0485d87b12427a6a3837114461d3b3fb",
+    "src/cli.rs": "d2610a655c2c57ead2d87961d84a1c9fb579269fbdd251940eddadbc5640327d",
+    "src/nca.rs": "0cf3af6faecf44e03890c8a71db1cd644be8b5c9783710f258eb86fbf45e87f7",
+    "src/experiment.rs": "23e3c549cd33a899ca9cd6c076c61e1e60a9582dd596e76472052857e7bc5c34",
+    "src/checkpoint.rs": "b48ab53d477feb971a30bf4d0e568a74c347a49fce7d3f63265eb5efb1f85b61",
+    "src/train.rs": "e5ebd29fe033e4e51930d4f92893fea8be2f43fd7e56c30c8bacbf0cf7b2faee",
+    "src/dataset.rs": "b6a3a1ec4da43dc14dbdbb72748348d9a6a1b9f648b4195474402ab162528107",
+    "tests/cli.rs": "3d54078a2e817d492e6b23ecfb12689fbdf1798f26e1b7566bd72b9a635b8389",
+    "README.md": "1892b83ae9df63fc92ef927372ab05491a251c07ffbe1cd3ca635727d30df793",
+    "Cargo.lock": "a14e4b2869d361caa11d483f232587fb2edc45cfb7ee779086522a01ee762d23",
+    "Cargo.toml": "ec99d71348b3fe8c0cebbf280d695dd99f9548e213cdcde64a84eb867443a84d",
+    "checkpoints/v0_text/model.safetensors": "546294af5a0263c4cef24b4097b8633f621012d119ced3dcc6047d386325f7fd",
+    "checkpoints/v0_text/manifest.json": "2220501c29152e7047370b086c8bfc7a3aa7fbd305db676539de38cbcc492e3b",
+    "checkpoints/m1_sanity/model.safetensors": "a2224b103d4756f02f874df4949c3eed1e0a89790b8b4de66dd141be4710e0cc",
+    "checkpoints/m1_sanity/manifest.json": "d4c88e3964441ef5c0b69b94e108e31ff0e2f822ddd43f7febd2512c58f40f96",
+    "checkpoints/v0_viscous/model.safetensors": "8a07b4ec03f39ecf99d2b5d1a24228a3a687addf9368ac3d43500c8330727b97",
+    "checkpoints/v0_viscous/manifest.json": "00ddaf6e3a02c7918a340a45b7c187630b24bd242bbe448082e21c0da78c1941",
+    "target/debug/titan_text": "66e8504fbd69c2b1347d563caefd408c97fe41a125d2e6dbb0ad362a4c361850",
+    "target/release/titan_text": "37d3b93c68cb24aa7d4edb557bea9add81e523f3346c72858ce5642abf90c680"
+  },
+  "original_files_unchanged": true,
+  "validation": {
+    "existing_test_command": "cargo test --locked --offline",
+    "unit_tests_passed": 12,
+    "integration_tests_passed": 3,
+    "dataset_audit_exact_reproduction": true,
+    "audit_python_syntax_valid": true,
+    "json_reports_parse": true,
+    "report_local_links_exist": true
+  },
+  "frozen_commands": [
+    "./target/debug/titan_text probe --load-dir checkpoints/v0_viscous --horizon 256 --output reviews/2026-09-11/v0_viscous-probe-256.json",
+    "./target/debug/titan_text probe --load-dir checkpoints/v0_text --horizon 64 --output reviews/2026-09-11/v0_text-probe-64.json",
+    "./target/debug/titan_text ns-probe --load-dir checkpoints/v0_viscous --viscosity 0.01 --horizon 64 --forcing-amp 0.2 --output reviews/2026-09-11/v0_viscous-fluid-64.json",
+    "./target/debug/titan_text probe --load-dir checkpoints/v0_viscous --horizon 8 --eps 0.001 --output reviews/2026-09-11/v0_viscous-eps-0.001.json",
+    "./target/debug/titan_text probe --load-dir checkpoints/v0_viscous --horizon 8 --eps 0.003 --output reviews/2026-09-11/v0_viscous-eps-0.003.json",
+    "./target/debug/titan_text probe --load-dir checkpoints/v0_viscous --horizon 8 --eps 0.03 --output reviews/2026-09-11/v0_viscous-eps-0.03.json",
+    "./target/debug/titan_text probe --load-dir checkpoints/v0_viscous --horizon 8 --eps 0.1 --output reviews/2026-09-11/v0_viscous-eps-0.1.json"
+  ],
+  "audit_note": "The Rust audit imports current repository modules, evaluates frozen weights, and perturbs/restores in-memory parameters for directional finite differences. It never saves weights. The copied runner rebuilds against existing debug dependencies; run a copy in a new scratch directory to preserve this historical evidence.",
+  "artifact_sha256": {
+    "audit.rs": "93d8a794fabed24f27df363b4420aa9d722acc51ca295092a1fbae23d0115ebb",
+    "dataset_audit.json": "8fae6e92c7196c32236d1e69afeefd13d543b50a016c09ac8287b247218894c0",
+    "dataset_audit.py": "99f88cd8b8e54bd77905b96caf0fd399545ce88ab5e8fb2658ea7375ae030437",
+    "results.jsonl": "4b14fa30a8f4f5b56b6e991eb1216f6eb744adbdd14201feba98dcda2a69fb77",
+    "review.md": "ffd26c9ec52e39f09559757709ed84a9fc144b05ae9aa26f9d8820f50cb0f6df",
+    "run_audit.py": "a048e5c492401c8b8533459b1a64a705cd79f0142f73b30f5eb845478538cd96",
+    "v0_text-probe-64.json": "8558015c480b3c16e9e8af46e0917486f704a5a303263966341fc2db3d902952",
+    "v0_text-probe-64.log": "904325e15fbde81e37e07507e26d63d3b449e38328f03bc78522517614581925",
+    "v0_viscous-eps-0.001.json": "b302d7def8ffa0de6acf7a62c898fd1dab909b596699588e2443851906694a4d",
+    "v0_viscous-eps-0.001.log": "68fbed216a6b6e30682c8df31e8450308fdacaaab5569ead10e3ce177f9f6ce3",
+    "v0_viscous-eps-0.003.json": "59a8374cd3eeb963de1d551af90d2b2a0a44aa2cfd077103210ccfecc11603d2",
+    "v0_viscous-eps-0.003.log": "ed67450bfada104015ed60a1ace5c2dae27e71a6e630f7ca95cad053df31ace6",
+    "v0_viscous-eps-0.03.json": "b5bb5b156c61a6e58e4ba677b95455ae6740caebd06505b8954b51cf1da81ed8",
+    "v0_viscous-eps-0.03.log": "3be79c8f2abee6bca224995d1c12d9d636901b445767beaca8fa519a3e08e123",
+    "v0_viscous-eps-0.1.json": "572117821d9b06ba1ef635072d1627e10f16e9b6c1b4c24ee938f4e9a76131fb",
+    "v0_viscous-eps-0.1.log": "6bb5378c7e6cabb31cb3061d75f93d26c4f25ee584fb6b1b891a5f0da786df6b",
+    "v0_viscous-fluid-64.json": "dddc39659f84d771ea26b8ce9798ab2bf72aa9964502056028f1dd8473bc6b88",
+    "v0_viscous-fluid-64.log": "7ed32d9aa2ac850e192ed9374cf4871f05fab9ef35d44f13eb955ec8cd53d647",
+    "v0_viscous-probe-256.json": "d09df6a2d24f6441a3ad1094ee3f1b35b857594cdd098a373933175177683cf4",
+    "v0_viscous-probe-256.log": "54e0714483a520966612507af475f5a3ed37caf15cc444df661a7b5f750d0d9d"
+  }
+}

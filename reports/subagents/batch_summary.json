@@ -1,0 +1,136 @@
+[
+  {
+    "status": "ok",
+    "model": "deepseek/deepseek-v4.1-flash",
+    "role": "task-auditor",
+    "purpose": "Audit the algorithmic task generators for remaining leakage, trivial shortcuts, split contamination, or invalid claims. Give up to five concrete findings with severity and cheapest discriminating control. The model is a zero-boundary symmetric radius-one NCA with no diffusion; all input tokens are visible at tick zero and scored only where mask=1. Distinguish intended retrieval from answer leakage. Legacy Text/Dyck are excluded from clean experiments.",
+    "answer": "# Audit Findings: Algorithmic Task Generators\n\n## Finding 1 \u2014 `HiddenRule` is a pure per-token shift, not a rule-induction task (Severity: HIGH)\n\n**Location:** `generate_row`, `TaskKind::HiddenRule` branch (lines ~262\u2013272).\n\n```rust\nlet add = rng.gen_bool(0.5);\ninput[0] = if add { '+' } else { '-' };\nfor i in 1..l {\n    let digit: u8 = rng.gen_range(0..10);\n    input[i] = (b'0' + digit) as char;\n    target[i] = (b'0' + (digit + if add { 1 } else { 9 }) % 10) as char;\n    mask[i] = 1.;\n}\n```\n\n**Proof of shortcut.** The target at position `i` is a deterministic function of `input[i]` alone, plus a single global bit carried in `input[0]`. For a radius-one NCA with all tokens visible at tick 0, the local neighborhood of any scored cell `i \u2265 1` is `{input[i-1], input[i], input[i+1]}`. The `+`/`-` selector at position 0 is **not** in the neighborhood of any `i \u2265 2`, yet the correct output there still depends on it. So the task is *not* solvable by a radius-one rule at all \u2014 it is either (a) trivially solvable for `i = 1` (neighborhood contains `input[0]`) and unsolvable for `i \u2265 2`, or (b) if the model has any global mixing, it degenerates to \"read the sign once, then apply a fixed per-token map.\" Either way it is not induction: the \"rule\" is *given* in the prompt, and the mapping is a constant offset. The comment even admits this (\"this is conditional digit transformation, not induction of an unobserved rule\"), but the task is still listed under algorithmic tasks and scored as if it were a reasoning benchmark.\n\n**Cheapest discriminating control.** Replace the sign token with a *per-row random offset* `k \u2208 {1,\u2026,9}` written as a digit at `input[0]`, and require `target[i] = (digit + k) mod 10`. A radius-one NCA must fail for `i \u2265 2`; a model that succeeds must be doing global broadcast. Alternatively, shuffle the sign token to a random interior position and confirm accuracy collapses \u2014 that isolates \"local shift\" from \"global rule read.\"\n\n---\n\n## Finding 2 \u2014 `BracketDepth` target is a function of a *single* boundary token, not of depth (Severity: HIGH)\n\n**Location:** `TaskKind::BracketDepth` branch (lines ~228\u2013244).\n\n```rust\nlet mut depth = 0u8;\nfor c in &mut input[..l - 2] {\n    let up = depth == 0 || (depth < 5 && rng.gen_bool(0.5));\n    ...\n}\ninput[l - 2] = '=';\ntarget[l - 2] = (b'0' + depth) as char;\nmask[l - 2] = 1.;\n```\n\n**Proof of shortcut.** Only position `l-2` is scored. The neighborhood of `l-2` under radius-one is `{input[l-3], '=', input[l-1]}`. The final depth is *not* recoverable from `input[l-3]` alone \u2014 it depends on the entire prefix. So the task as written is **unsolvable by the stated model class**, and any nonzero accuracy is either (a) memorization of the training distribution (the generator's `up` bias makes the depth distribution highly concentrated near 0 and 5), or (b) leakage through the `'='` sentinel if the model learns a position-specific bias. The comment \"depth parity is necessarily fixed; report its prior as control\" acknowledges the degeneracy but the task is still scored.\n\n**Cheapest discriminating control.** Compute the empirical distribution of `depth` at `l-2` over 10\u2074 samples. If it is concentrated on \u2264 3 values, the task is a constant-output heuristic. Then replace the single scored cell with a *running depth* target at every position (mask all of `[0, l-2]`), which forces the model to actually integrate. A radius-one NCA will still fail, but the failure will be diagnostic rather than hidden behind a degenerate prior.\n\n---\n\n## Finding 3 \u2014 `Associative` query is at a fixed position with a fixed separator, enabling positional lookup (Severity: MEDIUM)\n\n**Location:** `TaskKind::Associative` branch (lines ~274\u2013292).\n\n```rust\ninput[4 * i..4 * i + 4].copy_from_slice(&[keys[i], '=', value, ';']);\n...\ninput[l - 2] = keys[selected];\ninput[l - 1] = '?';\ntarget[l - 1] = values[selected];\nmask[l - 1] = 1.;\n```\n\n**Proof of shortcut.** The query key is always at `l-2`, the `?` always at `l-1`, and the answer is always at `l-1`. The scored cell's neighborhood is `{input[l-3], input[l-2], input[l-1]}`. If `l-3` happens to be `;` (which it is whenever `n` divides evenly), the model sees `{';', key, '?'}` \u2014 a *fixed syntactic frame*. A radius-one rule can learn \"if left neighbor is `;` and middle is a key, emit the value that appeared after that key.\" That is genuine retrieval, but the *positional* regularity (query always last, separator always `;`) means the model never has to search \u2014 it only has to match a key against a dictionary that is always in the same relative position. This is a weaker form of retrieval than the task name implies.\n\n**Cheapest discriminating control.** Randomize the query position uniformly in `[0, l-2]` and pad the rest with distractors. If accuracy drops sharply, the model was exploiting positional regularity, not associative lookup. Also randomize the separator character per row.\n\n---\n\n## Finding 4 \u2014 `AmbiguousBasin` is a two-way conditional lookup with a *linear* answer map (Severity: MEDIUM)\n\n**Location:** `TaskKind::AmbiguousBasin` branch (lines ~294\u2013306).\n\n```rust\nlet alpha = rng.gen_bool(0.5);\ninput[0] = if alpha { 'A' } else { 'B' };\nlet cue: u8 = rng.gen_range(0..8);\ninput[l - 2] = (b'0' + cue) as char;\ninput[l - 1] = '?';\ntarget[l - 1] = (b'0' + (cue + if alpha { 1 } else { 2 }) % 10) as char;\n```\n\n**Proof of shortcut.** The answer is `(cue + 1) mod 10` if `alpha`, else `(cue + 2) mod 10`. The `alpha` bit is at position 0, the cue at `l-2`, the answer at `l-1`. For `l \u2265 4`, position 0 is *not* in the radius-one neighborhood of `l-1`. So again the task is unsolvable by the stated model class unless the model has global mixing. If it does, the task reduces to \"read one bit, add a constant\" \u2014 a two-parameter lookup, not a basin computation. The comment \"no basin claim\" is honest, but the task is still scored as if it tested context-conditioned computation.\n\n**Cheapest discriminating control.** Move the `alpha` bit to `l-3` (adjacent to the cue) and confirm accuracy is unchanged \u2014 that proves the model is not using the distant context. Then move it back to position 0 and confirm accuracy *drops* \u2014 that proves the task requires global mixing and is mislabeled as local.\n\n---\n\n## Finding 5 \u2014 Split assignment via `observation_hash % 5` is a *content* hash, not a *distribution* split (Severity: MEDIUM)\n\n**Location:** `generate_batch_seeded`, lines ~110\u2013130.\n\n```rust\nfor _ in 0..10_000 {\n    let row = Self::generate_row(kind, seq_len, &mut rng);\n    if (observation_hash(&row.0) % 5 == 0) == is_val {\n        selected = Some(row);\n        break;\n    }\n}\n```\n\n**Proof of contamination risk.** The split is determined by the *input string* only. For tasks where the input is highly structured (e.g., `HiddenRule` where `input[0] \u2208 {'+','-'}` and the rest is random digits), the hash is effectively a random function of the digit sequence, so train/val are disjoint in input space. But for `BracketDepth`, the input is a *Dyck-like* string whose hash is correlated with its depth profile. Two inputs with the same depth profile but different bracket orderings can hash to the same bucket, and more importantly, the *target* (final depth) is a function of the input's depth profile. So a model that learns \"hash bucket \u2192 depth\" can generalize across the split without learning the task. This is a **target-leakage-through-split** channel: the split is not independent of the label.\n\n**Cheapest discriminating control.** Compute the mutual information between `observation_hash(input) % 5` and `target` for each task over 10\u2075 samples. If MI > 0 for any task, the split is label-correlated. The fix is to hash `(input, target)` jointly, or to split by a per-row random seed stored alongside the row.\n\n---\n\n## Summary Table\n\n| # | Task | Severity | Shortcut | Cheapest control |\n|---|------|----------|----------|------------------|\n| 1 | HiddenRule | HIGH | Per-token shift; sign not in radius-one neighborhood | Random per-row offset; shuffle sign position |\n| 2 |",
+    "parsed_json": null,
+    "reasoning": null,
+    "finish_reason": "length",
+    "usage": {
+      "prompt_tokens": 2940,
+      "completion_tokens": 2200,
+      "total_tokens": 5140,
+      "cost": 0.0034046,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0034046,
+        "upstream_inference_prompt_cost": 0.0008526,
+        "upstream_inference_completions_cost": 0.002552
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "files": [
+      {
+        "file": "src/tasks.rs",
+        "span": "69-360",
+        "sha256": "2e745a52237949cc20693c3d2793c44892ad3bfab98c430c897030e9b644ae09"
+      }
+    ],
+    "elapsed_seconds": 16.386928,
+    "created_at_utc": "2026-09-15T04:10:22.912602+00:00",
+    "name": "task-attack"
+  },
+  {
+    "status": "ok",
+    "model": "deepseek/deepseek-v4.1-flash",
+    "role": "code-reviewer",
+    "purpose": "Review this existing horizon training implementation. Identify silent no-ops, RNG confounds, loss-weighting problems and what must be corrected before claiming horizon robustness. Return concrete findings and minimal tests; no architecture additions.",
+    "answer": "# Review: `src/train.rs` horizon training\n\n## 1. `avg_update_mag` is wrong for every non-default mode (silent no-op / mislabeled diagnostic)\n\n```rust\nlet avg_update_mag = total_update_mag / t_target.max(1) as f32;\n```\n\n`total_update_mag` accumulates over the **actual number of NCA steps executed**, but the divisor is `t_target`, which is only the single-horizon target. Consequences:\n\n- **`multi_tick`**: `t_target = horizon_max`, but the loop runs `1..=h_max` \u2192 `h_max` steps. Divisor happens to match, but `t_target` is set to `horizon_max` while `is_multi` ignores it. Fragile coincidence, not correctness.\n- **`stability_tail`**: `t_target = base_t`, but the loop runs `base_t + tail_k` steps. `avg_update_mag` is inflated by `(base_t + tail_k)/base_t`. The diagnostic silently lies about per-step update magnitude.\n- **`jitter`/`randomized`**: `t_target` is the sampled horizon, and the loop runs `t_target` steps \u2014 this case is correct.\n\nThis is a **silent no-op in the diagnostic**: `update_magnitude` is reported as a per-step quantity but is not. Fix: track `steps_executed` explicitly and divide by that.\n\n```rust\nlet mut steps_executed = 0usize;\n// increment inside every nca.step call site\nlet avg_update_mag = total_update_mag / steps_executed.max(1) as f32;\n```\n\n## 2. `randomized` horizon is deterministic and confounded with `step_count`\n\n```rust\nlet t = self.config.train.horizon_min + (self.step_count % (span + 1));\n```\n\nThis is a **cyclic schedule**, not randomization. Two problems:\n\n- **No RNG**: the name `randomized` is misleading; the horizon is a deterministic function of `step_count`. If the intent is stochastic horizon sampling, this is a silent no-op.\n- **Confound with `jitter`**: `jitter` also uses `self.step_count % (2*j+1)`. Both modes are pure functions of `step_count`, so any comparison between them is comparing two deterministic schedules, not \"randomized vs jittered\". Any claim of \"horizon robustness\" from these two modes is unsupported.\n\nAlso note `span = horizon_max - horizon_min` then `% (span + 1)` \u2014 the `+1` is correct for inclusive range, but if `horizon_max == horizon_min`, `span = 0`, `span+1 = 1`, `t = horizon_min`. Fine, but the `.max(1)` on `span` is dead code because `span+1` is used, not `span`. Minor.\n\nIf true randomization is intended, use a seeded RNG stored on `Trainer` (see \u00a75).\n\n## 3. `stability_tail` loss weighting is arbitrary and undocumented\n\n```rust\nlet scaled_k = (loss_k * 0.5)?;\ntail_loss = (&tail_loss + &scaled_k)?;\n```\n\n- The base loss at `base_t` gets weight 1.0; each of the `tail_k` losses gets weight 0.5. There is no normalization by `tail_k`, so the effective loss scale grows with `tail_k`. With `tail_k = 8`, the tail contributes `4\u00d7` the base loss. This is a **loss-weighting problem**: the gradient is dominated by the tail, and the \"stability\" objective is not comparable across `tail_k` values.\n- The 0.5 is a magic constant with no config knob. Either expose it or normalize: `tail_loss = (base + sum(tail_k)) / (1 + tail_k)`.\n\n## 4. `multi_tick` loss averaging is correct but `final_logits`/`train_acc` are misleading\n\n```rust\nce_loss_acc = Some((total_loss / (loss_count.max(1.0) as f64))?);\n```\n\nThe loss is averaged over `h_min..=h_max`, which is correct. But:\n\n- `final_logits = Some(logits_t)` is overwritten each iteration, so `train_acc` is computed **only at `h_max`**, not averaged. The reported `train_acc` does not correspond to the reported `train_loss`. This is a **diagnostic inconsistency**, not a training bug, but it will mislead anyone reading the metrics.\n- `loss_count` is `f32` and cast to `f64` for division; `total_loss` is a `Tensor`. The `?` on `(total_loss / ...)` suggests a fallible op. Fine, but `loss_count.max(1.0)` is dead \u2014 the loop guarantees `loss_count >= 1` when `h_max >= h_min`. If `h_min > h_max`, the loop body never enters `t >= h_min`, `ce_loss_acc` stays `None`, and `ce_loss_acc.unwrap()` panics. **Boundary condition**: `horizon_min > horizon_max` is not validated.\n\n## 5. No RNG anywhere; `rand::random` only in test\n\nThe test uses `rand::random::<u32>()` for a temp path, but the trainer itself has no RNG. Combined with \u00a72, \"randomized\" and \"jitter\" are deterministic. If the goal is horizon robustness via stochastic sampling, this is a **silent no-op**: the code claims randomization but delivers a cyclic schedule. Add a seeded `StdRng` to `Trainer` and use it for horizon sampling; seed it from `config` so runs are reproducible.\n\n## 6. `evaluate_val` uses `dev_steps`, not the training horizon\n\n```rust\nfor _ in 0..self.config.train.dev_steps {\n    field = self.nca.step_field(&field, &self.device)?;\n}\n```\n\nValidation always evaluates at `dev_steps`, regardless of `horizon_mode`. So a model trained with `multi_tick` (supervised at `h_min..=h_max`) is validated only at `dev_steps`. If `dev_steps` is outside `[h_min, h_max]`, the validation loss is not measuring the trained objective. This is a **train/eval mismatch** that will make horizon-robustness claims unverifiable. Either evaluate at multiple horizons or at the mode's target.\n\n## 7. `step_count` is incremented before backward, and not persisted\n\n```rust\nself.step_count += 1;\nlet grads = ce_loss.backward()?;\n```\n\n- Incrementing before backward is harmless for the horizon schedule (which reads `step_count` at the top of the next call), but it means the first step uses `step_count = 0` and the schedule is offset by one relative to a resumed run. On resume, `step_count` is **not restored** from the checkpoint (`Trainer::new` sets it to 0). The test asserts val loss matches after resume, but the horizon schedule will diverge on the next `train_step` because `step_count` restarts at 0. **This is a resume bug**: `randomized`/`jitter` horizons will not match a continuous run. The test only checks `!is_nan()`, so it does not catch this.\n\n## 8. `grad_norm` computed over `varmap.all_vars()` but `grads.get` may miss vars\n\n```rust\nfor var in self.varmap.all_vars() {\n    if let Some(g) = grads.get(&var) { ... }\n}\n```\n\nIf a variable receives no gradient (e.g., unused path), it is silently skipped. That is standard, but combined with `sum_sq_grad` starting at 0.0, a fully detached graph would report `grad_norm = 0.0` rather than erroring. Not a bug per se, but worth an assertion that at least one gradient was found.\n\n## 9. `is_tail` ignores `t_target`\n\nIn `stability_tail`, `t_target = base_t` is set but the loop uses `base_t` directly. `t_target` is then used in `avg_update_mag",
+    "parsed_json": null,
+    "reasoning": null,
+    "finish_reason": "length",
+    "usage": {
+      "prompt_tokens": 3472,
+      "completion_tokens": 1800,
+      "total_tokens": 5272,
+      "cost": 0.0032016,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0032016,
+        "upstream_inference_prompt_cost": 0.0010416,
+        "upstream_inference_completions_cost": 0.00216
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "files": [
+      {
+        "file": "src/train.rs",
+        "span": "1-326",
+        "sha256": "b418d3aab3ef667e65dca88d53353b734b08393c658dd06908cf073c920dce42"
+      }
+    ],
+    "elapsed_seconds": 12.857174,
+    "created_at_utc": "2026-09-15T04:10:39.304961+00:00",
+    "name": "horizon-attack"
+  },
+  {
+    "status": "ok",
+    "model": "deepseek/deepseek-v4.1-flash",
+    "role": "architectural-minimalist",
+    "purpose": "Independently critique the Titan NCA hypothesis that horizon-specific accuracy peaks demonstrate paced computation. No clean results exist yet. Propose three competing mundane mechanisms and one cheap discriminating experiment each. Specify a minimal conventional competitor and fair parameter/update/runtime comparisons. Treat bound increments as distinct from bounded state.",
+    "answer": "# Critique: \"Horizon-Specific Accuracy Peaks = Paced Computation\"\n\n## The claim, steelmanned\n\nThe Titan NCA hypothesis appears to be: if accuracy on a task peaks at some horizon $H^*$ and declines for $H < H^*$ and $H > H^*$, then the system has *paced* its computation \u2014 i.e., it has learned to allocate a specific number of internal update steps to a specific amount of \"work,\" and the peak marks the alignment between internal pacing and task horizon.\n\nThis is a strong claim. A peak in accuracy-vs-horizon is a *shape*, and shapes are cheap. Before attributing pacing, we need to rule out mundane mechanisms that produce the same shape without any notion of internal pacing.\n\n## Why the claim is underdetermined\n\nThree structural problems:\n\n1. **A peak is not a signature of pacing.** Any system with a finite effective memory, a finite effective receptive field, or a finite training distribution will produce a peak somewhere. The peak location is a *derived* quantity, not a *mechanism*.\n2. **\"Bound increments\" \u2260 \"bounded state.\"** The NCA's `step_with_forcing` applies a bounded update (`tanh` delta, sigmoid gate, `alpha` scaling) to an *unbounded* state `x`. The state norm can grow without limit across steps even though each increment is bounded. So \"the update is bounded\" tells us nothing about whether the *computation* is paced \u2014 the state can drift, saturate, or explode independently of the increment bound. Any argument that \"bounded increments imply paced computation\" is a category error.\n3. **No clean results exist.** The hypothesis is currently unfalsifiable in practice. The critique below is therefore about *what would need to be true* for the hypothesis to be distinguishable from the alternatives.\n\n## Three competing mundane mechanisms\n\n### M1: Finite effective receptive field (no pacing, just locality)\n\nThe NCA's perception stencil is `[identity, gradient, laplacian]` over a 1D grid with `roll_spatial` or zero boundaries. After $k$ steps, information has propagated at most $k$ cells (one cell per step for the Laplacian stencil). If the task requires integrating information over a distance $D$, accuracy will rise until $k \\approx D$ and then plateau or decline due to noise accumulation. The peak is a *receptive-field* effect, not a pacing effect.\n\n**Discriminating experiment:** Measure the *spatial* extent of the task's dependency (e.g., by ablating input tokens at varying distances from the query). If the peak horizon $H^*$ scales linearly with the task's dependency distance $D$ across several task variants, M1 is confirmed. Pacing would predict $H^*$ is set by an internal clock and is *invariant* to $D$ (or scales with task *difficulty*, not *distance*).\n\n### M2: Training-distribution horizon bias\n\nIf training sequences are sampled with a horizon distribution $p(H)$, the model will be best at horizons near the mode of $p(H)$. A peak at $H^*$ may simply reflect that $H^*$ was the most common training horizon. This is the most boring possible explanation and must be ruled out first.\n\n**Discriminating experiment:** Train two models with identical architecture but different horizon distributions \u2014 one uniform over $[1, H_{\\max}]$, one concentrated at $H^*$. If the peak moves with the training distribution, M2 is confirmed. Pacing would predict the peak is a property of the *architecture* and is stable across training distributions (or at least moves only with architectural changes like depth or step size).\n\n### M3: Optimization/curvature artifact (loss landscape, not computation)\n\nThe NCA's update is `x + alpha * (delta * gate + f)`, then optional viscous dissipation. The `tanh` delta and sigmoid gate create a *nonlinear* dynamical system. Such systems generically have fixed points, limit cycles, and bifurcations. A peak in accuracy-vs-horizon can arise from the state trajectory passing near a \"good\" region of state space at a particular step count and then leaving it \u2014 a *dynamical* artifact, not a *computational* one. The `apply_viscous_dissipation` substepping (with `max_substep = 0.25`) is a stability fix for the *diffusion* term, but it does nothing to guarantee that the *learned* dynamics are well-behaved.\n\n**Discriminating experiment:** Freeze the trained weights and probe the state trajectory directly. At each step $k$, decode the state with a linear probe trained to predict the task answer. If the probe's accuracy peaks at $H^*$ and then declines, the peak is in the *representation*, not in the *readout* \u2014 consistent with M3. If the probe's accuracy is monotonic but the *readout* peaks, the peak is a readout artifact. Pacing would predict the probe accuracy peaks at $H^*$ *and* that the state at $H^*$ is a stable fixed point of the dynamics (perturbations return).\n\n## Minimal conventional competitor\n\nThe file already contains the right competitor in `baselines.rs`: `UntiedFeedforwardBaseline` with the comment:\n\n> \"Minimal spatial competitor: x <- x + 0.1*tanh(W2*tanh(W1*[left,x,right])). Zero boundary, no adaptive gates, diffusion, extra pathways or trainable positions.\"\n\nThis is the correct Occam's-razor competitor. It has:\n- The same local receptive field (`[left, x, right]`).\n- The same residual update structure (`x + delta`).\n- No gates, no diffusion, no viscosity, no `with_viscosity`, no `parameter_breakdown` entries for \"viscous_dissipation_damping\" (which is listed with 0 parameters \u2014 a tell that it's pseudo-physics baggage).\n- No `apply_viscous_dissipation` with its von Neumann stability commentary.\n\n**Fair comparison protocol:**\n\n| Dimension | Titan NCA | Minimal competitor |\n|---|---|---|\n| Parameters | `dense1 + dense_delta + dense_gate` | `l1 + l2` per layer |\n| Update rule | `x + alpha*(tanh(W_d h) * sigmoid(W_g h) + f)`, then diffusion | `x + 0.1*tanh(W2*tanh(W1*[left,x,right]))` |\n| Steps per token | 1 (per `step_with_forcing`) | 1 (per `forward`) |\n| Runtime | Measure wall-clock per step, multiply by steps | Measure wall-clock per forward |\n| Diffusion | `viscosity * step_size`, substepped | None |\n\n**Parameter matching:** Match `dense1 + dense_delta + dense_gate` parameter count to `l1 + l2` by adjusting `mlp_hidden` and `depth`. The NCA has 3 linear layers; the competitor has 2 per layer. A single-layer competitor with `mlp_hidden = hidden_dim` and `channels = field_cfg.channels` is the closest match.\n\n**Update matching:** The NCA's `step_size` (`alpha`) is a free scalar. The competitor's `0.1` is a fixed scalar. To be fair, either fix `alpha = 0.1` in the NCA or make the competitor's scale trainable. The current asymmetry (trainable `alpha` vs. fixed `0.1`) is a confound.\n\n**Runtime matching:** The NCA's `perceive` does 2 `roll_spatial` calls (each a `narrow` + `cat`), plus gradient and Laplacian computation, plus 3 linear layers, plus optional mask generation with `rand::random` per batch-element, plus optional diffusion substepping. The competitor does 1 `cat` of `[left, x, right]`, 2 linear layers, 1 `tanh`. The NCA is doing substantially more work per step. Any accuracy advantage must be normalized by wall-clock time, not step count.\n\n## What would actually support the pacing hypothesis\n\nFor \"horizon-specific accuracy peaks demonstrate paced computation\" to be credible, all of the following must hold:\n\n1. **Peak is invariant to training horizon distribution** (rules out M2).\n2. **",
+    "parsed_json": null,
+    "reasoning": null,
+    "finish_reason": "length",
+    "usage": {
+      "prompt_tokens": 3534,
+      "completion_tokens": 1800,
+      "total_tokens": 5334,
+      "cost": 0.00370323,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.00370323,
+        "upstream_inference_prompt_cost": 0.00121923,
+        "upstream_inference_completions_cost": 0.002484
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "files": [
+      {
+        "file": "src/nca.rs",
+        "span": "1-225",
+        "sha256": "edbdbf405fa861d6705ede9733c0b16a50604c48fdda9298e0b705fbf694282a"
+      },
+      {
+        "file": "src/baselines.rs",
+        "span": "460-523",
+        "sha256": "7ee9100967d50635afe8173c2480759860338cb6ed2dc7921c59a423c9af7779"
+      }
+    ],
+    "elapsed_seconds": 10.823961,
+    "created_at_utc": "2026-09-15T04:10:52.170050+00:00",
+    "name": "minimalist-attack"
+  }
+]

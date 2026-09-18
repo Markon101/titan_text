@@ -1,0 +1,30 @@
+[
+  {
+    "name": "task-attack",
+    "task": "Audit the algorithmic task generators for remaining leakage, trivial shortcuts, split contamination, or invalid claims. Give up to five concrete findings with severity and cheapest discriminating control. The model is a zero-boundary symmetric radius-one NCA with no diffusion; all input tokens are visible at tick zero and scored only where mask=1. Distinguish intended retrieval from answer leakage. Legacy Text/Dyck are excluded from clean experiments.",
+    "role": "task-auditor",
+    "files": [
+      "src/tasks.rs:69-360"
+    ],
+    "max_tokens": 2200
+  },
+  {
+    "name": "horizon-attack",
+    "task": "Review this existing horizon training implementation. Identify silent no-ops, RNG confounds, loss-weighting problems and what must be corrected before claiming horizon robustness. Return concrete findings and minimal tests; no architecture additions.",
+    "role": "code-reviewer",
+    "files": [
+      "src/train.rs"
+    ],
+    "max_tokens": 1800
+  },
+  {
+    "name": "minimalist-attack",
+    "task": "Independently critique the Titan NCA hypothesis that horizon-specific accuracy peaks demonstrate paced computation. No clean results exist yet. Propose three competing mundane mechanisms and one cheap discriminating experiment each. Specify a minimal conventional competitor and fair parameter/update/runtime comparisons. Treat bound increments as distinct from bounded state.",
+    "role": "architectural-minimalist",
+    "files": [
+      "src/nca.rs:1-225",
+      "src/baselines.rs:460-523"
+    ],
+    "max_tokens": 1800
+  }
+]

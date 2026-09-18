@@ -7,3 +7,11 @@
 .DS_Store
 *.swp
 *~
+
+# Local OpenRouter credentials (never commit).
+.env.openrouter
+.env.openrouter.*
+__pycache__/
+/scratch/
+patterns.txt
+titantext*.txt

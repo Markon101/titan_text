@@ -1,0 +1,142 @@
+{
+  "perturbation": {
+    "epsilon": 0.1,
+    "lp_window_cells": 8,
+    "wavelengths": [
+      {
+        "frequency_label": "High-Frequency (Nyquist alternating)",
+        "wavenumber": 16,
+        "wavelength_cells": 2,
+        "q_norm": 0.18885307,
+        "ordinary_update_norm": 0.3800861,
+        "relative_response_ratio": 0.49686787
+      },
+      {
+        "frequency_label": "Mid-Frequency (Mesoscale wave)",
+        "wavenumber": 8,
+        "wavelength_cells": 4,
+        "q_norm": 0.047819946,
+        "ordinary_update_norm": 0.3800861,
+        "relative_response_ratio": 0.12581313
+      },
+      {
+        "frequency_label": "Low-Frequency (Macro wave)",
+        "wavenumber": 4,
+        "wavelength_cells": 8,
+        "q_norm": 0.01604026,
+        "ordinary_update_norm": 0.3800861,
+        "relative_response_ratio": 0.042201538
+      }
+    ],
+    "verdict": "WEAK_NONLINEAR_COUPLING (Measurable coarse-scale coupling observed)"
+  },
+  "trajectory": {
+    "horizon": 8,
+    "classification": "OPEN_PHASE_DRIFT (Bounded wandering trajectory)",
+    "min_recurrence_distance": 3.4028235e+38,
+    "detected_cycle_period": null,
+    "mean_step_velocity": 0.37699547,
+    "final_energy": 13.066638,
+    "final_entropy": 0.0,
+    "traces": [
+      {
+        "step": 0,
+        "state_norm": 2.8117738,
+        "update_magnitude": 0.3800861,
+        "energy": 3.9530358,
+        "pct_low": 30.59482,
+        "pct_mid": 29.528864,
+        "pct_high": 39.876316,
+        "output_entropy": 0.0,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 1,
+        "state_norm": 3.145049,
+        "update_magnitude": 0.3799624,
+        "energy": 4.9456673,
+        "pct_low": 30.860804,
+        "pct_mid": 29.468245,
+        "pct_high": 39.67095,
+        "output_entropy": 0.0,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 2,
+        "state_norm": 3.4777198,
+        "update_magnitude": 0.3794078,
+        "energy": 6.0472674,
+        "pct_low": 31.163425,
+        "pct_mid": 29.381191,
+        "pct_high": 39.455383,
+        "output_entropy": 0.0,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 3,
+        "state_norm": 3.8092318,
+        "update_magnitude": 0.37808958,
+        "energy": 7.255123,
+        "pct_low": 31.480642,
+        "pct_mid": 29.25756,
+        "pct_high": 39.261795,
+        "output_entropy": 0.0,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 4,
+        "state_norm": 4.138929,
+        "update_magnitude": 0.37616345,
+        "energy": 8.565367,
+        "pct_low": 31.805826,
+        "pct_mid": 29.11079,
+        "pct_high": 39.083385,
+        "output_entropy": 0.0,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 5,
+        "state_norm": 4.466177,
+        "update_magnitude": 0.37461826,
+        "energy": 9.973369,
+        "pct_low": 32.12939,
+        "pct_mid": 28.967905,
+        "pct_high": 38.902702,
+        "output_entropy": 0.0,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 6,
+        "state_norm": 4.7904277,
+        "update_magnitude": 0.37420902,
+        "energy": 11.474098,
+        "pct_low": 32.468655,
+        "pct_mid": 28.826973,
+        "pct_high": 38.704372,
+        "output_entropy": 0.0,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 7,
+        "state_norm": 5.1120715,
+        "update_magnitude": 0.37342748,
+        "energy": 13.066638,
+        "pct_low": 32.828518,
+        "pct_mid": 28.689537,
+        "pct_high": 38.481945,
+        "output_entropy": 0.0,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      }
+    ]
+  },
+  "falsification": {
+    "baseline_accuracy": 1.0,
+    "scrambled_context_accuracy": 0.078125,
+    "zeroed_context_accuracy": 0.140625,
+    "truncated_context_accuracy": 0.5234375,
+    "state_reset_divergence": 2.7441223,
+    "contextual_memory_ratio": 3.42497,
+    "verdict": "POSITION_AND_CONTEXT_DEPENDENT (Model relies on sequence structure rather than position shortcut)"
+  },
+  "navier_stokes": null
+}

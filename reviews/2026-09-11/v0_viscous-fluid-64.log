@@ -1,0 +1,62 @@
+Loading trained weights from 'checkpoints/v0_viscous'...
+╔══════════════════════════════════════════════════════════════════════════════════════╗
+║ TITAN TEXT · NAVIER-STOKES MILLENNIUM SINGULARITY & ENSTROPHY CASCADE PROBE          ║
+║ Theoretical Foundations: Beale-Kato-Majda Blow-up & Smooth External Forcing          ║
+║ (Context: OpenAI Sept 8, 2026 Finite-Time Singularity Proof for Cases C & D)         ║
+╚══════════════════════════════════════════════════════════════════════════════════════╝
+  Horizon Steps (T)   : 64
+  Forcing Amplitude A : 0.200 (Smooth C^inf multi-mode periodic)
+  Base Viscosity (nu) : 0.0100
+  Spatial Lattice (L) : 32 cells
+  Channels (C)        : 64
+
+[1] UNFORCED FLOW (f = 0, nu = 0.0100)
+    Step | Energy   | Enstrophy (Ω) | Palinstrophy (P) | BKM Norm (||∇x||) | ||x||_inf | Centroid k | Slope β
+    ─────┼──────────┼───────────────┼──────────────────┼───────────────────┼───────────┼────────────┼────────
+    000  | 3.9530   | 1.8748        | 25.9927          | 17.4021           | 5.9939    | 8.19       | -0.258 
+    008  | 14.7534  | 6.7370        | 93.1740          | 33.2376           | 9.5911    | 7.88       | -0.243 
+    016  | 31.2808  | 13.8518       | 186.3026         | 48.5394           | 13.4236   | 7.51       | -0.181 
+    024  | 52.4471  | 22.6958       | 294.5673         | 62.4903           | 17.2192   | 7.18       | -0.125 
+    032  | 77.8875  | 33.0989       | 414.2709         | 75.5333           | 20.9632   | 6.89       | -0.081 
+    040  | 106.8708 | 44.4689       | 539.1685         | 88.1885           | 24.2905   | 6.61       | -0.041 
+    048  | 138.6934 | 56.4568       | 659.9983         | 99.9635           | 28.1631   | 6.33       | 0.008  
+    056  | 173.1108 | 68.9095       | 772.3483         | 110.9389          | 32.0189   | 6.04       | 0.061  
+    063  | 205.0641 | 80.0158       | 862.4949         | 119.9500          | 35.3782   | 5.78       | 0.111  
+    Initial Enstrophy Ω(0) : 1.87479
+    Max Enstrophy Ω_max    : 80.01579
+    Max BKM Norm B_max     : 119.94998
+    Accumulated BKM ∫B dt  : 2328.95825
+
+[2] SMOOTH EXTERNAL FORCING FLOW (f ∈ C^inf, A = 0.200, nu = 0.0)
+    Step | Energy   | Enstrophy (Ω) | Palinstrophy (P) | BKM Norm (||∇x||) | ||x||_inf | Forcing Pwr | Dissip Rate
+    ─────┼──────────┼───────────────┼──────────────────┼───────────────────┼───────────┼─────────────┼────────────
+    000  | 3.9530   | 1.8748        | 25.9927          | 17.4021           | 5.9939    | 0.00003     | 0.00000    
+    008  | 16.8135  | 7.7268        | 114.9899         | 35.6928           | 10.1600   | 0.01362     | 0.00000    
+    016  | 39.0683  | 17.5367       | 269.1773         | 54.9783           | 14.3801   | -0.00454    | 0.00000    
+    024  | 70.5718  | 31.1809       | 488.1434         | 74.4714           | 18.0612   | -0.02292    | 0.00000    
+    032  | 111.5907 | 48.6126       | 778.0170         | 94.4552           | 22.0636   | 0.02204     | 0.00000    
+    040  | 162.5262 | 69.8819       | 1139.4353        | 114.4649          | 26.4349   | -0.03458    | 0.00000    
+    048  | 223.1162 | 94.8596       | 1574.7739        | 134.5704          | 30.0647   | -0.00622    | 0.00000    
+    056  | 293.7404 | 123.6716      | 2084.0161        | 154.6052          | 33.8908   | 0.00348     | 0.00000    
+    063  | 364.1978 | 152.2647      | 2592.8174        | 172.3628          | 37.5458   | -0.00166    | 0.00000    
+    Blowup Detected        : YES (Singularity/Breakdown Observed)
+    Singularity Time T*    : Step 32
+    Enstrophy Exponent γ   : 0.494 (dΩ/dt ~ Ω^γ; γ > 1 implies finite-time blowup)
+    BKM Criteria Met       : YES (Singularity Criteria Satisfied)
+
+[3] VISCOSITY REGULARIZATION SWEEP (nu * Δx Dissipation)
+    Viscosity (nu) | Final Energy | Final Enstrophy | Max BKM Norm | Max ||x||_inf | Regularized?
+    ───────────────┼──────────────┼─────────────────┼──────────────┼───────────────┼─────────────
+    nu = 0.0000    | 364.1978     | 152.2647        | 172.3628     | 37.5458       | ✗ NO (Singular/Blowup)
+    nu = 0.0050    | 261.4383     | 107.1502        | 142.6955     | 35.9046       | ✗ NO (Singular/Blowup)
+    nu = 0.0100    | 205.2355     | 79.9881         | 119.4334     | 35.4289       | ✗ NO (Singular/Blowup)
+    nu = 0.0200    | 149.3109     | 46.7827         | 92.3821      | 34.6281       | ✗ NO (Singular/Blowup)
+    nu = 0.0500    | 101.2431     | 16.8095         | 61.0012      | 33.9402       | ✓ YES (Stable)
+    nu = 0.1000    | 117.9289     | 7.0536          | 43.4649      | 33.7853       | ✓ YES (Stable)
+    nu = 0.2000    | 166.1583     | 2.7679          | 27.8699      | 33.4105       | ✓ YES (Stable)
+    nu = 0.4000    | 191.1115     | 1.8087          | 20.1718      | 33.2880       | ✓ YES (Stable)
+    Critical Viscosity nu* : ~0.0500 (Minimum dissipation needed to arrest blowup)
+
+Verdict: FINITE_TIME_SINGULARITY_BLOWUP (Smooth forcing triggered gradient breakdown at step 32; regularized by nu >= 0.05)
+
+✓ Scientific report saved to 'reviews/2026-09-11/v0_viscous-fluid-64.json'

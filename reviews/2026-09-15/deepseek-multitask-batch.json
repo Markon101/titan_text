@@ -1,0 +1,20 @@
+[
+  {
+    "name": "nca2d-code-review",
+    "role": "code-reviewer",
+    "task": "Perform a rigorous code review of `src/nca2d.rs` in Titan Text (written in Rust using Candle for ARM64 Termux).\n\nKey areas to audit:\n1. Tensor operations & ARM64 performance: In `perceive_with_feedback`, `step`, and `LatentBlackboard2D::process_sequence`, are there unnecessary tensor allocations or non-contiguous copies? Can memory allocations be minimized?\n2. Spatial boundary conditions: In `neighbors`, verify both periodic boundary (`roll_h`/`roll_w`) and zero-padding boundary conditions. Are there any off-by-one errors or channel misalignment when H != W?\n3. Viscous dissipation substepping: Audit `dissipate` for numerical edge cases (effective_diff == 0, negative values, very large values, float precision).\n4. Compact Manifold RMS Normalization: Verify that `s.broadcast_div(&rms)` properly handles epsilon and does not suffer from underflow or gradient vanishing.\n5. Hilbert Curve bit-twiddling: Audit `d2xy` and `xy2d` for any potential panics, overflow on non-power-of-2 inputs, or edge cases when sequence length exceeds grid capacity.\n6. Provide specific, actionable code improvements with diffs.",
+    "max_tokens": 2048
+  },
+  {
+    "name": "blackboard-deliberation-research",
+    "role": "researcher",
+    "task": "Research advanced dynamical extensions for the Latent Morphogenic Blackboard (`LatentBlackboard2D`) in Titan Text:\n1. Dynamic Deliberation & Adaptive Halting: Instead of fixed T_b NCA steps per token, how can the 2D blackboard detect when cellular patterns have reached an attractor/fixpoint (e.g. using local kinetic energy E_kin = ||S_t - S_{t-1}||^2 or Shannon entropy of morphogen states)?\n2. Wavefront Propagation for Multi-Step Planning: How can the 2D blackboard solve percolation, pathfinding, and long-range carry chains via reaction-diffusion waves? Compare bistable FitzHugh-Nagumo / Belousov-Zhabotinsky dynamics with our current gated NCA.\n3. Multi-Scale Hierarchies (Pyramid 2D NCA): How could an Octree or 2D Pyramid NCA (e.g. coarse 4x4 grid coupled to fine 16x16 grid) reduce the communication diameter from O(sqrt(L)) to O(log L) while preserving 2D spatial inductive bias?\n4. Propose concrete architectural equations that can be implemented cleanly in Candle Rust.",
+    "max_tokens": 2048
+  },
+  {
+    "name": "adversarial-blackboard-audit",
+    "role": "adversarial-reviewer",
+    "task": "Adversarially audit the training and evaluation pipeline for the Latent Morphogenic Blackboard (`LatentBlackboard2D`):\n1. Shortcut Bypassing: How can a sequence model bypass the 2D blackboard entirely (e.g. routing all information through the direct residual stream and ignoring read_proj)? How do we detect and penalize this (e.g. Blackboard Utilization Ratio, Readout Gradient Norm)?\n2. Falsification Ablations: Specify the 4 mandatory ablation controls to prove the blackboard is genuinely computing:\n   - (a) Frozen Blackboard (untrained random NCA rules)\n   - (b) Zeroed Readout (blackboard read zeroed out at inference)\n   - (c) Permuted / Shuffled Hilbert Mapping (breaking 2D spatial locality)\n   - (d) T_b = 0 vs T_b = 1 vs T_b = 4 steps\n3. Training Instability Risks: When backpropagating through T_b steps of 2D NCA across L tokens (total T_b * L recurrent steps), what prevents vanishing/exploding gradients in Candle without checkpointing? How does RMS normalization interact with BPTT?",
+    "max_tokens": 2048
+  }
+]

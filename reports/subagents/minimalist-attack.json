@@ -1,0 +1,48 @@
+{
+  "status": "ok",
+  "model": "deepseek/deepseek-v4.1-flash",
+  "role": "architectural-minimalist",
+  "purpose": "Independently critique the Titan NCA hypothesis that horizon-specific accuracy peaks demonstrate paced computation. No clean results exist yet. Propose three competing mundane mechanisms and one cheap discriminating experiment each. Specify a minimal conventional competitor and fair parameter/update/runtime comparisons. Treat bound increments as distinct from bounded state.",
+  "answer": "# Critique: \"Horizon-Specific Accuracy Peaks = Paced Computation\"\n\n## The claim, steelmanned\n\nThe Titan NCA hypothesis appears to be: if accuracy on a task peaks at some horizon $H^*$ and declines for $H < H^*$ and $H > H^*$, then the system has *paced* its computation \u2014 i.e., it has learned to allocate a specific number of internal update steps to a specific amount of \"work,\" and the peak marks the alignment between internal pacing and task horizon.\n\nThis is a strong claim. A peak in accuracy-vs-horizon is a *shape*, and shapes are cheap. Before attributing pacing, we need to rule out mundane mechanisms that produce the same shape without any notion of internal pacing.\n\n## Why the claim is underdetermined\n\nThree structural problems:\n\n1. **A peak is not a signature of pacing.** Any system with a finite effective memory, a finite effective receptive field, or a finite training distribution will produce a peak somewhere. The peak location is a *derived* quantity, not a *mechanism*.\n2. **\"Bound increments\" \u2260 \"bounded state.\"** The NCA's `step_with_forcing` applies a bounded update (`tanh` delta, sigmoid gate, `alpha` scaling) to an *unbounded* state `x`. The state norm can grow without limit across steps even though each increment is bounded. So \"the update is bounded\" tells us nothing about whether the *computation* is paced \u2014 the state can drift, saturate, or explode independently of the increment bound. Any argument that \"bounded increments imply paced computation\" is a category error.\n3. **No clean results exist.** The hypothesis is currently unfalsifiable in practice. The critique below is therefore about *what would need to be true* for the hypothesis to be distinguishable from the alternatives.\n\n## Three competing mundane mechanisms\n\n### M1: Finite effective receptive field (no pacing, just locality)\n\nThe NCA's perception stencil is `[identity, gradient, laplacian]` over a 1D grid with `roll_spatial` or zero boundaries. After $k$ steps, information has propagated at most $k$ cells (one cell per step for the Laplacian stencil). If the task requires integrating information over a distance $D$, accuracy will rise until $k \\approx D$ and then plateau or decline due to noise accumulation. The peak is a *receptive-field* effect, not a pacing effect.\n\n**Discriminating experiment:** Measure the *spatial* extent of the task's dependency (e.g., by ablating input tokens at varying distances from the query). If the peak horizon $H^*$ scales linearly with the task's dependency distance $D$ across several task variants, M1 is confirmed. Pacing would predict $H^*$ is set by an internal clock and is *invariant* to $D$ (or scales with task *difficulty*, not *distance*).\n\n### M2: Training-distribution horizon bias\n\nIf training sequences are sampled with a horizon distribution $p(H)$, the model will be best at horizons near the mode of $p(H)$. A peak at $H^*$ may simply reflect that $H^*$ was the most common training horizon. This is the most boring possible explanation and must be ruled out first.\n\n**Discriminating experiment:** Train two models with identical architecture but different horizon distributions \u2014 one uniform over $[1, H_{\\max}]$, one concentrated at $H^*$. If the peak moves with the training distribution, M2 is confirmed. Pacing would predict the peak is a property of the *architecture* and is stable across training distributions (or at least moves only with architectural changes like depth or step size).\n\n### M3: Optimization/curvature artifact (loss landscape, not computation)\n\nThe NCA's update is `x + alpha * (delta * gate + f)`, then optional viscous dissipation. The `tanh` delta and sigmoid gate create a *nonlinear* dynamical system. Such systems generically have fixed points, limit cycles, and bifurcations. A peak in accuracy-vs-horizon can arise from the state trajectory passing near a \"good\" region of state space at a particular step count and then leaving it \u2014 a *dynamical* artifact, not a *computational* one. The `apply_viscous_dissipation` substepping (with `max_substep = 0.25`) is a stability fix for the *diffusion* term, but it does nothing to guarantee that the *learned* dynamics are well-behaved.\n\n**Discriminating experiment:** Freeze the trained weights and probe the state trajectory directly. At each step $k$, decode the state with a linear probe trained to predict the task answer. If the probe's accuracy peaks at $H^*$ and then declines, the peak is in the *representation*, not in the *readout* \u2014 consistent with M3. If the probe's accuracy is monotonic but the *readout* peaks, the peak is a readout artifact. Pacing would predict the probe accuracy peaks at $H^*$ *and* that the state at $H^*$ is a stable fixed point of the dynamics (perturbations return).\n\n## Minimal conventional competitor\n\nThe file already contains the right competitor in `baselines.rs`: `UntiedFeedforwardBaseline` with the comment:\n\n> \"Minimal spatial competitor: x <- x + 0.1*tanh(W2*tanh(W1*[left,x,right])). Zero boundary, no adaptive gates, diffusion, extra pathways or trainable positions.\"\n\nThis is the correct Occam's-razor competitor. It has:\n- The same local receptive field (`[left, x, right]`).\n- The same residual update structure (`x + delta`).\n- No gates, no diffusion, no viscosity, no `with_viscosity`, no `parameter_breakdown` entries for \"viscous_dissipation_damping\" (which is listed with 0 parameters \u2014 a tell that it's pseudo-physics baggage).\n- No `apply_viscous_dissipation` with its von Neumann stability commentary.\n\n**Fair comparison protocol:**\n\n| Dimension | Titan NCA | Minimal competitor |\n|---|---|---|\n| Parameters | `dense1 + dense_delta + dense_gate` | `l1 + l2` per layer |\n| Update rule | `x + alpha*(tanh(W_d h) * sigmoid(W_g h) + f)`, then diffusion | `x + 0.1*tanh(W2*tanh(W1*[left,x,right]))` |\n| Steps per token | 1 (per `step_with_forcing`) | 1 (per `forward`) |\n| Runtime | Measure wall-clock per step, multiply by steps | Measure wall-clock per forward |\n| Diffusion | `viscosity * step_size`, substepped | None |\n\n**Parameter matching:** Match `dense1 + dense_delta + dense_gate` parameter count to `l1 + l2` by adjusting `mlp_hidden` and `depth`. The NCA has 3 linear layers; the competitor has 2 per layer. A single-layer competitor with `mlp_hidden = hidden_dim` and `channels = field_cfg.channels` is the closest match.\n\n**Update matching:** The NCA's `step_size` (`alpha`) is a free scalar. The competitor's `0.1` is a fixed scalar. To be fair, either fix `alpha = 0.1` in the NCA or make the competitor's scale trainable. The current asymmetry (trainable `alpha` vs. fixed `0.1`) is a confound.\n\n**Runtime matching:** The NCA's `perceive` does 2 `roll_spatial` calls (each a `narrow` + `cat`), plus gradient and Laplacian computation, plus 3 linear layers, plus optional mask generation with `rand::random` per batch-element, plus optional diffusion substepping. The competitor does 1 `cat` of `[left, x, right]`, 2 linear layers, 1 `tanh`. The NCA is doing substantially more work per step. Any accuracy advantage must be normalized by wall-clock time, not step count.\n\n## What would actually support the pacing hypothesis\n\nFor \"horizon-specific accuracy peaks demonstrate paced computation\" to be credible, all of the following must hold:\n\n1. **Peak is invariant to training horizon distribution** (rules out M2).\n2. **",
+  "parsed_json": null,
+  "reasoning": null,
+  "finish_reason": "length",
+  "usage": {
+    "prompt_tokens": 3534,
+    "completion_tokens": 1800,
+    "total_tokens": 5334,
+    "cost": 0.00370323,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.00370323,
+      "upstream_inference_prompt_cost": 0.00121923,
+      "upstream_inference_completions_cost": 0.002484
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  },
+  "files": [
+    {
+      "file": "src/nca.rs",
+      "span": "1-225",
+      "sha256": "edbdbf405fa861d6705ede9733c0b16a50604c48fdda9298e0b705fbf694282a"
+    },
+    {
+      "file": "src/baselines.rs",
+      "span": "460-523",
+      "sha256": "7ee9100967d50635afe8173c2480759860338cb6ed2dc7921c59a423c9af7779"
+    }
+  ],
+  "elapsed_seconds": 10.823961,
+  "created_at_utc": "2026-09-15T04:10:52.170050+00:00",
+  "name": "minimalist-attack"
+}

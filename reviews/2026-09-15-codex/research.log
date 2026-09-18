@@ -1,0 +1,15 @@
+   Compiling titan_text v0.1.0 (/data/data/com.termux/files/home/projects/titan_text)
+    Finished `release` profile [optimized] target(s) in 26.54s
+     Running `target/release/examples/blackboard_audit reviews/2026-09-15-codex/research.json`
+Auditing Arm1BlackboardFixed
+Auditing Arm3UselessCompute
+Auditing Arm5StaticBuffer
+Optimization gate: static_local_write seed 42
+Optimization gate: fixed_local_write seed 42
+Optimization gate: gru47 seed 42
+Optimization gate: static_local_write seed 101
+Optimization gate: fixed_local_write seed 101
+Optimization gate: gru47 seed 101
+Optimization gate: static_local_write seed 202
+Optimization gate: fixed_local_write seed 202
+Optimization gate: gru47 seed 202

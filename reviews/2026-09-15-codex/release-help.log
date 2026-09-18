@@ -1,0 +1,23 @@
+TITAN TEXT 0.1.0 · Recurrent Neural-Cellular Sequence Laboratory
+
+USAGE:
+  titan_text falsify [OPTIONS]
+
+OPTIONS:
+  -h, --help          Show this command's help
+  --epochs <NUM>      Additional training iterations (default: checkpoint or 200)
+  --steps-per-epoch <NUM> Steps per training iteration (default: 8)
+  --batch-size <NUM>  Evaluation batch size (default: 8)
+  --seq-len <NUM>     Spatial sequence length (default: checkpoint or 32)
+  --lr <FLOAT>        Learning rate (default: checkpoint or 0.003)
+  --seeds <LIST>    Evaluation seeds (default: 0; e.g. 1,2,3 for multi-seed sweep)
+  --load-dir <DIR>    Load checkpoint config, task, and model weights
+  --task <NAME>       Task (text, dyck, delayed-recall, bracket, parity, reverse, hidden-rule, associative, ambiguous, column-arithmetic)
+  --eps <FLOAT>       Perturbation epsilon (default: 0.01)
+  --horizon <NUM>     Rollout steps (default: 64)
+  --output <FILE>     Write report JSON; create parent directories as needed
+  --threads <NUM>      Number of worker threads (default: hardware concurrency or RAYON_NUM_THREADS)
+
+Counts must be positive integers. Floats must be finite; lr and eps > 0,
+viscosity and forcing-amp >= 0. Unknown, duplicate, and misplaced arguments
+are errors. Both --option value and --option=value are accepted.

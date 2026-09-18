@@ -1,0 +1,404 @@
+{
+  "source_path": "/data/data/com.termux/files/home/projects/titan_text/src/dataset.rs",
+  "source_sha256": "b6a3a1ec4da43dc14dbdbb72748348d9a6a1b9f648b4195474402ab162528107",
+  "batch_size": 8,
+  "sequence_length": 32,
+  "method": "Exact Python reproduction of deterministic Rust loops; text phrases parsed from current source. No model execution or training.",
+  "text": {
+    "train": {
+      "phrase_count": 4,
+      "phrase_characters": 193,
+      "phrases": [
+        "the morphogenic sequence field evolves in time. ",
+        "local cellular interactions produce global syntax. ",
+        "attractor dynamics stabilize linguistic states. ",
+        "recurrent feedback drives sequence emergence. "
+      ],
+      "unique_input_windows": 8,
+      "unique_target_windows": 8,
+      "repeated_calls_identical": true,
+      "rows": [
+        {
+          "batch_index": 0,
+          "phrase_index": 0,
+          "offset": 0,
+          "input": "the morphogenic sequence field e",
+          "target": "he morphogenic sequence field ev"
+        },
+        {
+          "batch_index": 1,
+          "phrase_index": 1,
+          "offset": 7,
+          "input": "ellular interactions produce glo",
+          "target": "llular interactions produce glob"
+        },
+        {
+          "batch_index": 2,
+          "phrase_index": 2,
+          "offset": 14,
+          "input": "mics stabilize linguistic states",
+          "target": "ics stabilize linguistic states."
+        },
+        {
+          "batch_index": 3,
+          "phrase_index": 3,
+          "offset": 21,
+          "input": "ives sequence emergence. recurre",
+          "target": "ves sequence emergence. recurren"
+        },
+        {
+          "batch_index": 4,
+          "phrase_index": 0,
+          "offset": 28,
+          "input": "ld evolves in time. the morphoge",
+          "target": "d evolves in time. the morphogen"
+        },
+        {
+          "batch_index": 5,
+          "phrase_index": 1,
+          "offset": 35,
+          "input": " global syntax. local cellular i",
+          "target": "global syntax. local cellular in"
+        },
+        {
+          "batch_index": 6,
+          "phrase_index": 2,
+          "offset": 42,
+          "input": "ates. attractor dynamics stabili",
+          "target": "tes. attractor dynamics stabiliz"
+        },
+        {
+          "batch_index": 7,
+          "phrase_index": 3,
+          "offset": 3,
+          "input": "urrent feedback drives sequence ",
+          "target": "rrent feedback drives sequence e"
+        }
+      ],
+      "ring_right_copy": {
+        "correct": 248,
+        "total": 256,
+        "accuracy": 0.96875
+      },
+      "interior_right_copy": {
+        "correct": 248,
+        "total": 248,
+        "accuracy": 1.0
+      },
+      "training_fitted_bigram": {
+        "correct": 83,
+        "total": 256,
+        "accuracy": 0.32421875
+      },
+      "training_majority": {
+        "correct": 36,
+        "total": 256,
+        "accuracy": 0.140625
+      },
+      "ring_right_copy_after_falsification_shuffle": {
+        "correct": 22,
+        "total": 256,
+        "accuracy": 0.0859375
+      },
+      "copy_shortcut_passes_context_verdict": true
+    },
+    "validation": {
+      "phrase_count": 2,
+      "phrase_characters": 98,
+      "phrases": [
+        "hierarchical coupling guides sequence attractors. ",
+        "nonlinear cellular networks learn local syntax. "
+      ],
+      "unique_input_windows": 8,
+      "unique_target_windows": 8,
+      "repeated_calls_identical": true,
+      "rows": [
+        {
+          "batch_index": 0,
+          "phrase_index": 0,
+          "offset": 0,
+          "input": "hierarchical coupling guides seq",
+          "target": "ierarchical coupling guides sequ"
+        },
+        {
+          "batch_index": 1,
+          "phrase_index": 1,
+          "offset": 7,
+          "input": "ar cellular networks learn local",
+          "target": "r cellular networks learn local "
+        },
+        {
+          "batch_index": 2,
+          "phrase_index": 0,
+          "offset": 14,
+          "input": "oupling guides sequence attracto",
+          "target": "upling guides sequence attractor"
+        },
+        {
+          "batch_index": 3,
+          "phrase_index": 1,
+          "offset": 21,
+          "input": "tworks learn local syntax. nonli",
+          "target": "works learn local syntax. nonlin"
+        },
+        {
+          "batch_index": 4,
+          "phrase_index": 0,
+          "offset": 28,
+          "input": " sequence attractors. hierarchic",
+          "target": "sequence attractors. hierarchica"
+        },
+        {
+          "batch_index": 5,
+          "phrase_index": 1,
+          "offset": 35,
+          "input": "ocal syntax. nonlinear cellular ",
+          "target": "cal syntax. nonlinear cellular n"
+        },
+        {
+          "batch_index": 6,
+          "phrase_index": 0,
+          "offset": 42,
+          "input": "actors. hierarchical coupling gu",
+          "target": "ctors. hierarchical coupling gui"
+        },
+        {
+          "batch_index": 7,
+          "phrase_index": 1,
+          "offset": 1,
+          "input": "onlinear cellular networks learn",
+          "target": "nlinear cellular networks learn "
+        }
+      ],
+      "ring_right_copy": {
+        "correct": 248,
+        "total": 256,
+        "accuracy": 0.96875
+      },
+      "interior_right_copy": {
+        "correct": 248,
+        "total": 248,
+        "accuracy": 1.0
+      },
+      "training_fitted_bigram": {
+        "correct": 54,
+        "total": 256,
+        "accuracy": 0.2109375
+      },
+      "training_majority": {
+        "correct": 22,
+        "total": 256,
+        "accuracy": 0.0859375
+      },
+      "ring_right_copy_after_falsification_shuffle": {
+        "correct": 17,
+        "total": 256,
+        "accuracy": 0.06640625
+      },
+      "copy_shortcut_passes_context_verdict": true
+    },
+    "train_validation_input_intersection": []
+  },
+  "dyck": {
+    "train": {
+      "unique_input_windows": 2,
+      "repeated_calls_identical": true,
+      "valid_dyck_words": 8,
+      "sample_count": 8,
+      "peak_depths": [
+        1,
+        2
+      ],
+      "ending_depths": [
+        0
+      ],
+      "rows": [
+        {
+          "batch_index": 0,
+          "input": "()()()()()()()()()()()()()()()()",
+          "target": ")()()()()()()()()()()()()()()()(",
+          "final_depth": 0,
+          "peak_depth": 1,
+          "minimum_prefix_depth": 0,
+          "valid_dyck_word": true
+        },
+        {
+          "batch_index": 1,
+          "input": "(()()()()()()()()()()()()()()())",
+          "target": "()()()()()()()()()()()()()()())(",
+          "final_depth": 0,
+          "peak_depth": 2,
+          "minimum_prefix_depth": 0,
+          "valid_dyck_word": true
+        },
+        {
+          "batch_index": 2,
+          "input": "()()()()()()()()()()()()()()()()",
+          "target": ")()()()()()()()()()()()()()()()(",
+          "final_depth": 0,
+          "peak_depth": 1,
+          "minimum_prefix_depth": 0,
+          "valid_dyck_word": true
+        },
+        {
+          "batch_index": 3,
+          "input": "(()()()()()()()()()()()()()()())",
+          "target": "()()()()()()()()()()()()()()())(",
+          "final_depth": 0,
+          "peak_depth": 2,
+          "minimum_prefix_depth": 0,
+          "valid_dyck_word": true
+        },
+        {
+          "batch_index": 4,
+          "input": "()()()()()()()()()()()()()()()()",
+          "target": ")()()()()()()()()()()()()()()()(",
+          "final_depth": 0,
+          "peak_depth": 1,
+          "minimum_prefix_depth": 0,
+          "valid_dyck_word": true
+        },
+        {
+          "batch_index": 5,
+          "input": "(()()()()()()()()()()()()()()())",
+          "target": "()()()()()()()()()()()()()()())(",
+          "final_depth": 0,
+          "peak_depth": 2,
+          "minimum_prefix_depth": 0,
+          "valid_dyck_word": true
+        },
+        {
+          "batch_index": 6,
+          "input": "()()()()()()()()()()()()()()()()",
+          "target": ")()()()()()()()()()()()()()()()(",
+          "final_depth": 0,
+          "peak_depth": 1,
+          "minimum_prefix_depth": 0,
+          "valid_dyck_word": true
+        },
+        {
+          "batch_index": 7,
+          "input": "(()()()()()()()()()()()()()()())",
+          "target": "()()()()()()()()()()()()()()())(",
+          "final_depth": 0,
+          "peak_depth": 2,
+          "minimum_prefix_depth": 0,
+          "valid_dyck_word": true
+        }
+      ],
+      "ring_right_copy": {
+        "correct": 256,
+        "total": 256,
+        "accuracy": 1.0
+      },
+      "opposite_current_token": {
+        "correct": 248,
+        "total": 256,
+        "accuracy": 0.96875
+      }
+    },
+    "validation": {
+      "unique_input_windows": 2,
+      "repeated_calls_identical": true,
+      "valid_dyck_words": 0,
+      "sample_count": 8,
+      "peak_depths": [
+        3,
+        4
+      ],
+      "ending_depths": [
+        2
+      ],
+      "rows": [
+        {
+          "batch_index": 0,
+          "input": "((()()()()()()()()()()()()()()()",
+          "target": "(()()()()()()()()()()()()()()()(",
+          "final_depth": 2,
+          "peak_depth": 3,
+          "minimum_prefix_depth": 1,
+          "valid_dyck_word": false
+        },
+        {
+          "batch_index": 1,
+          "input": "(((()()()()()()()()()()()()()())",
+          "target": "((()()()()()()()()()()()()()())(",
+          "final_depth": 2,
+          "peak_depth": 4,
+          "minimum_prefix_depth": 1,
+          "valid_dyck_word": false
+        },
+        {
+          "batch_index": 2,
+          "input": "((()()()()()()()()()()()()()()()",
+          "target": "(()()()()()()()()()()()()()()()(",
+          "final_depth": 2,
+          "peak_depth": 3,
+          "minimum_prefix_depth": 1,
+          "valid_dyck_word": false
+        },
+        {
+          "batch_index": 3,
+          "input": "(((()()()()()()()()()()()()()())",
+          "target": "((()()()()()()()()()()()()()())(",
+          "final_depth": 2,
+          "peak_depth": 4,
+          "minimum_prefix_depth": 1,
+          "valid_dyck_word": false
+        },
+        {
+          "batch_index": 4,
+          "input": "((()()()()()()()()()()()()()()()",
+          "target": "(()()()()()()()()()()()()()()()(",
+          "final_depth": 2,
+          "peak_depth": 3,
+          "minimum_prefix_depth": 1,
+          "valid_dyck_word": false
+        },
+        {
+          "batch_index": 5,
+          "input": "(((()()()()()()()()()()()()()())",
+          "target": "((()()()()()()()()()()()()()())(",
+          "final_depth": 2,
+          "peak_depth": 4,
+          "minimum_prefix_depth": 1,
+          "valid_dyck_word": false
+        },
+        {
+          "batch_index": 6,
+          "input": "((()()()()()()()()()()()()()()()",
+          "target": "(()()()()()()()()()()()()()()()(",
+          "final_depth": 2,
+          "peak_depth": 3,
+          "minimum_prefix_depth": 1,
+          "valid_dyck_word": false
+        },
+        {
+          "batch_index": 7,
+          "input": "(((()()()()()()()()()()()()()())",
+          "target": "((()()()()()()()()()()()()()())(",
+          "final_depth": 2,
+          "peak_depth": 4,
+          "minimum_prefix_depth": 1,
+          "valid_dyck_word": false
+        }
+      ],
+      "ring_right_copy": {
+        "correct": 256,
+        "total": 256,
+        "accuracy": 1.0
+      },
+      "opposite_current_token": {
+        "correct": 232,
+        "total": 256,
+        "accuracy": 0.90625
+      }
+    }
+  },
+  "limitations": [
+    "This diagnoses available data and shortcuts; it does not establish which strategy any trained checkpoint uses.",
+    "Exact deterministic dataset replay is intentional code behavior; no sampling RNG is present.",
+    "Token-level baselines are calculated over all 256 positions per split unless explicitly named interior.",
+    "Bigram tie breaking uses first observed target; this baseline is a low-cost reference only."
+  ]
+}

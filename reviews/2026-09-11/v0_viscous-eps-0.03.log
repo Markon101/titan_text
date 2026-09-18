@@ -1,0 +1,32 @@
+Loading trained weights from 'checkpoints/v0_viscous'...
+╔══════════════════════════════════════════════════════════════════════════════════════╗
+║ TITAN TEXT · DYNAMICAL BATTERY & NONLINEAR PERTURBATION REPORT                       ║
+╚══════════════════════════════════════════════════════════════════════════════════════╝
+
+[1] ±EPSILON NONLINEAR PERTURBATION PROBE (eps = 0.03)
+    Wavenumber | Wavelength | ||Q|| Norm | ||Δx|| Base | Relative Q/||Δx||
+    ───────────┼────────────┼────────────┼─────────────┼──────────────────
+    k = 16     | 2  cells   | 0.20121    | 0.38009     | 0.529    (High-Frequency (Nyquist alternating))
+    k = 8      | 4  cells   | 0.04890    | 0.38009     | 0.129    (Mid-Frequency (Mesoscale wave))
+    k = 4      | 8  cells   | 0.01614    | 0.38009     | 0.042    (Low-Frequency (Macro wave))
+    Verdict: STRONG_NONLINEAR_COUPLING (Microscopic perturbations induce significant macro response)
+
+[2] AUTONOMOUS FROZEN TRAJECTORY (8-step rollout)
+    • Trajectory Classification   : OPEN_PHASE_DRIFT (Bounded wandering trajectory)
+    • Mean Step Drift Velocity    : 0.37700 units/step
+    • Min Recurrence Distance     : 340282346638528859811704183484516925440.00000
+    • Final Field Energy          : 13.0666
+    • Final Output Token Entropy  : 0.0000 nats
+    • Initial Seed Pattern        : "he morphogenic sequence field ev"
+    • Final Emerged Pattern       : "he morphogenic sequence field ev"
+
+[3] FALSIFICATION & CONTEXT SENSITIVITY BATTERY
+    • Baseline Target Accuracy    : 100.0%
+    • Scrambled Context Accuracy  :   7.8%
+    • Zeroed Context Accuracy     :  14.1%
+    • Truncated Context Accuracy  :  52.3%
+    • State-Reset Divergence      : 3.02513
+    • Contextual Memory Ratio     : 347.6%
+    • Verdict                     : POSITION_AND_CONTEXT_DEPENDENT (Model relies on sequence structure rather than position shortcut)
+
+✓ Scientific report saved to 'reviews/2026-09-11/v0_viscous-eps-0.03.json'

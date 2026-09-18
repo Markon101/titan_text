@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "git_commit": "b7583ad",
+  "random_seed": 42,
+  "cumulative_step": 50,
+  "dev_steps": 8,
+  "train_loss": 0.0052901544,
+  "train_accuracy": 1.0,
+  "val_loss": 1.3149971,
+  "val_accuracy": 0.7421875,
+  "grad_norm": 0.020558603,
+  "state_energy": 2.8882904,
+  "param_count": 43715,
+  "checkpoint_hash": "8e88ff063c637cf1",
+  "timestamp_unix": 1789006290,
+  "config": {
+    "field": {
+      "seq_len": 32,
+      "channels": 64,
+      "periodic_boundary": true
+    },
+    "nca": {
+      "hidden_dim": 96,
+      "step_size": 0.5,
+      "update_rate": 1.0,
+      "activation": "gelu"
+    },
+    "train": {
+      "epochs": 50,
+      "dev_steps": 8,
+      "batch_size": 8,
+      "lr": 0.003,
+      "weight_decay": 0.01,
+      "save_every": 50,
+      "log_every": 10,
+      "seed": 42
+    },
+    "probe": {
+      "horizon": 64,
+      "perturbation_eps": 0.01,
+      "lp_window": 8
+    }
+  }
+}

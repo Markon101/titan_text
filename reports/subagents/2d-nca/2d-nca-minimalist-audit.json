@@ -1,0 +1,37 @@
+{
+  "status": "ok",
+  "model": "deepseek/deepseek-v4.1-flash",
+  "role": "architectural-minimalist",
+  "purpose": "Apply Occam's razor to the proposal of extending Titan Text from 1D NCA to 2D NCA on mobile Termux ARM64 hardware (using Candle Rust):\n1. Tensor shape & memory footprint: Analyze [B, H, W, C] vs [B, L, C]. What are the cache locality and FLOP implications for CPU-bound SIMD (NEON on ARM)?\n2. Perception stencils: 1D uses 3C channels [Identity, Gradient, Laplacian]. In 2D, what is the minimal discrete stencil (5-point von Neumann vs 9-point Moore vs separable Sobel)? What is the minimal parameterization?\n3. Comparison against 1D NCA + Macro Feedback: We just proved that a 1D NCA with global pooling feedback provides O(1) instantaneous communication. Why would we need 2D NCA if macro feedback already solves the 1D lightcone problem?\n4. Define the strict conditions under which 2D NCA earns its complexity, or recommend an alternative minimal geometry.",
+  "answer": "# Occam's Razor on 2D NCA for Titan Text on Termux/ARM64\n\n## 1. Tensor shape & memory footprint\n\n**The honest accounting:**\n\n| Shape | Elements (B=1, C=16) | Notes |\n|---|---|---|\n| `[B, L, C]` L=1024 | 16,384 | 1D baseline |\n| `[B, H, W, C]` H=W=32 | 16,384 | \"same budget\" |\n| `[B, H, W, C]` H=W=64 | 65,536 | 4\u00d7 memory, 4\u00d7 FLOPs |\n\n**Cache locality on NEON:** The 1D layout is *already* the right one. A `[B, L, C]` tensor with C contiguous is a perfect match for NEON's 128-bit lanes (C=16 \u2192 4\u00d7 `float32x4` or 2\u00d7 `float32x8`). The stencil neighbor is `\u00b1C` floats away \u2014 one cache line. In 2D `[B, H, W, C]`, the von Neumann neighbor is `\u00b1C` (row) or `\u00b1W*C` (column). The column stride is `W*C*4` bytes = 4 KB at W=64, C=16 \u2014 **a full page per row step**. You pay TLB pressure and cache-line splits on every vertical neighbor fetch.\n\n**FLOP implication:** 2D NCA with a 5-point stencil is 5\u00d7 the neighbor-gather work of 1D's 3-point, on 4\u00d7 the cells (at 64\u00d764 vs 1024). That's ~20\u00d7 the perception FLOPs for the same \"sequence length.\" On a phone CPU with no tensor cores, this is the dominant cost.\n\n**Verdict:** 2D is strictly worse on both axes unless the *task* requires 2D structure. Nothing in \"text\" does.\n\n## 2. Perception stencils\n\nThe 1D `[Identity, Gradient, Laplacian]` is the **minimal complete local basis** for a 1D scalar field: value, first difference, second difference. It's the discrete Taylor expansion truncated at order 2.\n\nIn 2D the analogous minimal set is **not** Sobel or Moore. It's:\n\n- **Identity** (1 channel)\n- **\u2202x, \u2202y** (2 channels, central differences)\n- **\u2202xx, \u2202yy, \u2202xy** (3 channels) \u2014 or just the **Laplacian \u2202xx+\u2202yy** (1 channel) if you accept losing anisotropy\n\nSo the minimal parameterization is **5 channels** (identity + 2 first + Laplacian + cross) or **4 channels** (identity + 2 first + Laplacian). The 5-point von Neumann stencil gives you exactly this. The 9-point Moore stencil adds diagonal first-derivatives \u2014 redundant with \u2202x, \u2202y under rotation, and it costs 80% more gather traffic.\n\n**Sobel is a mistake here.** Sobel is a *smoothing* derivative designed for noisy natural images. NCA state is not noisy natural images; it's a learned latent. You want the sharpest, cheapest discrete derivative, which is the central difference. Sobel's 3\u00d73 kernel is 9 taps to compute what 2 taps do exactly.\n\n**Minimal parameterization:** 4 perception channels (id, \u2202x, \u2202y, \u2207\u00b2), 5-point stencil, no learned stencil weights. Anything more is a hyperparameter you'll never tune on a phone.\n\n## 3. Why 2D at all, given macro feedback?\n\nYou already proved the key result: **global pooling feedback gives O(1) instantaneous communication in 1D.** That collapses the lightcone. The entire historical motivation for 2D NCA (long-range information propagation via spatial diffusion) is *already solved* by your macro channel.\n\nSo the question becomes: what does 2D buy you that 1D + macro feedback doesn't?\n\nThe only honest answers:\n\n1. **Genuinely 2D structure in the data.** Text is a 1D token stream. It is not 2D. Rendering it as a 2D grid is a *choice*, and a costly one.\n2. **Spatial locality priors you can't express in 1D.** E.g., if you wanted a 2D \"canvas\" where nearby tokens attend to each other. But attention already does this, cheaper.\n3. **Aesthetic/architectural preference.** Not a technical reason.\n\nNone of these apply to Titan Text. **2D NCA is solving a problem you already solved, at 20\u00d7 the FLOPs.**\n\n## 4. Strict conditions for 2D to earn its complexity\n\n2D NCA earns its keep **only if all** of the following hold:\n\n- **(a)** The task has intrinsic 2D structure (images, grids, spatial fields) \u2014 not sequences.\n- **(b)** Macro feedback is *insufficient* \u2014 i.e., you need *anisotropic* long-range communication (different information flowing along different spatial directions), which a single global pool cannot express.\n- **(c)** The 2D grid is small enough that `W*C*4 \u2264 512 bytes` (fits in L1 with room for neighbors), i.e., W \u2264 8 at C=16. Otherwise you're paying cache misses per step.\n- **(d)** You have a *reason* to prefer local 2D stencils over a 1D scan + attention, which is strictly cheaper on ARM64.\n\nFor Titan Text, **none of (a)\u2013(d) hold.**\n\n## Recommended minimal geometry\n\n**Keep 1D NCA. Keep macro feedback. Do not add 2D.**\n\nIf you feel the 1D lightcone is still limiting despite macro feedback, the Occam-minimal fix is **not** 2D \u2014 it's one of:\n\n- **Hierarchical 1D pooling** (multi-scale macro channels: pool at stride 1, 4, 16). O(log L) communication, still 1D layout, still NEON-friendly.\n- **A single attention layer** on top of the 1D NCA state. One matmul, exact O(1) communication, no stencil overhead.\n- **Learned positional mixing** via a small 1D convolution with dilated kernel (dilation 1, 2, 4, 8). Same receptive field growth as 2D diffusion, 1D memory layout.\n\n**The simplest conventional competitor:** a 1D NCA with 3-channel perception + global mean pool broadcast + a single dilated conv. This is ~10 lines of Candle, runs in L1, and dominates 2D NCA on every metric that matters on a phone.\n\n---\n\n**Bottom line:** 2D NCA on Termux/ARM64 is pseudo-physics baggage. The 2D grid is a continuum-hydrodynamics intuition imported into a discrete 1D token problem. Your macro-feedback result already killed the only real motivation. Delete the 2D branch before it's written.",
+  "parsed_json": null,
+  "reasoning": null,
+  "finish_reason": "stop",
+  "usage": {
+    "prompt_tokens": 294,
+    "completion_tokens": 1542,
+    "total_tokens": 1836,
+    "cost": 0.00242325,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.00242325,
+      "upstream_inference_prompt_cost": 0.00011025,
+      "upstream_inference_completions_cost": 0.002313
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  },
+  "files": [],
+  "elapsed_seconds": 9.086097,
+  "created_at_utc": "2026-09-15T04:56:12.757019+00:00",
+  "name": "2d-nca-minimalist-audit"
+}

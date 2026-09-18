@@ -1,5 +1,7 @@
 # TITAN TEXT
 
+Current research assessment: [September 15 code review and controlled follow-up](reviews/2026-09-15-codex/review.md) and [September 18 system audit and research plan](reviews/2026-09-18-research-audit.md). The saved blackboard experiment does not establish arithmetic generalization or adaptive-compute advantage; see those reviews before continuing it.
+
 A lean morphogenic neural-cellular sequence laboratory exploring nonlinear local dynamics, bounded attractors, and multiscale sequence emergence.
 
 ## Core Research Goal
@@ -107,6 +109,55 @@ $$\partial_t \mathbf{x} = \mathcal{N}_\theta(\mathbf{x}, \nabla \mathbf{x}, \Del
 
 ## CLI Usage & Exact Commands
 
+Global and command-specific help are available without starting computation or
+loading a checkpoint:
+
+```bash
+./target/release/titan_text --help
+./target/release/titan_text train --help
+./target/release/titan_text help rollout
+```
+
+All commands reject unknown options, unexpected positional arguments, missing
+values, duplicate options (including aliases), and options belonging to another
+command. Usage errors go to stderr and exit with status 2 before any checkpoint
+access or output writes; runtime errors exit with status 1. Help exits with status 0.
+Both `--option value` and `--option=value` are accepted. Use the equals form for
+string values starting with a hyphen, such as `--prompt=--hello`.
+
+Counts (`--epochs`, `--dev-steps`, `--seq-len`, `--horizon`) must be positive
+integers. All numeric floating-point values must be finite; learning rate and
+epsilon must be greater than zero, while viscosity and forcing amplitude may be
+zero. Epsilon must also have a representable nonzero squared denominator in f32.
+Tasks are `text` or `dyck` (`paren` remains an alias for `dyck`).
+
+Command aliases remain supported: `diagnostics` for `probe`, and `navier-stokes`,
+`blowup`, or `fluid-probe` for `ns-probe`. `falsify` runs the same full diagnostic
+battery as `probe`. For `rollout`, `--steps` and `--dev-steps` alias `--horizon`;
+`--raw` aliases `--patterns-only` for both `train` and `rollout`.
+
+### Checkpoint continuation and pattern output
+
+```bash
+./target/release/titan_text train --load-dir checkpoints/v0_text --epochs 10
+./target/release/titan_text rollout --load-dir checkpoints/v0_text --horizon 32 --patterns-only --output outputs/patterns.txt
+```
+
+Training with `--load-dir` restores model weights, configuration, task, and the
+cumulative training step. It creates a **fresh AdamW optimizer**; optimizer moments
+are not stored, so continuation is not numerically identical to uninterrupted
+training. `--epochs` is the number of additional iterations. Without `--save-dir`,
+training saves back into `--load-dir`; specify another directory to retain the
+parent checkpoint. Explicit options override the loaded settings. An explicit
+`--task` must match recorded checkpoint task metadata; older manifests without a
+task field retain the text fallback and allow an explicit task selection.
+
+`rollout --patterns-only` writes only decoded pattern lines to stdout and, when
+specified, to `--output`. `train --patterns-only` formats its post-training pattern
+file and requires `--output`; training diagnostics still appear on stdout. Output
+files create missing parent directories. `probe`, `ns-probe`, and `falsify` write
+JSON reports with `--output`. See each command's help for its specific defaults.
+
 ### 1. Training with Navier-Stokes Viscous Dissipation
 ```bash
 cargo run --release -- train --epochs 50 --dev-steps 8 --viscosity 0.05 --task text --save-dir checkpoints/v0_text
@@ -129,13 +180,132 @@ cargo run --release -- rollout --horizon 32
 
 ## Checkpoint Format
 
-Checkpoints are saved atomically into `checkpoints/<dir>`:
+Checkpoints are saved into the selected directory (the manifest is replaced atomically):
 - `model.safetensors`: SafeTensors binary weight format.
-- `manifest.json`: Complete reproducible metadata containing Git commit hash, seed, optimizer step, train/val losses, gradient norm, parameter count, config, and SHA256 checkpoint hash.
+- `manifest.json`: Metadata containing Git commit hash, seed, cumulative training step, train/val losses, gradient norm, parameter count, config, task, and an FNV-1a weight-file checksum. Optimizer state is not saved.
 
 ## Current Hypotheses
 
 1. **Nonlinear Upward Coupling**: Microscopic high-frequency perturbations ($k = L/2$) couple through the local nonlinear MLP into macro-scale modes, yielding a non-zero $Q$ norm.
 2. **Context vs Position**: Successful token prediction requires continuous developmental flow across spatial cells; shuffling input context drops accuracy to random chance, confirming genuine context dependence.
 3. **Viscous Singular Regularization**: Navier-Stokes dissipation $\nu \Delta \mathbf{x}$ with $\nu \ge \nu^* \approx 0.05$ prevents Beale-Kato-Majda gradient blowup during extended autonomous rollout without compromising symbolic sequence memory.
+4. **Latent Recurrence Computation Gain**: Additional internal evolution steps in the absence of new external input causally increase prediction accuracy and lower entropy, settling into low-dimensional sequence attractors.
+5. **Dynamic Semantic Association**: Semantic associations propagate continuously along a latent time axis rather than depending solely on static geometric proximity in embedding space.
+
+---
+
+## Recurrent Latent Computation & Dynamical Substrate Platform
+
+Titan Text treats sequence modeling as a continuous dynamical substrate:
+1. **Input Perturbation**: Inputs perturb the continuous state $\mathbf{s}$.
+2. **Internal Latent Evolution**: State evolves over internal time $\tau \in [1, K]$ through interacting fast and slow pathways without mandatory token emission.
+3. **Observation**: Output predictions are non-invasive observations of the resulting state trajectory.
+
+### 1. Parameter Counts by Subsystem (Matched Baselines)
+
+Comparison of roughly parameter-matched architectures over ASCII vocabulary ($V = 99$, $C = 64$ channels):
+
+| Architecture | Subsystem | Parameters |
+| :--- | :--- | :--- |
+| **Titan NCA** | Spatial Perception Stencil (Identity, $\nabla$, $\Delta$) | 0 (Fixed continuum operator) |
+| | Hidden Feature Extraction (`dense1`: $192 \to 96$) | 18,528 |
+| | Directional Update (`dense_delta`: $96 \to 64$) | 6,208 |
+| | Adaptive Channel Gate (`dense_gate`: $96 \to 64$) | 6,208 |
+| | Navier-Stokes Viscous Dissipation ($\nu \Delta \mathbf{x}$) | 0 (Physical continuum operator) |
+| | Token Embedding ($V \times C = 99 \times 64$) | 6,336 |
+| | Token Readout Projection ($C \times V + V = 64 \times 99 + 99$) | 6,435 |
+| **Titan NCA Total** | **All Subsystems** | **43,715 weights** |
+| **Transformer** | Token Embedding ($V \times C$) | 6,336 |
+| | Causal Self-Attention ($Q, K, V$, out projections) | 16,640 |
+| | Feedforward MLP ($C \to 96 \to C$) | 12,448 |
+| | Readout Projection ($C \to V$) | 6,435 |
+| **Transformer Total** | **All Subsystems** | **41,859 weights** |
+| **GRU Recurrent** | Token Embedding ($V \times C$) | 6,336 |
+| | GRU Recurrent Core ($W_x, W_h$ reset/update/candidate) | 24,960 |
+| | Readout Projection ($C \to V$) | 6,435 |
+| **GRU Total** | **All Subsystems** | **37,731 weights** |
+| **Simple RNN** | Token Embedding ($V \times C$) | 6,336 |
+| | Elman Recurrent Core ($W_x x + W_h h + b$) | 8,320 |
+| | Readout Projection ($C \to V$) | 6,435 |
+| **Simple RNN Total** | **All Subsystems** | **21,091 weights** |
+
+### 2. Experiment Controls & CLI Options
+
+The platform exposes dedicated commands and intervention flags for scientific inspection:
+
+- `sweep`: Evaluates checkpoints across multiple internal compute budgets ($\tau = 0, 1, 2, 4, 8, 16, 32\dots$) to detect smooth improvement vs sharp bifurcation.
+- `associate`: Probes target concept decodability at each latent tick following an initial stimulus without input reinforcement.
+- `attractor`: Measures trajectory divergence between competing stimuli to quantify state basins and hysteresis.
+- `benchmark`: Reports subsystem parameter breakdowns and initial loss/accuracy across NCA, Transformer, GRU, and Simple RNN.
+- `memory`: Quantifies how prior events modify subsequent dynamics without direct token replay.
+
+#### Configurable Lesion / Intervention Flags
+- `--lesion-state`: Disables recurrent updates ($\Delta \mathbf{s} \equiv 0$).
+- `--lesion-gates`: Forces update gates open ($g \equiv 1.0$).
+- `--lesion-residual`: Bypasses residual integration ($\mathbf{s}_{\tau+1} = \Delta \mathbf{s}$).
+- `--lesion-gain <FLOAT>`: Scales recurrence update magnitude by $\gamma$.
+- `--lesion-noise <FLOAT>`: Injects zero-mean Gaussian noise $\mathcal{N}(0, \sigma^2)$ at each tick.
+- `--lesion-freeze <NUM>`: Freezes state updates at and after tick $K$.
+- `--lesion-reset <NUM>`: Resets state to zero at tick $K$.
+- `--lesion-channels <LIST>`: Selectively ablates specific channel indices.
+- `--slow-cadence <NUM>`: Sets update cadence for delayed slow pathways.
+- `--slow-fraction <FLOAT>`: Sets fraction of channels allocated to slow pathways.
+
+### 3. Example Commands
+
+```bash
+# 1. Architecture parameter comparison benchmark
+./target/release/titan_text benchmark --task delayed-recall
+
+# 2. Latent compute budget sweep across budgets 0 to 32 ticks
+./target/release/titan_text sweep --load-dir checkpoints/v0_text --task text --budgets 0,1,2,4,8,16,32
+
+# 3. Lesion experiment: sweep with gates disabled (un-gated dynamics)
+./target/release/titan_text sweep --load-dir checkpoints/v0_text --task text --budgets 0,1,2,4,8,16,32 --lesion-gates
+
+# 4. Dynamic semantic association emergence probe
+./target/release/titan_text associate --load-dir checkpoints/v0_text --stimulus t --target h --horizon 12
+
+# 5. Attractor basin separation and hysteresis test
+./target/release/titan_text attractor --load-dir checkpoints/v0_text --prompt-a "the morphogenic" --prompt-b "local cellular" --horizon 12
+
+# 6. Memory as dynamics: prior event lingering influence
+./target/release/titan_text memory --load-dir checkpoints/v0_text --event-1 "attractor" --event-2 "dynamics" --ticks 8
+```
+
+### 4. Initial Empirical Findings: Latent Budget & Lesion Study
+
+Evaluating `checkpoints/v0_text` across multiple internal compute budgets:
+
+#### Latent Budget Sweep (Unlesioned Baseline)
+| Latent Ticks | Accuracy (%) | Cross-Entropy Loss | Confidence | State Displacement ($\|\Delta \mathbf{x}\|$) | Regime |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **0** | 2.7% | 5.3544 | 0.0012 | 0.0000 | Chance Baseline |
+| **1** | 13.7% | 4.1145 | 0.0022 | 0.2842 | Compute Gain |
+| **2** | 42.6% | 2.9122 | 0.0058 | 0.5723 | Sharp Bifurcation (+28.9%) |
+| **4** | 68.0% | 1.3627 | 0.0312 | 1.1705 | Compute Gain |
+| **8** | **79.3%** | **1.1207** | **0.0909** | 2.4526 | **Optimal Convergence** |
+| **16** | 76.2% | 2.3730 | 0.2480 | 5.2043 | Post-Target Drift |
+| **32** | 50.8% | 7.7168 | 0.4065 | 10.9783 | Ungrounded Divergence |
+
+#### Lesion Comparison (`--lesion-gates` vs `--lesion-state`)
+- **Unlesioned Baseline at 8 ticks**: **79.3% accuracy**, loss 1.1207, state displacement 2.4526.
+- **`--lesion-gates` (Gates forced open = 1.0)**: **56.6% accuracy** (-22.7% drop), loss 2.5582, displacement surges to 3.6016. By 32 ticks, loss diverges to 17.8757.
+  *Finding*: Gating is causally necessary to bound velocity and arrest runaway trajectory divergence.
+- **`--lesion-state` (Recurrent updates disabled)**: **2.7% accuracy** across all ticks, displacement strictly 0.0000.
+  *Finding*: Confirms zero teacher leakage and verifies that performance gains are 100% causal consequence of state transitions.
+
+#### Dynamic Association Emergence (Stimulus `'t'` $\to$ Target `'h'`)
+| Latent Tick | Target Concept | $P(\text{Target})$ | Target Rank | Top Decoded Token | State Displacement |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Tick 0** | `'h'` | 0.0259 | #14 | `"<"` | 0.0654 |
+| **Tick 1** | `'h'` | 0.0850 | #1 | `"h"` | 0.0697 |
+| **Tick 2** | `'h'` | 0.2543 | #1 | `"h"` | 0.0762 |
+| **Tick 3** | `'h'` | 0.5503 | #1 | `"h"` | 0.0849 |
+| **Tick 4** | `'h'` | 0.7999 | #1 | `"h"` | 0.0942 |
+| **Tick 5** | `'h'` | 0.9078 | #1 | `"h"` | 0.1029 |
+| **Tick 10** | `'h'` | **0.9777** | **#1** | `"h"` | 0.1444 |
+
+*Finding*: Association emergence exhibits an explicit temporal propagation profile: initially undetectable at tick 0 (rank #14, $P = 0.026$), rapidly surfacing by tick 2 ($P = 0.254$), and consolidating to peak confidence at tick 10 ($P = 0.978$).
+
 

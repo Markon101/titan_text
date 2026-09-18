@@ -1,0 +1,32 @@
+Loading trained weights from 'checkpoints/v0_viscous'...
+╔══════════════════════════════════════════════════════════════════════════════════════╗
+║ TITAN TEXT · DYNAMICAL BATTERY & NONLINEAR PERTURBATION REPORT                       ║
+╚══════════════════════════════════════════════════════════════════════════════════════╝
+
+[1] ±EPSILON NONLINEAR PERTURBATION PROBE (eps = 0.01)
+    Wavenumber | Wavelength | ||Q|| Norm | ||Δx|| Base | Relative Q/||Δx||
+    ───────────┼────────────┼────────────┼─────────────┼──────────────────
+    k = 16     | 2  cells   | 0.20244    | 0.38009     | 0.533    (High-Frequency (Nyquist alternating))
+    k = 8      | 4  cells   | 0.04903    | 0.38009     | 0.129    (Mid-Frequency (Mesoscale wave))
+    k = 4      | 8  cells   | 0.01619    | 0.38009     | 0.043    (Low-Frequency (Macro wave))
+    Verdict: STRONG_NONLINEAR_COUPLING (Microscopic perturbations induce significant macro response)
+
+[2] AUTONOMOUS FROZEN TRAJECTORY (256-step rollout)
+    • Trajectory Classification   : DIVERGENT (Field exploded without stability)
+    • Mean Step Drift Velocity    : 0.31458 units/step
+    • Min Recurrence Distance     : 0.88715
+    • Final Field Energy          : 1721.7290
+    • Final Output Token Entropy  : 0.0005 nats
+    • Initial Seed Pattern        : "he morphogenic sequence field ev"
+    • Final Emerged Pattern       : "ee no .lolenieele een.   seull e"
+
+[3] FALSIFICATION & CONTEXT SENSITIVITY BATTERY
+    • Baseline Target Accuracy    : 100.0%
+    • Scrambled Context Accuracy  :   7.8%
+    • Zeroed Context Accuracy     :  14.1%
+    • Truncated Context Accuracy  :  52.3%
+    • State-Reset Divergence      : 2.87531
+    • Contextual Memory Ratio     : 351.9%
+    • Verdict                     : POSITION_AND_CONTEXT_DEPENDENT (Model relies on sequence structure rather than position shortcut)
+
+✓ Scientific report saved to 'reviews/2026-09-11/v0_viscous-probe-256.json'

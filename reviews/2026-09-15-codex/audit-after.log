@@ -1,0 +1,6 @@
+   Compiling titan_text v0.1.0 (/data/data/com.termux/files/home/projects/titan_text)
+    Finished `release` profile [optimized] target(s) in 20.68s
+     Running `target/release/examples/blackboard_audit reviews/2026-09-15-codex/audit-after.json`
+Auditing Arm1BlackboardFixed
+Auditing Arm3UselessCompute
+Auditing Arm5StaticBuffer

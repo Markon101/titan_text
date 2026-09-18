@@ -1,0 +1,8 @@
+{
+  "rows": 960,
+  "unique_canonical_ids": 960,
+  "split_depth_cells": 15,
+  "rows_per_cell": 64,
+  "oracle_and_masks": "passed"
+}
+All 45 per-split baseline metrics independently verified.

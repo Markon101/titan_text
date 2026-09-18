@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "git_commit": "0b59e11",
+  "random_seed": 42,
+  "cumulative_step": 200,
+  "dev_steps": 1,
+  "train_loss": 0.018181354,
+  "train_accuracy": 1.0,
+  "val_loss": 0.9000856,
+  "val_accuracy": 0.796875,
+  "grad_norm": 0.014272193,
+  "state_energy": 0.6571498,
+  "param_count": 43715,
+  "checkpoint_hash": "af47c4a6fe469708",
+  "timestamp_unix": 1789364280,
+  "config": {
+    "field": {
+      "seq_len": 32,
+      "channels": 64,
+      "periodic_boundary": true
+    },
+    "nca": {
+      "hidden_dim": 96,
+      "step_size": 0.5,
+      "update_rate": 1.0,
+      "activation": "gelu",
+      "viscosity": 0.0
+    },
+    "train": {
+      "epochs": 200,
+      "dev_steps": 1,
+      "batch_size": 8,
+      "lr": 0.003,
+      "weight_decay": 0.01,
+      "save_every": 50,
+      "log_every": 10,
+      "seed": 42
+    },
+    "probe": {
+      "horizon": 64,
+      "perturbation_eps": 0.01,
+      "lp_window": 8,
+      "forcing_amplitude": 0.2
+    },
+    "latent": {
+      "latent_ticks_per_token": 1,
+      "post_input_ticks": 0,
+      "slow_timescale_cadence": 1,
+      "slow_channel_fraction": 0.0,
+      "observation_interval": 1
+    },
+    "intervention": {
+      "disable_recurrent": false,
+      "disable_gates": false,
+      "gate_clamp": null,
+      "disable_residual": false,
+      "recurrence_gain": 1.0,
+      "ablate_channel_pct": 0.0,
+      "ablate_channel_indices": [],
+      "additive_noise_sigma": 0.0,
+      "freeze_step": null,
+      "reset_step": null,
+      "bypass_perception": false,
+      "identity_only_perception": false
+    },
+    "model": "nca"
+  },
+  "task": "text"
+}

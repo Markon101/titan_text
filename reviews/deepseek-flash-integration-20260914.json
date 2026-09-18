@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "purpose": "Review this Python OpenRouter delegation helper for concrete correctness or credential-exposure bugs. Focus on transport, secret precedence, retries, JSON parsing, selected input guardrails, and accounting. Return at most five actionable findings with selected line evidence and cheapest regression checks. Treat missing features as lower priority than actual bugs. Do not rewrite the helper.",
+  "role": "code-reviewer",
+  "requested_model": "deepseek/deepseek-v4.1-flash",
+  "endpoint": "https://openrouter.ai/api/v1",
+  "temperature": 0.1,
+  "max_tokens": 1800,
+  "context": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "files": [
+    {
+      "selection": "skills/deepseek-flash/scripts/deepseek_flash.py",
+      "bytes": 22573,
+      "sha256": "f07344672fc361143ed28dc71531fc8d8127036960c55390b8747109897b6b84"
+    }
+  ],
+  "request": {
+    "bytes": 24937,
+    "sha256": "e6105dfb17edf80f2c3d6ea74e03656d3d4545d94c2493a2c17d9c76f31de7e9"
+  },
+  "status": "incomplete",
+  "returned_model": "deepseek/deepseek-v4.1-flash",
+  "id": "gen-1789369321-HWVuik7glNUKakyuus2e",
+  "finish_reason": "length",
+  "usage": {
+    "prompt_tokens": 6494,
+    "completion_tokens": 1800,
+    "total_tokens": 8294,
+    "cost": 0.0041082,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0041082,
+      "upstream_inference_prompt_cost": 0.0019482,
+      "upstream_inference_completions_cost": 0.00216
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  },
+  "attempts": 1,
+  "elapsed_seconds": 11.441,
+  "review_status": "Output limit reached; candidate claims checked independently; exploratory/retracted text not retained.",
+  "disagreements": [
+    {
+      "CLAIM A": "Reviewer suggested curl size aborts undermine the response guard.",
+      "CLAIM B": "curl exit 63 is explicitly mapped to a size-limit error; the post-read check adds defense in depth.",
+      "WHY THEY DIFFER": "The review treated the primary early-abort path as a missing guard.",
+      "DISCRIMINATING EXPERIMENT": "Mock curl exit 63 and inspect request_json error.",
+      "result": "Passed: explicit size-limit error; no change justified."
+    },
+    {
+      "CLAIM A": "Reviewer warned retries can duplicate billing.",
+      "CLAIM B": "Agreed; bounded transient retries are requested and successful retry results disclose the limited usage scope.",
+      "WHY THEY DIFFER": "Tradeoff rather than a correctness disagreement; no supported provider idempotency guarantee was established.",
+      "DISCRIMINATING EXPERIMENT": "Offline 429/503/success sequence checks attempts=3, backoff=1/2 seconds, and usage_scope disclosure.",
+      "result": "Passed; retain retries and documented billing limitation."
+    },
+    {
+      "CLAIM A": "Reviewer suggested numerical usage accounting is lost.",
+      "CLAIM B": "Observed OpenRouter responses contain numeric token/cost fields, which are preserved; undocumented string values are deliberately excluded.",
+      "WHY THEY DIFFER": "The reviewer hypothesized a string-valued provider field without evidence and incorrectly described a numeric field as dropped.",
+      "DISCRIMINATING EXPERIMENT": "Compare smoke response usage with offline nested numerical usage fixture.",
+      "result": "Passed: numeric cost, token counts, and cost_details retained. String metadata excluded."
+    },
+    {
+      "CLAIM A": "Reviewer suggested missing files incorrectly report root escape.",
+      "CLAIM B": "A missing file within the root reaches the regular-file validation.",
+      "WHY THEY DIFFER": "Incorrect prediction of Path.resolve/relative_to behavior.",
+      "DISCRIMINATING EXPERIMENT": "Call read_selection on an absent in-root file in a fresh temporary directory.",
+      "result": "Passed: Selection must be a regular file of at most 2 MiB; export a narrow text excerpt."
+    },
+    {
+      "CLAIM A": "Reviewer questioned secret precedence and duplicate smoke keyword arguments.",
+      "CLAIM B": "The argument set is valid; the configured local key wins and output is scrubbed before main receives it.",
+      "WHY THEY DIFFER": "Several speculative findings were retracted in the truncated response.",
+      "DISCRIMINATING EXPERIMENT": "Live smoke plus offline local-versus-stale-environment and response-redaction tests.",
+      "result": "Passed; no reputation-based acceptance of speculative findings."
+    }
+  ],
+  "validation": {
+    "offline_tests": 30,
+    "external_smoke": "OK",
+    "smoke_total_tokens": 159,
+    "smoke_cost": 4.86e-05,
+    "skill_validator": "passed"
+  }
+}

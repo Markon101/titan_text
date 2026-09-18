@@ -1,0 +1,406 @@
+{
+  "perturbation": {
+    "epsilon": 0.01,
+    "lp_window_cells": 8,
+    "wavelengths": [
+      {
+        "frequency_label": "High-Frequency (Nyquist alternating)",
+        "wavenumber": 16,
+        "wavelength_cells": 2,
+        "q_norm": 0.34886006,
+        "ordinary_update_norm": 0.35963875,
+        "relative_response_ratio": 0.9700264
+      },
+      {
+        "frequency_label": "Mid-Frequency (Mesoscale wave)",
+        "wavenumber": 8,
+        "wavelength_cells": 4,
+        "q_norm": 0.07134869,
+        "ordinary_update_norm": 0.35963875,
+        "relative_response_ratio": 0.19838932
+      },
+      {
+        "frequency_label": "Low-Frequency (Macro wave)",
+        "wavenumber": 4,
+        "wavelength_cells": 8,
+        "q_norm": 0.01489155,
+        "ordinary_update_norm": 0.35963875,
+        "relative_response_ratio": 0.04140685
+      }
+    ],
+    "verdict": "STRONG_NONLINEAR_COUPLING (Microscopic perturbations induce significant macro response)"
+  },
+  "trajectory": {
+    "horizon": 32,
+    "classification": "OPEN_PHASE_DRIFT (Bounded wandering trajectory)",
+    "min_recurrence_distance": 1.1126736,
+    "detected_cycle_period": null,
+    "mean_step_velocity": 0.38314658,
+    "final_energy": 74.395485,
+    "final_entropy": 0.07791411,
+    "traces": [
+      {
+        "step": 0,
+        "state_norm": 2.5797076,
+        "update_magnitude": 0.35963875,
+        "energy": 3.3274457,
+        "pct_low": 31.766438,
+        "pct_mid": 26.836954,
+        "pct_high": 41.39661,
+        "output_entropy": 0.00016689453,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 1,
+        "state_norm": 2.8823016,
+        "update_magnitude": 0.36234015,
+        "energy": 4.153831,
+        "pct_low": 31.957527,
+        "pct_mid": 26.506466,
+        "pct_high": 41.536007,
+        "output_entropy": 0.000033411674,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 2,
+        "state_norm": 3.1879706,
+        "update_magnitude": 0.3645057,
+        "energy": 5.0815787,
+        "pct_low": 32.184868,
+        "pct_mid": 26.174046,
+        "pct_high": 41.641087,
+        "output_entropy": 0.000009446608,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 3,
+        "state_norm": 3.4957397,
+        "update_magnitude": 0.36651924,
+        "energy": 6.110098,
+        "pct_low": 32.386078,
+        "pct_mid": 25.901348,
+        "pct_high": 41.712574,
+        "output_entropy": 0.0000041453854,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 4,
+        "state_norm": 3.804657,
+        "update_magnitude": 0.36855745,
+        "energy": 7.237707,
+        "pct_low": 32.553745,
+        "pct_mid": 25.676514,
+        "pct_high": 41.76974,
+        "output_entropy": 0.0000030155113,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 5,
+        "state_norm": 4.1135716,
+        "update_magnitude": 0.3708826,
+        "energy": 8.460735,
+        "pct_low": 32.732494,
+        "pct_mid": 25.457842,
+        "pct_high": 41.80966,
+        "output_entropy": 0.0000030238605,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 6,
+        "state_norm": 4.4216375,
+        "update_magnitude": 0.37308025,
+        "energy": 9.775438,
+        "pct_low": 32.94294,
+        "pct_mid": 25.223133,
+        "pct_high": 41.833927,
+        "output_entropy": 0.0000037241425,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 7,
+        "state_norm": 4.729461,
+        "update_magnitude": 0.37443772,
+        "energy": 11.183902,
+        "pct_low": 33.19382,
+        "pct_mid": 24.961308,
+        "pct_high": 41.844868,
+        "output_entropy": 0.0000053843055,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 8,
+        "state_norm": 5.0372076,
+        "update_magnitude": 0.37570733,
+        "energy": 12.686731,
+        "pct_low": 33.465755,
+        "pct_mid": 24.67289,
+        "pct_high": 41.86136,
+        "output_entropy": 0.00000925582,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 9,
+        "state_norm": 5.3446994,
+        "update_magnitude": 0.37774134,
+        "energy": 14.282906,
+        "pct_low": 33.750267,
+        "pct_mid": 24.36756,
+        "pct_high": 41.882175,
+        "output_entropy": 0.000019318906,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 10,
+        "state_norm": 5.652398,
+        "update_magnitude": 0.37983447,
+        "energy": 15.974803,
+        "pct_low": 34.032864,
+        "pct_mid": 24.04429,
+        "pct_high": 41.922844,
+        "output_entropy": 0.0000510088,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 11,
+        "state_norm": 5.960207,
+        "update_magnitude": 0.38155055,
+        "energy": 17.762033,
+        "pct_low": 34.2945,
+        "pct_mid": 23.725529,
+        "pct_high": 41.979973,
+        "output_entropy": 0.0001811293,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 12,
+        "state_norm": 6.268907,
+        "update_magnitude": 0.38212037,
+        "energy": 19.649597,
+        "pct_low": 34.544678,
+        "pct_mid": 23.419584,
+        "pct_high": 42.03574,
+        "output_entropy": 0.0008434933,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 13,
+        "state_norm": 6.578183,
+        "update_magnitude": 0.38295668,
+        "energy": 21.636246,
+        "pct_low": 34.784805,
+        "pct_mid": 23.125313,
+        "pct_high": 42.08988,
+        "output_entropy": 0.0042494237,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 14,
+        "state_norm": 6.8871613,
+        "update_magnitude": 0.38397342,
+        "energy": 23.716496,
+        "pct_low": 35.016186,
+        "pct_mid": 22.829355,
+        "pct_high": 42.154457,
+        "output_entropy": 0.016867928,
+        "decoded_pattern": "he morphogenic sequence field ev"
+      },
+      {
+        "step": 15,
+        "state_norm": 7.196313,
+        "update_magnitude": 0.38479677,
+        "energy": 25.89346,
+        "pct_low": 35.24071,
+        "pct_mid": 22.535128,
+        "pct_high": 42.22416,
+        "output_entropy": 0.02765908,
+        "decoded_pattern": "he morehogenic sequence field ev"
+      },
+      {
+        "step": 16,
+        "state_norm": 7.505371,
+        "update_magnitude": 0.3859666,
+        "energy": 28.165298,
+        "pct_low": 35.45064,
+        "pct_mid": 22.25189,
+        "pct_high": 42.29747,
+        "output_entropy": 0.017969865,
+        "decoded_pattern": "he morehogenic sequence field ev"
+      },
+      {
+        "step": 17,
+        "state_norm": 7.8142314,
+        "update_magnitude": 0.3869964,
+        "energy": 30.531107,
+        "pct_low": 35.646896,
+        "pct_mid": 21.98777,
+        "pct_high": 42.365334,
+        "output_entropy": 0.0147006055,
+        "decoded_pattern": "he morehogenic sequence field ev"
+      },
+      {
+        "step": 18,
+        "state_norm": 8.1235075,
+        "update_magnitude": 0.3875971,
+        "energy": 32.99569,
+        "pct_low": 35.831383,
+        "pct_mid": 21.743818,
+        "pct_high": 42.424797,
+        "output_entropy": 0.02134211,
+        "decoded_pattern": "he morehogenic sequence field ev"
+      },
+      {
+        "step": 19,
+        "state_norm": 8.432981,
+        "update_magnitude": 0.38905334,
+        "energy": 35.55758,
+        "pct_low": 36.007812,
+        "pct_mid": 21.512705,
+        "pct_high": 42.47948,
+        "output_entropy": 0.036681376,
+        "decoded_pattern": "he morehogenic sequence field ev"
+      },
+      {
+        "step": 20,
+        "state_norm": 8.742811,
+        "update_magnitude": 0.38977227,
+        "energy": 38.218376,
+        "pct_low": 36.174213,
+        "pct_mid": 21.288355,
+        "pct_high": 42.537434,
+        "output_entropy": 0.053570695,
+        "decoded_pattern": "he moreho enic sequence field ev"
+      },
+      {
+        "step": 21,
+        "state_norm": 9.053719,
+        "update_magnitude": 0.39047295,
+        "energy": 40.984913,
+        "pct_low": 36.32312,
+        "pct_mid": 21.081596,
+        "pct_high": 42.59528,
+        "output_entropy": 0.06379071,
+        "decoded_pattern": "henmoreho enic sequence field ev"
+      },
+      {
+        "step": 22,
+        "state_norm": 9.365502,
+        "update_magnitude": 0.3913726,
+        "energy": 43.85632,
+        "pct_low": 36.46063,
+        "pct_mid": 20.896242,
+        "pct_high": 42.643127,
+        "output_entropy": 0.07113452,
+        "decoded_pattern": "henmoreho enic sequence field ev"
+      },
+      {
+        "step": 23,
+        "state_norm": 9.6775675,
+        "update_magnitude": 0.392668,
+        "energy": 46.82766,
+        "pct_low": 36.60207,
+        "pct_mid": 20.723898,
+        "pct_high": 42.674034,
+        "output_entropy": 0.08441269,
+        "decoded_pattern": "henmoreho enic sequence field ev"
+      },
+      {
+        "step": 24,
+        "state_norm": 9.990141,
+        "update_magnitude": 0.3936212,
+        "energy": 49.90146,
+        "pct_low": 36.747944,
+        "pct_mid": 20.563463,
+        "pct_high": 42.688595,
+        "output_entropy": 0.107436195,
+        "decoded_pattern": "henmorero enic sequence field ev"
+      },
+      {
+        "step": 25,
+        "state_norm": 10.303725,
+        "update_magnitude": 0.39398474,
+        "energy": 53.083374,
+        "pct_low": 36.891483,
+        "pct_mid": 20.417225,
+        "pct_high": 42.69129,
+        "output_entropy": 0.111984804,
+        "decoded_pattern": "henmorero elic sequelcevfield ev"
+      },
+      {
+        "step": 26,
+        "state_norm": 10.618642,
+        "update_magnitude": 0.39388534,
+        "energy": 56.377777,
+        "pct_low": 37.02579,
+        "pct_mid": 20.287971,
+        "pct_high": 42.686237,
+        "output_entropy": 0.08833923,
+        "decoded_pattern": "henmorero elic sequelcevfield ev"
+      },
+      {
+        "step": 27,
+        "state_norm": 10.934008,
+        "update_magnitude": 0.3943436,
+        "energy": 59.776257,
+        "pct_low": 37.150864,
+        "pct_mid": 20.169998,
+        "pct_high": 42.67914,
+        "output_entropy": 0.07472353,
+        "decoded_pattern": "henmorero elic sequelcevfield et"
+      },
+      {
+        "step": 28,
+        "state_norm": 11.249465,
+        "update_magnitude": 0.3948354,
+        "energy": 63.275227,
+        "pct_low": 37.263966,
+        "pct_mid": 20.063137,
+        "pct_high": 42.672894,
+        "output_entropy": 0.07116507,
+        "decoded_pattern": "henmorero elic sequelcevfield et"
+      },
+      {
+        "step": 29,
+        "state_norm": 11.565182,
+        "update_magnitude": 0.39554036,
+        "energy": 66.87672,
+        "pct_low": 37.358234,
+        "pct_mid": 19.965769,
+        "pct_high": 42.675995,
+        "output_entropy": 0.07167478,
+        "decoded_pattern": "henmorero elic sequelcevfield et"
+      },
+      {
+        "step": 30,
+        "state_norm": 11.881181,
+        "update_magnitude": 0.396111,
+        "energy": 70.58122,
+        "pct_low": 37.435024,
+        "pct_mid": 19.87807,
+        "pct_high": 42.686905,
+        "output_entropy": 0.07348177,
+        "decoded_pattern": "henmorero elic sequelcevfield et"
+      },
+      {
+        "step": 31,
+        "state_norm": 12.19799,
+        "update_magnitude": 0.39582592,
+        "energy": 74.395485,
+        "pct_low": 37.501762,
+        "pct_mid": 19.797462,
+        "pct_high": 42.700775,
+        "output_entropy": 0.07791411,
+        "decoded_pattern": "henmorero elic sequelcevf eld et"
+      }
+    ]
+  },
+  "falsification": {
+    "baseline_accuracy": 1.0,
+    "scrambled_context_accuracy": 0.07421875,
+    "zeroed_context_accuracy": 0.0625,
+    "truncated_context_accuracy": 0.5078125,
+    "state_reset_divergence": 2.698423,
+    "contextual_memory_ratio": 3.1741672,
+    "verdict": "POSITION_AND_CONTEXT_DEPENDENT (Model relies on sequence structure rather than position shortcut)"
+  },
+  "navier_stokes": null
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "name": "falsification-statistical-protocol",
+    "role": "experiment-designer",
+    "task": "You are a senior statistical experiment designer evaluating a neural cellular automaton model on symbolic carry arithmetic.\n\nContext:\nIn Titan Text, we implemented `LatentBlackboard2D` (a dual-system 1D sequence model reading/writing to a 2D NCA lattice via Hilbert coordinates) with adaptive kinetic halting (E_kin = ||S_t - S_{t-1}||^2 < epsilon).\nWe are testing whether 2D spatial topology and recurrent cellular dynamics are genuinely required, or if the model simply routes around them via the residual stream.\n\nFormulate the exact statistical falsification protocol:\n1. For N=256 paired test instances of `ColumnArithmetic` with hostile ripple carry chains (e.g. 99...9 + 1):\n   - Null Hypothesis H0_A (Decorative Bypass): Acc(Intact) - Acc(Zeroed_Readout) <= 0.05\n   - Null Hypothesis H0_B (Static Identity Buffer): Acc(Intact) - Acc(Static_T0) <= 0.05\n   - Null Hypothesis H0_C (Spatial Topology Irrelevant): Acc(Intact) - Acc(Shuffled_Coords) <= 0.05\n   - Null Hypothesis H0_D (Adaptive Deliberation Equal): Acc(Adaptive_Halting) <= Acc(Fixed_T4) at lower FLOPs\n2. Specify the exact statistical significance test (McNemar's test or paired permutation test) and p-value threshold (p < 0.01) to reject each null.\n3. How should the Blackboard Utilization Ratio (BUR = ||read|| / (||read|| + ||res||)) be reported alongside per-digit carry depth?",
+    "max_tokens": 2048
+  },
+  {
+    "name": "controlled-blackboard-coder-audit",
+    "role": "coder",
+    "task": "You are a senior systems engineer optimizing Candle (Rust) code on ARM64 Termux.\n\nReview the proposed architecture for `LatentBlackboard2D::forward_controlled`:\n```rust\npub fn forward_controlled(\n    &self,\n    token_embeddings: &Tensor,\n    coord_mode: SpatialCoordMode,  // Hilbert vs Shuffled\n    readout_mode: ReadoutMode,      // Active vs Zeroed\n    dynamics_mode: DynamicsMode,    // FixedTicks vs StaticBuffer vs AdaptiveKinetic\n) -> Result<BlackboardRolloutOutput>\n```\n\n1. Ensure that `ReadoutMode::Zeroed` does not allocate unnecessary zero tensors per step.\n2. Ensure that `SpatialCoordMode::Shuffled` uses a robust, deterministic coordinate permutation that completely breaks 2D spatial adjacency while maintaining a bijection on [0, H*W).\n3. Ensure that `DynamicsMode::AdaptiveKinetic` computes E_kin cleanly without host CPU synchronizations on every step.\n4. Provide the exact, production-grade Rust implementation for these structs and methods in `src/nca2d.rs`.",
+    "max_tokens": 2048
+  },
+  {
+    "name": "adversarial-falsification-arbiter",
+    "role": "falsification-arbiter",
+    "task": "You are a relentless adversarial referee whose sole objective is to prevent researchers from declaring false victories for complex 2D architectures over simple 1D baselines.\n\n1. What are the subtle ways a researcher might claim 2D Latent Blackboard won when it actually didn't?\n   - Parameter mismatch: did the 2D blackboard add parameters (e.g. write_proj, read_proj) that gave it an unfair advantage over the 1D control?\n   - FLOP mismatch: did the 2D blackboard use 4x more steps than the 1D model?\n   - Test leakage: did the Hilbert curve accidentally map digit positions in a way that aligns row additions with the output query?\n2. Define the strict, uncompromising rules under which you will certify that 2D Latent Blackboard genuinely provides emergent 2D spatial computation.\n3. What negative result would decisively falsify 2D NCA for symbolic sequence reasoning?",
+    "max_tokens": 2048
+  }
+]

@@ -1,0 +1,19 @@
+{
+  "missing": {
+    "exit": 1,
+    "stderr": "Error: usage: target/debug/examples/arithmetic_corpus_audit OUTPUT.json"
+  },
+  "unknown": {
+    "exit": 1,
+    "stderr": "Error: unknown option: --bogus"
+  },
+  "extra": {
+    "exit": 1,
+    "stderr": "Error: usage: target/debug/examples/arithmetic_corpus_audit OUTPUT.json"
+  },
+  "overwrite": {
+    "exit": 1,
+    "stderr": "Error: create output exclusively: reviews/2026-09-17-next-step/corpus.json\n\nCaused by:\n    File exists (os error 17)"
+  },
+  "output_unchanged": true
+}

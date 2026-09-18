@@ -1,0 +1,77 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling titan_text v0.1.0 (/data/data/com.termux/files/home/projects/titan_text)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.51s
+     Running unittests src/main.rs (target/debug/deps/titan_text-a357a29b651108d2)
+
+running 58 tests
+test baselines::tests::local_depth_has_finite_propagation_and_no_boundary_wrap ... ok
+test checkpoint::tests::test_manifest_backward_compatibility ... ok
+test baselines::tests::causal_models_prefix_and_streaming_outputs_agree ... ok
+test baselines::tests::test_baselines_forward_and_params ... ok
+test checkpoint::tests::test_save_and_load_checkpoint_roundtrip ... ok
+test experiment::tests::test_autonomous_rollout_with_pattern_decoding ... ok
+test experiment::tests::test_smooth_forcing_spatial_zero_mean ... ok
+test falsification::tests::empty_falsification_seed_list_fails_before_training ... ok
+test falsification::tests::exact_answer_effect_and_step_quantiles_use_observed_units ... ok
+test experiment::tests::test_rollout_prompt_and_file_export ... ok
+test baselines::tests::seeded_models_have_repeatable_outputs_and_connected_weights ... ok
+test falsification::tests::test_combine_fisher_pvalues ... ok
+test falsification::tests::test_exact_mcnemar_binomial ... ok
+test falsification::tests::test_useless_compute_1d_parameter_match ... ok
+test field::tests::test_constant_field_zero_gradients ... ok
+test field::tests::test_parseval_identity_energy_conservation ... ok
+test field::tests::test_sinusoidal_field_fluid_observables ... ok
+test instrumentation::tests::test_cosine_similarity ... ok
+test experiment::tests::test_navier_stokes_blowup_probe_execution ... ok
+test instrumentation::tests::test_effective_dimension ... ok
+test instrumentation::tests::test_effective_dimension_rank1_and_independent ... ok
+test instrumentation::tests::test_instrumentation_trace_summary ... ok
+test intervention::tests::test_intervention_channel_ablation_and_reset ... ok
+test intervention::tests::test_intervention_gate_and_delta ... ok
+test falsification::tests::test_bootstrap_difference_ci ... ok
+test latent::tests::test_scientific_hygiene_observation_does_not_mutate_state ... ok
+test latent::tests::test_scientific_hygiene_gradients_through_recurrent_paths ... ok
+test latent::tests::test_scientific_hygiene_recurrent_depth_changes_computation ... ok
+test nca2d::tests::test_2d_nca_adaptive_kinetic_halting ... ok
+test nca2d::tests::test_2d_nca_perception_shapes ... ok
+test nca2d::tests::test_2d_nca_macro_feedback_expansion ... ok
+test nca2d::tests::test_2d_viscous_dissipation_substepping_stability ... ok
+test latent::tests::test_latent_executor_independent_depth_and_association ... ok
+test nca2d::tests::test_controlled_interventions_zeroed_readout ... ok
+test nca2d::tests::test_hilbert_curve_bijective_roundtrip ... ok
+test nca2d::tests::test_hilbert_curve_locality_preservation ... ok
+test nca2d::tests::test_controlled_interventions_write_disabled_and_freeze ... ok
+test nca2d::tests::test_latent_blackboard_causal_read_write_loop ... ok
+test nca2d::tests::test_latent_blackboard_residual_integration_and_bur ... ok
+test nca2d::tests::test_temporal_corruption_intervention ... ok
+test nca::tests::test_dual_timescale_leaky_contraction ... ok
+test nca::tests::test_macro_recursive_feedback_loop_lightcone_expansion ... ok
+test nca::tests::test_nca_step_and_viscosity ... ok
+test nca::tests::test_state_norm_compact_manifold ... ok
+test nca::tests::test_viscous_damping_attenuates_high_frequencies ... ok
+test tasks::tests::impossible_arithmetic_constraints_do_not_silently_emit_zero_plus_zero ... ok
+test tasks::tests::invalid_task_shapes_fail_without_panicking ... ok
+test nca2d::tests::test_tripartite_coordinate_modes ... ok
+test tasks::tests::labels_match_independent_oracles_and_masks ... ok
+test tasks::tests::task_engine_dyck_uses_declared_vocabulary ... ok
+test nca2d::tests::test_2d_nca_rms_compact_manifold_invariance ... ok
+test tasks::tests::test_column_arithmetic_carry_chain_oracle ... ok
+test tasks::tests::test_task_suite_generation ... ok
+test train::tests::test_resume_training_from_checkpoint ... ok
+test train::tests::test_tail_equilibrium_loss_backprop ... ok
+test tasks::tests::marginal_controls_cannot_solve_randomized_tasks ... ok
+test tasks::tests::task_seed_determinism_diversity_and_content_disjoint_splits ... ok
+test falsification::tests::opt_in_local_write_normalization_keeps_static_gradients_finite ... ok
+
+test result: ok. 58 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.04s
+
+     Running tests/cli.rs (target/debug/deps/cli-a74a8c41cb6edd5e)
+
+running 3 tests
+test help_never_starts_work_or_touches_checkpoints ... ok
+test rejects_bad_arguments_before_io ... ok
+test checkpoint_continuation_probes_and_pattern_exports ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.94s
+

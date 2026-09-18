@@ -1,0 +1,26 @@
+{"changed_future_position":16,"checkpoint":"v0_text","future_new":"z","future_old":"p","prediction_new":"r","prediction_old":"t","prediction_position":15,"right_shift_copy_acc":0.96875,"right_shift_interior_acc":1.0,"same_prefix_logit_max_abs_change":10.50509262084961,"same_prefix_logit_rms_change":3.1879055500030518,"step":50,"val_model_acc":0.73046875}
+{"changed_future_position":16,"checkpoint":"v0_viscous","future_new":"z","future_old":"p","prediction_new":"e","prediction_old":"c","prediction_position":15,"right_shift_copy_acc":0.96875,"right_shift_interior_acc":1.0,"same_prefix_logit_max_abs_change":10.963586807250977,"same_prefix_logit_rms_change":3.10310697555542,"step":5706,"val_model_acc":0.8203125}
+{"autograd_derivative":7.861317157745361,"checkpoint":"v0_viscous","epsilon":0.01,"finite_difference_derivative":7.715177536010742,"gradient_test":"CE directional derivative along global normalized gradient","reachable_tensors":9,"relative_error":0.018589711978562663,"steps":8,"viscosity":0.009999999776482582}
+{"autograd_derivative":7.861317157745361,"checkpoint":"v0_viscous","epsilon":0.003,"finite_difference_derivative":7.845838864644368,"gradient_test":"CE directional derivative along global normalized gradient","reachable_tensors":9,"relative_error":0.001968918540036659,"steps":8,"viscosity":0.009999999776482582}
+{"autograd_derivative":7.861317157745361,"checkpoint":"v0_viscous","epsilon":0.001,"finite_difference_derivative":7.859528064727783,"gradient_test":"CE directional derivative along global normalized gradient","reachable_tensors":9,"relative_error":0.000227581839236116,"steps":8,"viscosity":0.009999999776482582}
+{"gradient_tensor":"interface.embed.weight","l2":0.6869426369667053}
+{"gradient_tensor":"interface.proj.bias","l2":0.03325764834880829}
+{"gradient_tensor":"interface.proj.weight","l2":0.8867192268371582}
+{"gradient_tensor":"nca.dense1.bias","l2":0.2474413812160492}
+{"gradient_tensor":"nca.dense1.weight","l2":6.381500720977783}
+{"gradient_tensor":"nca.dense_delta.bias","l2":0.18399259448051453}
+{"gradient_tensor":"nca.dense_delta.weight","l2":4.276148796081543}
+{"gradient_tensor":"nca.dense_gate.bias","l2":0.06365280598402023}
+{"gradient_tensor":"nca.dense_gate.weight","l2":1.1970443725585938}
+{"frozen_viscosity":0.0,"val_acc":0.83203125,"val_loss":1.3701032400131226}
+{"frozen_viscosity":0.009999999776482582,"val_acc":0.8203125,"val_loss":1.3089394569396973}
+{"frozen_viscosity":0.05000000074505806,"val_acc":0.82421875,"val_loss":1.1319255828857422}
+{"frozen_viscosity":0.10000000149011612,"val_acc":0.82421875,"val_loss":1.020139455795288}
+{"frozen_viscosity":0.20000000298023224,"val_acc":0.76171875,"val_loss":1.1561763286590576}
+{"frozen_viscosity":0.4000000059604645,"val_acc":0.32421875,"val_loss":2.910618782043457}
+{"centered_energy":3.483144998550415,"checkpoint":"v0_viscous","dc_energy":0.46989092230796814,"dc_energy_fraction":0.11886836588382721,"development_age":8,"global_mean":-0.04353746771812439,"mean_max_amplitude":2.3989248275756836,"total_energy":3.953035831451416}
+{"centered_energy":749.5421142578125,"checkpoint":"v0_viscous","dc_energy":972.1868896484375,"dc_energy_fraction":0.5646573305130005,"development_age":263,"global_mean":0.35031580924987793,"mean_max_amplitude":115.68415832519531,"total_energy":1721.72900390625}
+{"right_shift_copy_acc":0.96875,"split":"train","task":"text"}
+{"right_shift_copy_acc":0.96875,"split":"val","task":"text"}
+{"right_shift_copy_acc":1.0,"split":"train","task":"dyck"}
+{"right_shift_copy_acc":1.0,"split":"val","task":"dyck"}

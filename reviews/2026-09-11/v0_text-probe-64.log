@@ -1,0 +1,32 @@
+Loading trained weights from 'checkpoints/v0_text'...
+╔══════════════════════════════════════════════════════════════════════════════════════╗
+║ TITAN TEXT · DYNAMICAL BATTERY & NONLINEAR PERTURBATION REPORT                       ║
+╚══════════════════════════════════════════════════════════════════════════════════════╝
+
+[1] ±EPSILON NONLINEAR PERTURBATION PROBE (eps = 0.01)
+    Wavenumber | Wavelength | ||Q|| Norm | ||Δx|| Base | Relative Q/||Δx||
+    ───────────┼────────────┼────────────┼─────────────┼──────────────────
+    k = 16     | 2  cells   | 0.37016    | 0.33729     | 1.097    (High-Frequency (Nyquist alternating))
+    k = 8      | 4  cells   | 0.07296    | 0.33729     | 0.216    (Mid-Frequency (Mesoscale wave))
+    k = 4      | 8  cells   | 0.01592    | 0.33729     | 0.047    (Low-Frequency (Macro wave))
+    Verdict: STRONG_NONLINEAR_COUPLING (Microscopic perturbations induce significant macro response)
+
+[2] AUTONOMOUS FROZEN TRAJECTORY (64-step rollout)
+    • Trajectory Classification   : OPEN_PHASE_DRIFT (Bounded wandering trajectory)
+    • Mean Step Drift Velocity    : 0.36301 units/step
+    • Min Recurrence Distance     : 1.04503
+    • Final Field Energy          : 224.1407
+    • Final Output Token Entropy  : 0.0101 nats
+    • Initial Seed Pattern        : "he morphogenic sequence field ev"
+    • Final Emerged Pattern       : " t tiri o ectciserdenetctieideec"
+
+[3] FALSIFICATION & CONTEXT SENSITIVITY BATTERY
+    • Baseline Target Accuracy    : 100.0%
+    • Scrambled Context Accuracy  :   8.2%
+    • Zeroed Context Accuracy     :   6.2%
+    • Truncated Context Accuracy  :  48.4%
+    • State-Reset Divergence      : 2.36993
+    • Contextual Memory Ratio     : 265.3%
+    • Verdict                     : POSITION_AND_CONTEXT_DEPENDENT (Model relies on sequence structure rather than position shortcut)
+
+✓ Scientific report saved to 'reviews/2026-09-11/v0_text-probe-64.json'

@@ -1,0 +1,14 @@
+{
+  "command": [
+    "target/release/titan_text",
+    "falsify",
+    "--seeds",
+    "invalid",
+    "--epochs",
+    "1",
+    "--steps-per-epoch",
+    "1"
+  ],
+  "returncode": 1,
+  "stderr": "error: at least one seed is required\n"
+}

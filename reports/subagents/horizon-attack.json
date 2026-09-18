@@ -1,0 +1,43 @@
+{
+  "status": "ok",
+  "model": "deepseek/deepseek-v4.1-flash",
+  "role": "code-reviewer",
+  "purpose": "Review this existing horizon training implementation. Identify silent no-ops, RNG confounds, loss-weighting problems and what must be corrected before claiming horizon robustness. Return concrete findings and minimal tests; no architecture additions.",
+  "answer": "# Review: `src/train.rs` horizon training\n\n## 1. `avg_update_mag` is wrong for every non-default mode (silent no-op / mislabeled diagnostic)\n\n```rust\nlet avg_update_mag = total_update_mag / t_target.max(1) as f32;\n```\n\n`total_update_mag` accumulates over the **actual number of NCA steps executed**, but the divisor is `t_target`, which is only the single-horizon target. Consequences:\n\n- **`multi_tick`**: `t_target = horizon_max`, but the loop runs `1..=h_max` \u2192 `h_max` steps. Divisor happens to match, but `t_target` is set to `horizon_max` while `is_multi` ignores it. Fragile coincidence, not correctness.\n- **`stability_tail`**: `t_target = base_t`, but the loop runs `base_t + tail_k` steps. `avg_update_mag` is inflated by `(base_t + tail_k)/base_t`. The diagnostic silently lies about per-step update magnitude.\n- **`jitter`/`randomized`**: `t_target` is the sampled horizon, and the loop runs `t_target` steps \u2014 this case is correct.\n\nThis is a **silent no-op in the diagnostic**: `update_magnitude` is reported as a per-step quantity but is not. Fix: track `steps_executed` explicitly and divide by that.\n\n```rust\nlet mut steps_executed = 0usize;\n// increment inside every nca.step call site\nlet avg_update_mag = total_update_mag / steps_executed.max(1) as f32;\n```\n\n## 2. `randomized` horizon is deterministic and confounded with `step_count`\n\n```rust\nlet t = self.config.train.horizon_min + (self.step_count % (span + 1));\n```\n\nThis is a **cyclic schedule**, not randomization. Two problems:\n\n- **No RNG**: the name `randomized` is misleading; the horizon is a deterministic function of `step_count`. If the intent is stochastic horizon sampling, this is a silent no-op.\n- **Confound with `jitter`**: `jitter` also uses `self.step_count % (2*j+1)`. Both modes are pure functions of `step_count`, so any comparison between them is comparing two deterministic schedules, not \"randomized vs jittered\". Any claim of \"horizon robustness\" from these two modes is unsupported.\n\nAlso note `span = horizon_max - horizon_min` then `% (span + 1)` \u2014 the `+1` is correct for inclusive range, but if `horizon_max == horizon_min`, `span = 0`, `span+1 = 1`, `t = horizon_min`. Fine, but the `.max(1)` on `span` is dead code because `span+1` is used, not `span`. Minor.\n\nIf true randomization is intended, use a seeded RNG stored on `Trainer` (see \u00a75).\n\n## 3. `stability_tail` loss weighting is arbitrary and undocumented\n\n```rust\nlet scaled_k = (loss_k * 0.5)?;\ntail_loss = (&tail_loss + &scaled_k)?;\n```\n\n- The base loss at `base_t` gets weight 1.0; each of the `tail_k` losses gets weight 0.5. There is no normalization by `tail_k`, so the effective loss scale grows with `tail_k`. With `tail_k = 8`, the tail contributes `4\u00d7` the base loss. This is a **loss-weighting problem**: the gradient is dominated by the tail, and the \"stability\" objective is not comparable across `tail_k` values.\n- The 0.5 is a magic constant with no config knob. Either expose it or normalize: `tail_loss = (base + sum(tail_k)) / (1 + tail_k)`.\n\n## 4. `multi_tick` loss averaging is correct but `final_logits`/`train_acc` are misleading\n\n```rust\nce_loss_acc = Some((total_loss / (loss_count.max(1.0) as f64))?);\n```\n\nThe loss is averaged over `h_min..=h_max`, which is correct. But:\n\n- `final_logits = Some(logits_t)` is overwritten each iteration, so `train_acc` is computed **only at `h_max`**, not averaged. The reported `train_acc` does not correspond to the reported `train_loss`. This is a **diagnostic inconsistency**, not a training bug, but it will mislead anyone reading the metrics.\n- `loss_count` is `f32` and cast to `f64` for division; `total_loss` is a `Tensor`. The `?` on `(total_loss / ...)` suggests a fallible op. Fine, but `loss_count.max(1.0)` is dead \u2014 the loop guarantees `loss_count >= 1` when `h_max >= h_min`. If `h_min > h_max`, the loop body never enters `t >= h_min`, `ce_loss_acc` stays `None`, and `ce_loss_acc.unwrap()` panics. **Boundary condition**: `horizon_min > horizon_max` is not validated.\n\n## 5. No RNG anywhere; `rand::random` only in test\n\nThe test uses `rand::random::<u32>()` for a temp path, but the trainer itself has no RNG. Combined with \u00a72, \"randomized\" and \"jitter\" are deterministic. If the goal is horizon robustness via stochastic sampling, this is a **silent no-op**: the code claims randomization but delivers a cyclic schedule. Add a seeded `StdRng` to `Trainer` and use it for horizon sampling; seed it from `config` so runs are reproducible.\n\n## 6. `evaluate_val` uses `dev_steps`, not the training horizon\n\n```rust\nfor _ in 0..self.config.train.dev_steps {\n    field = self.nca.step_field(&field, &self.device)?;\n}\n```\n\nValidation always evaluates at `dev_steps`, regardless of `horizon_mode`. So a model trained with `multi_tick` (supervised at `h_min..=h_max`) is validated only at `dev_steps`. If `dev_steps` is outside `[h_min, h_max]`, the validation loss is not measuring the trained objective. This is a **train/eval mismatch** that will make horizon-robustness claims unverifiable. Either evaluate at multiple horizons or at the mode's target.\n\n## 7. `step_count` is incremented before backward, and not persisted\n\n```rust\nself.step_count += 1;\nlet grads = ce_loss.backward()?;\n```\n\n- Incrementing before backward is harmless for the horizon schedule (which reads `step_count` at the top of the next call), but it means the first step uses `step_count = 0` and the schedule is offset by one relative to a resumed run. On resume, `step_count` is **not restored** from the checkpoint (`Trainer::new` sets it to 0). The test asserts val loss matches after resume, but the horizon schedule will diverge on the next `train_step` because `step_count` restarts at 0. **This is a resume bug**: `randomized`/`jitter` horizons will not match a continuous run. The test only checks `!is_nan()`, so it does not catch this.\n\n## 8. `grad_norm` computed over `varmap.all_vars()` but `grads.get` may miss vars\n\n```rust\nfor var in self.varmap.all_vars() {\n    if let Some(g) = grads.get(&var) { ... }\n}\n```\n\nIf a variable receives no gradient (e.g., unused path), it is silently skipped. That is standard, but combined with `sum_sq_grad` starting at 0.0, a fully detached graph would report `grad_norm = 0.0` rather than erroring. Not a bug per se, but worth an assertion that at least one gradient was found.\n\n## 9. `is_tail` ignores `t_target`\n\nIn `stability_tail`, `t_target = base_t` is set but the loop uses `base_t` directly. `t_target` is then used in `avg_update_mag",
+  "parsed_json": null,
+  "reasoning": null,
+  "finish_reason": "length",
+  "usage": {
+    "prompt_tokens": 3472,
+    "completion_tokens": 1800,
+    "total_tokens": 5272,
+    "cost": 0.0032016,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0032016,
+      "upstream_inference_prompt_cost": 0.0010416,
+      "upstream_inference_completions_cost": 0.00216
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  },
+  "files": [
+    {
+      "file": "src/train.rs",
+      "span": "1-326",
+      "sha256": "b418d3aab3ef667e65dca88d53353b734b08393c658dd06908cf073c920dce42"
+    }
+  ],
+  "elapsed_seconds": 12.857174,
+  "created_at_utc": "2026-09-15T04:10:39.304961+00:00",
+  "name": "horizon-attack"
+}

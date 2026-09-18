@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "git_commit": "0b59e11",
+  "random_seed": 42,
+  "cumulative_step": 500,
+  "dev_steps": 16,
+  "train_loss": 0.0002498607,
+  "train_accuracy": 1.0,
+  "val_loss": 2.2601354,
+  "val_accuracy": 0.6640625,
+  "grad_norm": 0.0014050603,
+  "state_energy": 6.5698805,
+  "param_count": 43715,
+  "checkpoint_hash": "8ee5899c7e1b1808",
+  "timestamp_unix": 1789276026,
+  "config": {
+    "field": {
+      "seq_len": 32,
+      "channels": 64,
+      "periodic_boundary": true
+    },
+    "nca": {
+      "hidden_dim": 96,
+      "step_size": 0.5,
+      "update_rate": 1.0,
+      "activation": "gelu",
+      "viscosity": 0.01
+    },
+    "train": {
+      "epochs": 500,
+      "dev_steps": 16,
+      "batch_size": 8,
+      "lr": 0.003,
+      "weight_decay": 0.01,
+      "save_every": 50,
+      "log_every": 10,
+      "seed": 42
+    },
+    "probe": {
+      "horizon": 16,
+      "perturbation_eps": 0.01,
+      "lp_window": 8,
+      "forcing_amplitude": 0.2
+    }
+  },
+  "task": "text"
+}

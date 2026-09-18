@@ -1,0 +1,24 @@
+   Compiling titan_text v0.1.0 (/data/data/com.termux/files/home/projects/titan_text)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.14s
+     Running unittests examples/arithmetic_corpus_audit.rs (target/debug/examples/arithmetic_corpus_audit-b214668c79ff713a)
+
+running 16 tests
+test arithmetic_corpus::tests::corrupt_corpora_rejected ... ok
+test arithmetic_corpus::tests::exhaustive_width1_and_2_carry_oracle ... ok
+test arithmetic_corpus::tests::invalid_requests_rejected ... ok
+test arithmetic_corpus::tests::known_carry_depth_examples ... ok
+test arithmetic_corpus::tests::masks_and_query_only_labels ... ok
+test arithmetic_corpus::tests::metrics_balance_depth_and_identify_overflow ... ok
+test arithmetic_corpus::tests::overflow_is_first_query ... ok
+test arithmetic_corpus::tests::position_prior_uses_only_position ... ok
+test arithmetic_corpus::tests::exact_depth_across_k_and_seeds ... ok
+test arithmetic_corpus::tests::stable_fnv_fixture ... ok
+test arithmetic_corpus::tests::exhaustion_width1_count100 ... ok
+test arithmetic_corpus::tests::tiny_hand_computed_baseline_metrics ... ok
+test arithmetic_corpus::tests::reproducibility_same_seed ... ok
+test arithmetic_corpus::tests::swap_invariant_split_ownership ... ok
+test arithmetic_corpus::tests::unique_and_disjoint_panels ... ok
+test arithmetic_corpus::tests::default_config_shape ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+

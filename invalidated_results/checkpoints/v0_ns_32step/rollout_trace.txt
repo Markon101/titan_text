@@ -1,0 +1,37 @@
+# TITAN TEXT · AUTONOMOUS ROLLOUT PATTERN TRACE
+# Checkpoint: checkpoints/v0_ns_32step
+# Task: text | Horizon: 32 steps | Viscosity (nu): 0.0100
+# Classification: OPEN_PHASE_DRIFT (Bounded wandering trajectory)
+#
+Step 000: he morphogenic sequence field ev
+Step 001: he morphogenic sequence field ev
+Step 002: he morphogenic sequence field ev
+Step 003: he morphogenic sequence field ev
+Step 004: he morphogenic sequence field ev
+Step 005: he morphogenic sequence field ev
+Step 006: he morphogenic sequence field ev
+Step 007: he morphogenic sequence field ev
+Step 008: he morphogenic sequence field ev
+Step 009: he morphogenic sequence field ev
+Step 010: he morphogenic sequence field ev
+Step 011: he morphogenic sequence field ev
+Step 012: he morphogenic sequence field ev
+Step 013: he morphogenic sequence field ev
+Step 014: he morphogenic sequence field ev
+Step 015: he morphogenic sequence field ev
+Step 016: he morphogenic sequence field ev
+Step 017: he morphogenic sequence field ev
+Step 018: he morphogenic sequence field ev
+Step 019: he morphogenic sequence field ev
+Step 020:  e morphogenic sequence field ev
+Step 021:  e mohphogenic sequence field ev
+Step 022:  e mohphogenic sequence field ev
+Step 023:  e mohphogenic sequence field ev
+Step 024:  e mohphogenic sequence field ev
+Step 025:  e mohphogenic sequence field ev
+Step 026:  e uohphogenic sequence field ev
+Step 027:  e uohphogenic sequence field ev
+Step 028:  e uohpeogenic sequence fiend ev
+Step 029:  e uohpeotenic sequence fiend ev
+Step 030:  e uohpeotenic sequence fiend ev
+Step 031:  e uohpeotenic sequence fiend ev
