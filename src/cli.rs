@@ -77,6 +77,7 @@ impl Command {
                 "--state-norm",
                 "--trace-output",
                 "--record-activations",
+                "--zero-boundary",
             ],
             Self::Rollout => &[
                 "--load-dir",
@@ -103,6 +104,7 @@ impl Command {
                 "--threads",
                 "--trace-output",
                 "--record-activations",
+                "--zero-boundary",
             ],
             Self::Probe => &[
                 "--load-dir",
@@ -162,6 +164,7 @@ impl Command {
                 "--lesion-shuffle",
                 "--trace-output",
                 "--record-activations",
+                "--zero-boundary",
             ],
             Self::Associate => &[
                 "--load-dir",
@@ -284,6 +287,7 @@ fn is_flag_option(name: &str) -> bool {
             | "--lesion-shuffle"
             | "--train"
             | "--record-activations"
+            | "--zero-boundary"
     )
 }
 
@@ -528,6 +532,7 @@ pub fn print_help(command: Option<Command>) {
             "--state-norm" => "<NAME>      State normalization on intermediate fields (none, rms, bounded, layer_norm; default: none)",
             "--trace-output" => "<FILE>    Write detailed per-step activation traces to JSON file",
             "--record-activations" => "    Record full spatial activation matrices across rollout steps",
+            "--zero-boundary" => "         Enforce zero-padding spatial boundary (disable periodic wrap-around)",
             _ => unreachable!(),
         };
         println!("  {name} {description}");

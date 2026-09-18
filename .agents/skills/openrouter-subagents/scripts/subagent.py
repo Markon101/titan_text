@@ -69,6 +69,30 @@ ROLE_PROMPTS: dict[str, str] = {
         "You are an evidence-driven AI research scientist. "
         "Synthesize theoretical formulations, audit experimental data, and report findings with strict precision."
     ),
+    "ideation-agent": (
+        "You are an exploratory AI research ideation scientist. "
+        "Your purpose is broad, creative conceptual search across neuroscience, cellular automata, "
+        "dynamical systems, information theory, control theory, recurrent computation, algorithm learning, "
+        "and statistical mechanics. Propose novel tasks, new causal interventions, counterfactual state-transplants, "
+        "subspace interventions, and minimal synthetic worlds. "
+        "Generate both high-value practical experiments and high-risk/high-information unconventional ideas."
+    ),
+    "dynamics-agent": (
+        "You are a mathematical physicist and dynamical systems specialist. "
+        "Analyze phase space topologies, Lyapunov spectra, attractors, fixed points, energy dissipation, "
+        "and continuum limits in discrete and recurrent cellular systems."
+    ),
+    "statistical-agent": (
+        "You are a biostatistician and empirical measurement specialist. "
+        "Formulate rigorous pre-registered hypothesis tests, power calculations, Cohen's d effect sizes, "
+        "bootstrap confidence intervals, and distinguish signals from seed noise."
+    ),
+    "skeptical-agent": (
+        "You are a relentless skeptical critic and deflationary analyst. "
+        "Identify the most mundane, uninteresting explanation for any positive result: "
+        "feedforward depth specialization, label imbalance, marginal preference, token leakage, "
+        "or initialization artifacts."
+    ),
 }
 
 
@@ -231,7 +255,7 @@ def run_subagent(
     context: str = "",
     model: str = DEFAULT_MODEL,
     temperature: float = 0.2,
-    max_tokens: int = 2048,
+    max_tokens: int = 4096,
     enable_reasoning: bool = False,
     json_answer: bool = False,
     root: str | Path = ".",
@@ -292,6 +316,8 @@ def run_subagent(
     message = choice.get("message", {})
     content = message.get("content") or ""
     reasoning = message.get("reasoning")
+    if not content.strip() and reasoning:
+        content = reasoning
 
     parsed_json = None
     if json_answer and content:
@@ -330,14 +356,15 @@ def main(argv: list[str] | None = None) -> int:
 
     # run
     run_parser = subparsers.add_parser("run", help="Run a single subagent task")
-    run_parser.add_argument("--task", required=True, help="Task or research instruction")
+    run_parser.add_argument("--task", default="", help="Task or research instruction")
+    run_parser.add_argument("--task-file", help="Path to file containing task or research instruction")
     run_parser.add_argument("--role", default="researcher", choices=list(ROLE_PROMPTS.keys()))
     run_parser.add_argument("--file", action="append", dest="files", default=[])
     run_parser.add_argument("--context", default="")
     run_parser.add_argument("--context-file")
     run_parser.add_argument("--model", default=DEFAULT_MODEL)
     run_parser.add_argument("--temperature", type=float, default=0.2)
-    run_parser.add_argument("--max-tokens", type=int, default=2048)
+    run_parser.add_argument("--max-tokens", type=int, default=4096)
     run_parser.add_argument("--reasoning", action="store_true", help="Enable DeepSeek reasoning tokens")
     run_parser.add_argument("--json-answer", action="store_true", help="Request structured JSON output")
     run_parser.add_argument("--output-json", action="store_true", help="Print entire result envelope as JSON")
@@ -382,12 +409,18 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         elif args.subcommand == "run":
+            task = args.task
+            if args.task_file:
+                task = Path(args.task_file).read_text().strip()
+            if not task:
+                raise SubagentError("Either --task or --task-file must be provided and non-empty.")
+
             ctx = args.context
             if args.context_file:
                 ctx = (ctx + "\n" + Path(args.context_file).read_text()).strip()
 
             res = run_subagent(
-                args.task,
+                task,
                 role=args.role,
                 files=args.files,
                 context=ctx,

@@ -169,6 +169,9 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
     if let Some(sn) = state_norm_opt {
         config.nca.state_norm = sn;
     }
+    if args.flag("--zero-boundary") {
+        config.field.periodic_boundary = false;
+    }
     config.validate()?;
     start_step
         .checked_add(config.train.epochs)
@@ -875,6 +878,9 @@ fn cmd_rollout(args: &cli::Options, device: &Device) -> Result<()> {
     if let Some(v) = viscosity_opt {
         config.nca.viscosity = v;
     }
+    if args.flag("--zero-boundary") {
+        config.field.periodic_boundary = false;
+    }
 
     config.validate()?;
     let dataset = SequenceDataset::new(&task);
@@ -1075,6 +1081,9 @@ fn cmd_sweep(args: &cli::Options, device: &Device) -> Result<()> {
     }
     if args.flag("--lesion-shuffle") {
         intervention.shuffle_batch = true;
+    }
+    if args.flag("--zero-boundary") {
+        config.field.periodic_boundary = false;
     }
 
     config.validate()?;
