@@ -1,0 +1,102 @@
+{
+  "all_monotonic": false,
+  "any_accuracy_discontinuity": false,
+  "budgets": [
+    4
+  ],
+  "reports": [
+    {
+      "bifurcation_detected": false,
+      "budgets": [
+        {
+          "accuracy": 0.546875,
+          "compute_cost_units": 2048,
+          "latent_ticks": 4,
+          "loss": 1.414961814880371,
+          "mean_confidence": 0.013070777989923954,
+          "regime": "DEGRADATION",
+          "state_displacement": 1.1734583377838135
+        }
+      ],
+      "monotonic_improvement": false,
+      "optimal_ticks": 4,
+      "task_name": "iterated-parity"
+    },
+    {
+      "bifurcation_detected": false,
+      "budgets": [
+        {
+          "accuracy": 0.484375,
+          "compute_cost_units": 2048,
+          "latent_ticks": 4,
+          "loss": 1.5106077194213867,
+          "mean_confidence": 0.013175692409276962,
+          "regime": "DEGRADATION",
+          "state_displacement": 1.1666440963745117
+        }
+      ],
+      "monotonic_improvement": false,
+      "optimal_ticks": 4,
+      "task_name": "iterated-parity"
+    },
+    {
+      "bifurcation_detected": false,
+      "budgets": [
+        {
+          "accuracy": 0.5234375,
+          "compute_cost_units": 2048,
+          "latent_ticks": 4,
+          "loss": 1.4068472385406494,
+          "mean_confidence": 0.013068148866295815,
+          "regime": "DEGRADATION",
+          "state_displacement": 1.1689586639404297
+        }
+      ],
+      "monotonic_improvement": false,
+      "optimal_ticks": 4,
+      "task_name": "iterated-parity"
+    },
+    {
+      "bifurcation_detected": false,
+      "budgets": [
+        {
+          "accuracy": 0.578125,
+          "compute_cost_units": 2048,
+          "latent_ticks": 4,
+          "loss": 1.4124653339385986,
+          "mean_confidence": 0.012136921286582947,
+          "regime": "DEGRADATION",
+          "state_displacement": 1.1716492176055908
+        }
+      ],
+      "monotonic_improvement": false,
+      "optimal_ticks": 4,
+      "task_name": "iterated-parity"
+    },
+    {
+      "bifurcation_detected": false,
+      "budgets": [
+        {
+          "accuracy": 0.53125,
+          "compute_cost_units": 2048,
+          "latent_ticks": 4,
+          "loss": 1.379667043685913,
+          "mean_confidence": 0.013198621571063995,
+          "regime": "DEGRADATION",
+          "state_displacement": 1.166117787361145
+        }
+      ],
+      "monotonic_improvement": false,
+      "optimal_ticks": 4,
+      "task_name": "iterated-parity"
+    }
+  ],
+  "seeds": [
+    42,
+    101,
+    202,
+    303,
+    404
+  ],
+  "task_name": "iterated-parity"
+}

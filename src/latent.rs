@@ -772,9 +772,18 @@ impl<'a> LatentExecutor<'a> {
                 }
 
                 let logits = self.interface.logits(&field.x)?;
-                let loss_t = self.interface.cross_entropy_loss(&logits, &batch.targets)?;
-                let loss = loss_t.to_scalar::<f32>()?;
-                let acc = self.interface.accuracy(&logits, &batch.targets)?;
+                let mask_sum = batch.loss_mask.sum_all()?.to_scalar::<f32>()?;
+                let (loss, acc) = if mask_sum > 0.0 {
+                    let loss_t = self.interface.masked_cross_entropy_loss(&logits, &batch.targets, &batch.loss_mask)?;
+                    let loss = loss_t.to_scalar::<f32>()?;
+                    let acc = self.interface.masked_accuracy(&logits, &batch.targets, &batch.loss_mask)?;
+                    (loss, acc)
+                } else {
+                    let loss_t = self.interface.cross_entropy_loss(&logits, &batch.targets)?;
+                    let loss = loss_t.to_scalar::<f32>()?;
+                    let acc = self.interface.accuracy(&logits, &batch.targets)?;
+                    (loss, acc)
+                };
 
                 let flat_logits = logits.flatten_all()?;
                 let probs = candle_nn::ops::softmax(&flat_logits, 0)?.to_vec1::<f32>()?;

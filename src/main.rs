@@ -1073,6 +1073,9 @@ fn cmd_sweep(args: &cli::Options, device: &Device) -> Result<()> {
             .filter_map(|s| s.trim().parse::<usize>().ok())
             .collect();
     }
+    if args.flag("--lesion-shuffle") {
+        intervention.shuffle_batch = true;
+    }
 
     config.validate()?;
 

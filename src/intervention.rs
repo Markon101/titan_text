@@ -53,6 +53,10 @@ pub struct InterventionConfig {
     /// If true, forces perception to be identity-only (no spatial derivatives).
     #[serde(default)]
     pub identity_only_perception: bool,
+
+    /// If true, permutes/rotates state across batch dimension at each tick (shuffled-recurrence control).
+    #[serde(default)]
+    pub shuffle_batch: bool,
 }
 
 fn default_gain() -> f32 {
@@ -74,6 +78,7 @@ impl Default for InterventionConfig {
             reset_step: None,
             bypass_perception: false,
             identity_only_perception: false,
+            shuffle_batch: false,
         }
     }
 }
@@ -93,6 +98,7 @@ impl InterventionConfig {
             || self.reset_step.is_some()
             || self.bypass_perception
             || self.identity_only_perception
+            || self.shuffle_batch
     }
 
     /// Applies state-level interventions (reset, noise, freeze check) before/after tick.
@@ -133,6 +139,17 @@ impl InterventionConfig {
             let shape = x.shape();
             let noise = Tensor::randn(0.0f32, self.additive_noise_sigma, shape, device)?;
             x = (&x + &noise)?;
+        }
+
+        // 4. Batch permutation (shuffled recurrence control)
+        if self.shuffle_batch {
+            let (b, _, _) = x.dims3()?;
+            if b > 1 {
+                let mut indices: Vec<u32> = (1..b as u32).collect();
+                indices.push(0);
+                let idx_tensor = Tensor::from_slice(&indices, b, device)?;
+                x = x.index_select(&idx_tensor, 0)?;
+            }
         }
 
         Ok(x)
@@ -253,6 +270,43 @@ mod tests {
         assert_eq!(not_reset.flatten_all()?.to_vec1::<f32>()?[0], 1.0);
         let was_reset = cfg_reset.apply_to_state(5, &t, &dev)?;
         assert_eq!(was_reset.flatten_all()?.to_vec1::<f32>()?[0], 0.0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_intervention_batch_shuffle_and_inversion_gain() -> Result<()> {
+        let dev = Device::Cpu;
+        // 1. Test batch rotation: B=3, L=2, C=2
+        // Batch 0 filled with 10.0, Batch 1 filled with 20.0, Batch 2 filled with 30.0
+        let b0 = Tensor::full(10.0f32, (1, 2, 2), &dev)?;
+        let b1 = Tensor::full(20.0f32, (1, 2, 2), &dev)?;
+        let b2 = Tensor::full(30.0f32, (1, 2, 2), &dev)?;
+        let batch_t = Tensor::cat(&[&b0, &b1, &b2], 0)?;
+
+        let cfg_shuffle = InterventionConfig {
+            shuffle_batch: true,
+            ..Default::default()
+        };
+        assert!(cfg_shuffle.is_active());
+
+        let shuffled = cfg_shuffle.apply_to_state(0, &batch_t, &dev)?;
+        let s_vec = shuffled.to_vec3::<f32>()?;
+        // Index 0 receives index 1 (20.0), Index 1 receives index 2 (30.0), Index 2 receives index 0 (10.0)
+        assert_eq!(s_vec[0][0][0], 20.0);
+        assert_eq!(s_vec[1][0][0], 30.0);
+        assert_eq!(s_vec[2][0][0], 10.0);
+
+        // 2. Test inversion swap: recurrence_gain = -1.0
+        let cfg_inv = InterventionConfig {
+            recurrence_gain: -1.0,
+            ..Default::default()
+        };
+        assert!(cfg_inv.is_active());
+        let delta = Tensor::full(3.5f32, (1, 2, 2), &dev)?;
+        let inverted_delta = cfg_inv.apply_to_delta(&delta)?;
+        let inv_vec = inverted_delta.to_vec3::<f32>()?;
+        assert_eq!(inv_vec[0][0][0], -3.5);
 
         Ok(())
     }

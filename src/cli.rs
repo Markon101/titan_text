@@ -99,6 +99,7 @@ impl Command {
                 "--lesion-freeze",
                 "--lesion-reset",
                 "--lesion-channels",
+                "--lesion-shuffle",
                 "--threads",
                 "--trace-output",
                 "--record-activations",
@@ -158,6 +159,7 @@ impl Command {
                 "--lesion-freeze",
                 "--lesion-reset",
                 "--lesion-channels",
+                "--lesion-shuffle",
                 "--trace-output",
                 "--record-activations",
             ],
@@ -279,6 +281,7 @@ fn is_flag_option(name: &str) -> bool {
             | "--lesion-state"
             | "--lesion-gates"
             | "--lesion-residual"
+            | "--lesion-shuffle"
             | "--train"
             | "--record-activations"
     )
@@ -303,11 +306,18 @@ fn validate_value(name: &str, value: &str) -> Result<()> {
         "--seed" => {
             let _number: u64 = value.parse().with_context(invalid)?;
         }
-        "--lr" | "--lesion-gain" => {
+        "--lr" => {
             let number: f64 = value.parse().with_context(invalid)?;
             ensure!(
                 number.is_finite() && number > 0.0,
                 "{name} must be finite and greater than zero"
+            );
+        }
+        "--lesion-gain" => {
+            let number: f64 = value.parse().with_context(invalid)?;
+            ensure!(
+                number.is_finite(),
+                "{name} must be finite"
             );
         }
         "--eps" | "--viscosity" | "--forcing-amp" | "--slow-fraction" | "--lesion-noise" => {
@@ -494,6 +504,7 @@ pub fn print_help(command: Option<Command>) {
             "--lesion-freeze" => "<NUM> Freeze state updates at and after step K",
             "--lesion-reset" => "<NUM> Reset state to zero at step K",
             "--lesion-channels" => "<LIST> Comma-separated channel indices to ablate",
+            "--lesion-shuffle" => "   Lesion: permute state across batch to destroy temporal identity",
             "--output" if command == Command::Train || command == Command::Rollout => {
                 "<FILE>     Write decoded patterns; create parent directories as needed"
             }
