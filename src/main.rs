@@ -1140,6 +1140,10 @@ fn cmd_sweep(args: &cli::Options, device: &Device) -> Result<()> {
                 b.compute_cost_units,
                 b.regime
             );
+            if let Some(ref slots) = b.per_slot_accuracy {
+                let slot_strs: Vec<String> = slots.iter().enumerate().map(|(si, &acc)| format!("slot {}: {:.1}%", si, acc * 100.0)).collect();
+                println!("  └─ Query Slots: {}", slot_strs.join(", "));
+            }
         }
 
         println!("\nAnalysis Summary:");
@@ -1193,6 +1197,23 @@ fn cmd_sweep(args: &cli::Options, device: &Device) -> Result<()> {
                 "| {:<12} | {:<12.1} ± {:<10.1} | {:<11.4} | {:<19.4} | {:<6} |",
                 ticks, mean_acc, std_acc, mean_loss, mean_disp, regime
             );
+            if let Some(ref first_slots) = reports[0].budgets[idx].per_slot_accuracy {
+                let num_slots = first_slots.len();
+                let mut slot_sums = vec![0.0f32; num_slots];
+                for rep in &reports {
+                    if let Some(ref s) = rep.budgets[idx].per_slot_accuracy {
+                        for (si, &val) in s.iter().enumerate().take(num_slots) {
+                            slot_sums[si] += val;
+                        }
+                    }
+                }
+                let slot_strs: Vec<String> = slot_sums
+                    .iter()
+                    .enumerate()
+                    .map(|(si, &sum_val)| format!("slot {}: {:.1}%", si, (sum_val / reports.len() as f32) * 100.0))
+                    .collect();
+                println!("  └─ Mean Query Slots: {}", slot_strs.join(", "));
+            }
         }
 
         let all_monotonic = reports.iter().all(|r| r.monotonic_improvement);

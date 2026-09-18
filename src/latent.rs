@@ -120,6 +120,8 @@ pub struct LatentBudgetPoint {
     pub state_displacement: f32,
     pub compute_cost_units: usize,
     pub regime: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub per_slot_accuracy: Option<Vec<f32>>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -741,9 +743,9 @@ impl<'a> LatentExecutor<'a> {
         let batch = task_engine.generate_batch_seeded(task_kind, batch_size, seq_len, true, seed, device)?;
 
         use rayon::prelude::*;
-        let raw_points: Vec<(usize, f32, f32, f32, f32)> = latent_budgets
+        let raw_points: Vec<(usize, f32, f32, f32, f32, Option<Vec<f32>>)> = latent_budgets
             .par_iter()
-            .map(|&ticks| -> Result<(usize, f32, f32, f32, f32)> {
+            .map(|&ticks| -> Result<(usize, f32, f32, f32, f32, Option<Vec<f32>>)> {
                 let mut cfg = LatentConfig::default();
                 cfg.latent_ticks_per_token = ticks.max(1);
                 cfg.post_input_ticks = if ticks == 0 { 0 } else { ticks };
@@ -773,23 +775,53 @@ impl<'a> LatentExecutor<'a> {
 
                 let logits = self.interface.logits(&field.x)?;
                 let mask_sum = batch.loss_mask.sum_all()?.to_scalar::<f32>()?;
-                let (loss, acc) = if mask_sum > 0.0 {
+                let (loss, acc, per_slot) = if mask_sum > 0.0 {
                     let loss_t = self.interface.masked_cross_entropy_loss(&logits, &batch.targets, &batch.loss_mask)?;
                     let loss = loss_t.to_scalar::<f32>()?;
                     let acc = self.interface.masked_accuracy(&logits, &batch.targets, &batch.loss_mask)?;
-                    (loss, acc)
+
+                    let preds = logits.argmax(candle_core::D::Minus1)?;
+                    let preds_vec = preds.to_vec2::<u32>()?;
+                    let targets_vec = batch.targets.to_vec2::<u32>()?;
+                    let mask_vec = batch.loss_mask.to_vec2::<f32>()?;
+                    let b = preds_vec.len();
+                    let l = if b > 0 { preds_vec[0].len() } else { 0 };
+
+                    let mut slot_counts: Vec<(usize, usize)> = Vec::new();
+                    for i in 0..b {
+                        let mut slot_idx = 0;
+                        for j in 0..l {
+                            if mask_vec[i][j] > 0.5 {
+                                if slot_idx >= slot_counts.len() {
+                                    slot_counts.push((0, 0));
+                                }
+                                slot_counts[slot_idx].1 += 1;
+                                if preds_vec[i][j] == targets_vec[i][j] {
+                                    slot_counts[slot_idx].0 += 1;
+                                }
+                                slot_idx += 1;
+                            }
+                        }
+                    }
+                    let slot_accs = if !slot_counts.is_empty() {
+                        Some(slot_counts.into_iter().map(|(c, t)| if t > 0 { c as f32 / t as f32 } else { 0.0 }).collect())
+                    } else {
+                        None
+                    };
+
+                    (loss, acc, slot_accs)
                 } else {
                     let loss_t = self.interface.cross_entropy_loss(&logits, &batch.targets)?;
                     let loss = loss_t.to_scalar::<f32>()?;
                     let acc = self.interface.accuracy(&logits, &batch.targets)?;
-                    (loss, acc)
+                    (loss, acc, None)
                 };
 
                 let flat_logits = logits.flatten_all()?;
                 let probs = candle_nn::ops::softmax(&flat_logits, 0)?.to_vec1::<f32>()?;
                 let mean_conf = probs.iter().fold(0.0f32, |m, &p| m.max(p));
 
-                Ok((ticks, acc, loss, mean_conf, total_disp))
+                Ok((ticks, acc, loss, mean_conf, total_disp, per_slot))
             })
             .collect::<Result<Vec<_>>>()?;
 
@@ -797,7 +829,7 @@ impl<'a> LatentExecutor<'a> {
         let mut best_acc = -1.0f32;
         let mut best_ticks = 0;
 
-        for (ticks, acc, loss, mean_conf, total_disp) in raw_points {
+        for (ticks, acc, loss, mean_conf, total_disp, per_slot) in raw_points {
             let regime = if acc > best_acc && best_acc >= 0.0 {
                 "COMPUTE_GAIN".to_string()
             } else if (acc - best_acc).abs() < 1e-4 {
@@ -819,6 +851,7 @@ impl<'a> LatentExecutor<'a> {
                 state_displacement: total_disp,
                 compute_cost_units: ticks * batch_size * seq_len,
                 regime,
+                per_slot_accuracy: per_slot,
             });
         }
 
