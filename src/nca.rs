@@ -167,14 +167,30 @@ impl NeuralCellularAutomaton {
 
     /// Projects cell states onto a compact invariant manifold:
     /// - "rms": Zero-parameter RMS normalization along channel dimension
+    /// - "bounded": Smoothly clamps RMS amplitude above bound_threshold while leaving normal dynamics untouched
     /// - "layer_norm": Zero-mean, unit-variance LayerNorm along channel dimension
+    #[allow(dead_code)]
     pub fn apply_state_norm(tensor: &Tensor, mode: &str) -> Result<Tensor> {
+        Self::apply_state_norm_with_threshold(tensor, mode, 1.5)
+    }
+
+    pub fn apply_state_norm_with_threshold(tensor: &Tensor, mode: &str, threshold: f32) -> Result<Tensor> {
         match mode {
             "rms" => {
                 let sq = tensor.sqr()?;
                 let mean_sq = sq.mean_keepdim(candle_core::D::Minus1)?;
                 let rms = (mean_sq + 1e-5)?.sqrt()?;
                 Ok(tensor.broadcast_div(&rms)?)
+            }
+            "bounded" => {
+                let sq = tensor.sqr()?;
+                let mean_sq = sq.mean_keepdim(candle_core::D::Minus1)?;
+                let rms = (mean_sq + 1e-5)?.sqrt()?;
+                let th = (threshold as f64).max(0.1);
+                let ratio = (rms / th)?;
+                let ones = ratio.ones_like()?;
+                let scale = ratio.maximum(&ones)?;
+                Ok(tensor.broadcast_div(&scale)?)
             }
             "layer_norm" => {
                 let mean = tensor.mean_keepdim(candle_core::D::Minus1)?;
@@ -227,10 +243,16 @@ impl NeuralCellularAutomaton {
             gated_delta
         };
 
-        // 5. Residual active drift integration: x_(t+1/2) = x_t + \alpha * (\delta + f)
-        let alpha = self.nca_cfg.step_size as f64;
+        // 5. Residual active drift integration with optional damping and leaky contraction:
+        // x_(t+1/2) = (1 - lambda) * x_t + alpha * damping * (\delta + f)
+        let alpha = (self.nca_cfg.step_size * self.nca_cfg.damping_alpha) as f64;
         let scaled_delta = (effective_delta * alpha)?;
-        let mut interim_x = (x + &scaled_delta)?;
+        let base_x = if self.nca_cfg.leaky_lambda > 0.0 {
+            (x * (1.0 - self.nca_cfg.leaky_lambda.clamp(0.0, 0.99) as f64))?
+        } else {
+            x.clone()
+        };
+        let mut interim_x = (&base_x + &scaled_delta)?;
 
         if let Some(f) = forcing {
             let scaled_f = (f * alpha)?;
@@ -239,7 +261,7 @@ impl NeuralCellularAutomaton {
 
         // 6. State normalization: projects onto compact invariant manifold (prevents open-phase energy explosion)
         let interim_x = if self.nca_cfg.state_norm != "none" {
-            Self::apply_state_norm(&interim_x, &self.nca_cfg.state_norm)?
+            Self::apply_state_norm_with_threshold(&interim_x, &self.nca_cfg.state_norm, self.nca_cfg.bound_threshold)?
         } else {
             interim_x
         };

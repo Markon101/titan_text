@@ -94,6 +94,8 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
     let state_norm_opt: Option<String> = args.value("--state-norm")?;
     let output_path: Option<String> = args.value("--output")?;
     let patterns_only = args.flag("--patterns-only");
+    let trace_output: Option<String> = args.value("--trace-output")?;
+    let record_activations = args.flag("--record-activations") || trace_output.is_some();
 
     let (mut config, start_step, default_task) = if let Some(ref dir) = load_dir {
         let manifest = CheckpointManager::load_manifest(dir)?;
@@ -367,12 +369,13 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
     }
     println!("    Verdict: {}", probe_rep.verdict);
 
-    let traj_rep = ExperimentSuite::run_autonomous_rollout(
+    let traj_rep = ExperimentSuite::run_autonomous_rollout_with_options(
         &trainer.nca,
         &trainer.interface,
         &trainer.dataset.vocab,
         &settled_field,
         config.probe.horizon,
+        record_activations,
         device,
     )?;
     println!(
@@ -473,6 +476,12 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
         println!("\n✓ Post-training patterns saved to '{}'", path);
     }
 
+    if let Some(ref trace_path) = trace_output {
+        let trace_json = serde_json::to_string_pretty(&traj_rep.traces)?;
+        write_output_file(trace_path, trace_json)?;
+        println!("\n✓ Per-step activation traces saved to '{}'", trace_path);
+    }
+
     Ok(())
 }
 
@@ -482,6 +491,8 @@ fn cmd_probe(args: &cli::Options, device: &Device) -> Result<()> {
     let eps: f32 = args.value("--eps")?.unwrap_or(0.01);
     let horizon: usize = args.value("--horizon")?.unwrap_or(64);
     let output_path: Option<String> = args.value("--output")?;
+    let trace_output: Option<String> = args.value("--trace-output")?;
+    let record_activations = args.flag("--record-activations") || trace_output.is_some();
 
     let (config, default_task) = if let Some(ref dir) = load_dir {
         let manifest = CheckpointManager::load_manifest(dir)?;
@@ -553,12 +564,13 @@ fn cmd_probe(args: &cli::Options, device: &Device) -> Result<()> {
     }
     println!("    Verdict: {}", probe_rep.verdict);
 
-    let traj_rep = ExperimentSuite::run_autonomous_rollout(
+    let traj_rep = ExperimentSuite::run_autonomous_rollout_with_options(
         &nca,
         &interface,
         &dataset.vocab,
         &settled_field,
         horizon,
+        record_activations,
         device,
     )?;
     println!(
@@ -633,13 +645,19 @@ fn cmd_probe(args: &cli::Options, device: &Device) -> Result<()> {
     if let Some(path) = output_path {
         let full_report = experiment::FullDiagnosticReport {
             perturbation: probe_rep,
-            trajectory: traj_rep,
+            trajectory: traj_rep.clone(),
             falsification: falsify_rep,
             navier_stokes: None,
         };
         let json_str = serde_json::to_string_pretty(&full_report)?;
         write_output_file(&path, json_str)?;
         println!("\n✓ Scientific report saved to '{}'", path);
+    }
+
+    if let Some(ref trace_path) = trace_output {
+        let trace_json = serde_json::to_string_pretty(&traj_rep.traces)?;
+        write_output_file(trace_path, trace_json)?;
+        println!("\n✓ Per-step activation traces saved to '{}'", trace_path);
     }
 
     Ok(())
@@ -652,6 +670,7 @@ fn cmd_ns_probe(args: &cli::Options, device: &Device) -> Result<()> {
     let viscosity: f32 = args.value("--viscosity")?.unwrap_or(0.0);
     let horizon: usize = args.value("--horizon")?.unwrap_or(64);
     let output_path: Option<String> = args.value("--output")?;
+    let trace_output: Option<String> = args.value("--trace-output")?;
 
     let (mut config, default_task) = if let Some(ref dir) = load_dir {
         let manifest = CheckpointManager::load_manifest(dir)?;
@@ -820,6 +839,12 @@ fn cmd_ns_probe(args: &cli::Options, device: &Device) -> Result<()> {
         println!("\n✓ Scientific report saved to '{}'", path);
     }
 
+    if let Some(ref trace_path) = trace_output {
+        let trace_json = serde_json::to_string_pretty(&ns_report.forced_regime.traces)?;
+        write_output_file(trace_path, trace_json)?;
+        println!("\n✓ Per-step forced regime traces saved to '{}'", trace_path);
+    }
+
     Ok(())
 }
 
@@ -832,6 +857,8 @@ fn cmd_rollout(args: &cli::Options, device: &Device) -> Result<()> {
     let output_path: Option<String> = args.value("--output")?;
     let prompt_opt: Option<String> = args.value("--prompt")?;
     let patterns_only = args.flag("--patterns-only");
+    let trace_output: Option<String> = args.value("--trace-output")?;
+    let record_activations = args.flag("--record-activations") || trace_output.is_some();
 
     let (mut config, default_task) = if let Some(ref dir) = load_dir {
         let manifest = CheckpointManager::load_manifest(dir)?;
@@ -888,12 +915,13 @@ fn cmd_rollout(args: &cli::Options, device: &Device) -> Result<()> {
     let seed_embed = interface.embed_tokens(&sample_in)?;
     let sample_field = MorphogenicField::from_tensor(seed_embed, &config.field);
 
-    let traj = ExperimentSuite::run_autonomous_rollout(
+    let traj = ExperimentSuite::run_autonomous_rollout_with_options(
         &nca,
         &interface,
         &dataset.vocab,
         &sample_field,
         horizon,
+        record_activations,
         device,
     )?;
 
@@ -936,31 +964,47 @@ fn cmd_rollout(args: &cli::Options, device: &Device) -> Result<()> {
     }
 
     if let Some(ref out_file) = output_path {
-        let mut out_text = String::new();
-        if patterns_only {
-            for t in &traj.traces {
-                out_text.push_str(&format!("{}\n", t.decoded_pattern));
+        if out_file.ends_with(".json") {
+            let json_str = serde_json::to_string_pretty(&traj)?;
+            write_output_file(out_file, json_str)?;
+            if !patterns_only {
+                println!("\n✓ Rollout JSON report saved to '{}'", out_file);
             }
         } else {
-            out_text.push_str("# TITAN TEXT · AUTONOMOUS ROLLOUT PATTERN TRACE\n");
-            if let Some(ref dir) = load_dir {
-                out_text.push_str(&format!("# Checkpoint: {}\n", dir));
+            let mut out_text = String::new();
+            if patterns_only {
+                for t in &traj.traces {
+                    out_text.push_str(&format!("{}\n", t.decoded_pattern));
+                }
             } else {
-                out_text.push_str("# Checkpoint: random weights baseline\n");
+                out_text.push_str("# TITAN TEXT · AUTONOMOUS ROLLOUT PATTERN TRACE\n");
+                if let Some(ref dir) = load_dir {
+                    out_text.push_str(&format!("# Checkpoint: {}\n", dir));
+                } else {
+                    out_text.push_str("# Checkpoint: random weights baseline\n");
+                }
+                out_text.push_str(&format!(
+                    "# Task: {} | Horizon: {} steps | Viscosity: {:.4}\n",
+                    task, horizon, config.nca.viscosity
+                ));
+                out_text.push_str(&format!("# Classification: {}\n#\n", traj.classification));
+                for t in &traj.traces {
+                    out_text.push_str(&format!("Step {:03}: {}\n", t.step, t.decoded_pattern));
+                }
             }
-            out_text.push_str(&format!(
-                "# Task: {} | Horizon: {} steps | Viscosity: {:.4}\n",
-                task, horizon, config.nca.viscosity
-            ));
-            out_text.push_str(&format!("# Classification: {}\n#\n", traj.classification));
-            for t in &traj.traces {
-                out_text.push_str(&format!("Step {:03}: {}\n", t.step, t.decoded_pattern));
+
+            write_output_file(out_file, out_text)?;
+            if !patterns_only {
+                println!("\n✓ Rollout patterns saved to '{}'", out_file);
             }
         }
+    }
 
-        write_output_file(out_file, out_text)?;
+    if let Some(ref trace_path) = trace_output {
+        let trace_json = serde_json::to_string_pretty(&traj.traces)?;
+        write_output_file(trace_path, trace_json)?;
         if !patterns_only {
-            println!("\n✓ Rollout patterns saved to '{}'", out_file);
+            println!("\n✓ Per-step activation traces saved to '{}'", trace_path);
         }
     }
 
@@ -974,6 +1018,7 @@ fn cmd_sweep(args: &cli::Options, device: &Device) -> Result<()> {
     let seq_len_opt: Option<usize> = args.value("--seq-len")?;
     let batch_size: usize = args.value("--batch-size")?.unwrap_or(8);
     let output_path: Option<String> = args.value("--output")?;
+    let trace_output: Option<String> = args.value("--trace-output")?;
     let model_opt: Option<String> = args.value("--model")?;
     let seeds_str: Option<String> = args.value("--seeds")?;
     let seeds: Vec<usize> = match seeds_str {
@@ -1104,6 +1149,11 @@ fn cmd_sweep(args: &cli::Options, device: &Device) -> Result<()> {
             write_output_file(path, json_str)?;
             println!("\n✓ Sweep report saved to '{}'", path);
         }
+        if let Some(ref trace_path) = trace_output {
+            let json_str = serde_json::to_string_pretty(&report)?;
+            write_output_file(trace_path, json_str)?;
+            println!("\n✓ Sweep traces saved to '{}'", trace_path);
+        }
     } else {
         let reports: Vec<latent::LatentBudgetSweepReport> = seeds
             .par_iter()
@@ -1160,6 +1210,11 @@ fn cmd_sweep(args: &cli::Options, device: &Device) -> Result<()> {
             let json_str = serde_json::to_string_pretty(&multi_seed_output)?;
             write_output_file(path, json_str)?;
             println!("\n✓ Multi-seed sweep report saved to '{}'", path);
+        }
+        if let Some(ref trace_path) = trace_output {
+            let json_str = serde_json::to_string_pretty(&reports)?;
+            write_output_file(trace_path, json_str)?;
+            println!("\n✓ Multi-seed sweep traces saved to '{}'", trace_path);
         }
     }
 

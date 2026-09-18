@@ -35,6 +35,12 @@ pub struct TrajectoryStepTrace {
     pub output_entropy: f32,
     #[serde(default)]
     pub decoded_pattern: String,
+    #[serde(default)]
+    pub channel_means: Vec<f32>,
+    #[serde(default)]
+    pub channel_vars: Vec<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spatial_activations: Option<Vec<Vec<f32>>>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -256,6 +262,7 @@ impl ExperimentSuite {
     }
 
     /// Evaluates autonomous frozen rollout over H steps and records field trajectory
+    #[allow(dead_code)]
     pub fn run_autonomous_rollout(
         nca: &NeuralCellularAutomaton,
         interface: &TokenInterface,
@@ -264,7 +271,28 @@ impl ExperimentSuite {
         horizon: usize,
         device: &Device,
     ) -> Result<AutonomousTrajectoryReport> {
-        let mut history: Vec<MorphogenicField> = Vec::with_capacity(horizon);
+        Self::run_autonomous_rollout_with_options(
+            nca,
+            interface,
+            vocab,
+            initial_field,
+            horizon,
+            false,
+            device,
+        )
+    }
+
+    /// Evaluates autonomous frozen rollout over H steps with opt-in spatial state snapshot recording
+    pub fn run_autonomous_rollout_with_options(
+        nca: &NeuralCellularAutomaton,
+        interface: &TokenInterface,
+        vocab: &crate::vocab::Vocab,
+        initial_field: &MorphogenicField,
+        horizon: usize,
+        record_spatial: bool,
+        device: &Device,
+    ) -> Result<AutonomousTrajectoryReport> {
+        let mut flat_history: Vec<Vec<f32>> = Vec::with_capacity(horizon);
         let mut traces = Vec::with_capacity(horizon);
         let mut current = initial_field.clone();
 
@@ -273,6 +301,17 @@ impl ExperimentSuite {
             let state_norm = current.x.sqr()?.mean_all()?.to_scalar::<f32>()?.sqrt();
             let energy = current.energy()?;
             let decomp = current.spatial_frequency_decomposition()?;
+
+            // Compute channel-wise means and variances
+            let ch_means = current.x.mean(0)?.mean(0)?.to_vec1::<f32>()?;
+            let ch_vars = current.x.sqr()?.mean(0)?.mean(0)?.to_vec1::<f32>()?;
+
+            // Optional spatial activation snapshot: [L, C] for first batch sample
+            let spatial_activations = if record_spatial {
+                current.x.narrow(0, 0, 1)?.squeeze(0)?.to_vec2::<f32>().ok()
+            } else {
+                None
+            };
 
             // Compute output logits entropy: H = - sum(p * log(p))
             let logits = interface.logits(&current.x)?;
@@ -309,9 +348,12 @@ impl ExperimentSuite {
                 pct_high: decomp.pct_high,
                 output_entropy: mean_entropy,
                 decoded_pattern,
+                channel_means: ch_means,
+                channel_vars: ch_vars,
+                spatial_activations,
             });
 
-            history.push(current.clone());
+            flat_history.push(current.x.flatten_all()?.to_vec1::<f32>()?);
             current = next_field;
         }
 
@@ -321,12 +363,21 @@ impl ExperimentSuite {
         let final_energy = traces.last().map(|t| t.energy).unwrap_or(0.0);
         let final_entropy = traces.last().map(|t| t.output_entropy).unwrap_or(0.0);
 
-        // Search for periodic recurrence
+        // Search for periodic recurrence using fast CPU Euclidean distance
         let mut min_rec = f32::MAX;
         let mut detected_period = None;
-        for i in 8..horizon {
-            for j in 0..(i.saturating_sub(2)) {
-                let d = history[i].l2_distance(&history[j])?;
+        let stride = (horizon / 128).max(1);
+        for i in (8..horizon).step_by(stride) {
+            let a = &flat_history[i];
+            let len = a.len() as f32;
+            for j in (0..(i.saturating_sub(2))).step_by(stride) {
+                let b = &flat_history[j];
+                let mut sum_sq = 0.0f32;
+                for idx in 0..a.len() {
+                    let diff = a[idx] - b[idx];
+                    sum_sq += diff * diff;
+                }
+                let d = (sum_sq / len).sqrt();
                 if d < min_rec {
                     min_rec = d;
                     if d < 0.04 && detected_period.is_none() {
@@ -921,6 +972,80 @@ mod tests {
         assert_eq!(read_back.lines().count(), 3);
 
         let _ = std::fs::remove_dir_all("checkpoints/test_nested_out_dir");
+        Ok(())
+    }
+
+    #[test]
+    fn test_autonomous_rollout_activation_traces_and_bounded_long_horizon_stability() -> Result<()> {
+        let dev = Device::Cpu;
+        let mut nca_cfg = NcaConfig::default();
+        nca_cfg.state_norm = "bounded".to_string();
+        nca_cfg.bound_threshold = 1.5;
+        nca_cfg.damping_alpha = 0.95;
+        nca_cfg.leaky_lambda = 0.01;
+
+        let seq_len = 8;
+        let channels = 8;
+        let field_cfg = FieldConfig { seq_len, channels, periodic_boundary: true };
+        let varmap = VarMap::new();
+        let vb = candle_nn::VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+
+        let vocab = crate::vocab::Vocab::new_ascii();
+        let nca = NeuralCellularAutomaton::new(vb.pp("nca"), &nca_cfg, &field_cfg)?;
+        let interface = TokenInterface::new(vb.pp("interface"), vocab.size(), field_cfg.channels)?;
+
+        let tokens = Tensor::zeros((1, seq_len), candle_core::DType::U32, &dev)?;
+        let seed = interface.embed_tokens(&tokens)?;
+        let initial_field = MorphogenicField::from_tensor(seed, &field_cfg);
+
+        // 1. Run rollout with spatial activations recording enabled
+        let report = ExperimentSuite::run_autonomous_rollout_with_options(
+            &nca,
+            &interface,
+            &vocab,
+            &initial_field,
+            32,
+            true, // record_spatial = true
+            &dev,
+        )?;
+
+        assert_eq!(report.traces.len(), 32);
+        for t in &report.traces {
+            assert_eq!(t.channel_means.len(), channels);
+            assert_eq!(t.channel_vars.len(), channels);
+            let spatial = t.spatial_activations.as_ref().expect("spatial activations should be recorded");
+            assert_eq!(spatial.len(), seq_len);
+            assert_eq!(spatial[0].len(), channels);
+            assert!(t.state_norm.is_finite());
+            assert!(t.energy.is_finite());
+        }
+
+        // Test JSON serialization of traces
+        let json_str = serde_json::to_string(&report.traces)?;
+        let deserialized: Vec<TrajectoryStepTrace> = serde_json::from_str(&json_str)?;
+        assert_eq!(deserialized.len(), 32);
+        assert_eq!(deserialized[0].spatial_activations.as_ref().unwrap().len(), seq_len);
+
+        // 2. Test 128-step long-horizon stability under bounded state normalization
+        let long_report = ExperimentSuite::run_autonomous_rollout_with_options(
+            &nca,
+            &interface,
+            &vocab,
+            &initial_field,
+            128,
+            false,
+            &dev,
+        )?;
+
+        assert_eq!(long_report.traces.len(), 128);
+        let final_trace = long_report.traces.last().unwrap();
+        // With bounded normalization (threshold 1.5) and gentle leakage, state norm must remain strictly bounded (< 15.0)
+        // whereas unconstrained dynamics blew up to norm > 340 and energy > 58,000.
+        assert!(final_trace.state_norm < 15.0, "State norm blew up: {}", final_trace.state_norm);
+        assert!(final_trace.energy < 200.0, "Energy blew up: {}", final_trace.energy);
+        // Ensure dynamics did not freeze to exact zero velocity
+        assert!(long_report.mean_step_velocity > 0.0, "Dynamics frozen");
+
         Ok(())
     }
 }

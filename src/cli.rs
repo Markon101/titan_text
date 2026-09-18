@@ -75,6 +75,8 @@ impl Command {
                 "--tail-eq-weight",
                 "--tail-eq-ticks",
                 "--state-norm",
+                "--trace-output",
+                "--record-activations",
             ],
             Self::Rollout => &[
                 "--load-dir",
@@ -98,6 +100,8 @@ impl Command {
                 "--lesion-reset",
                 "--lesion-channels",
                 "--threads",
+                "--trace-output",
+                "--record-activations",
             ],
             Self::Probe => &[
                 "--load-dir",
@@ -106,6 +110,8 @@ impl Command {
                 "--horizon",
                 "--output",
                 "--threads",
+                "--trace-output",
+                "--record-activations",
             ],
             Self::Falsify => &[
                 "--epochs",
@@ -120,6 +126,8 @@ impl Command {
                 "--horizon",
                 "--output",
                 "--threads",
+                "--trace-output",
+                "--record-activations",
             ],
             Self::NsProbe => &[
                 "--load-dir",
@@ -129,6 +137,8 @@ impl Command {
                 "--horizon",
                 "--output",
                 "--threads",
+                "--trace-output",
+                "--record-activations",
             ],
             Self::Sweep => &[
                 "--load-dir",
@@ -148,6 +158,8 @@ impl Command {
                 "--lesion-freeze",
                 "--lesion-reset",
                 "--lesion-channels",
+                "--trace-output",
+                "--record-activations",
             ],
             Self::Associate => &[
                 "--load-dir",
@@ -240,6 +252,7 @@ pub fn canonical_task(task: &str) -> Result<&'static str> {
         "associative" | "assoc" => Ok("associative"),
         "ambiguous" | "ambiguous-basin" | "attractor" | "basin" => Ok("ambiguous-basin"),
         "column-arithmetic" | "arithmetic" | "addition" | "carry" => Ok("column-arithmetic"),
+        "iterated-parity" | "ippr" => Ok("iterated-parity"),
         _ => bail!("invalid --task '{task}'; expected text or dyck (alias: paren)"),
     }
 }
@@ -267,6 +280,7 @@ fn is_flag_option(name: &str) -> bool {
             | "--lesion-gates"
             | "--lesion-residual"
             | "--train"
+            | "--record-activations"
     )
 }
 
@@ -494,7 +508,9 @@ pub fn print_help(command: Option<Command>) {
             "--feedback-weight" => "<FLOAT> Feedback coupling rate beta for dual timescale integration (default: 0.2)",
             "--tail-eq-weight" => "<FLOAT>  Tail equilibrium contraction loss weight lambda_eq (default: 0.0)",
             "--tail-eq-ticks" => "<NUM>    Number of tail ticks to supervise for equilibrium (default: 2)",
-            "--state-norm" => "<NAME>      State normalization on intermediate fields (none, rms, layer_norm; default: none)",
+            "--state-norm" => "<NAME>      State normalization on intermediate fields (none, rms, bounded, layer_norm; default: none)",
+            "--trace-output" => "<FILE>    Write detailed per-step activation traces to JSON file",
+            "--record-activations" => "    Record full spatial activation matrices across rollout steps",
             _ => unreachable!(),
         };
         println!("  {name} {description}");

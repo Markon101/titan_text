@@ -41,9 +41,18 @@ pub struct NcaConfig {
     /// Feedback coupling rate beta in (0, 1] for dual timescale leaky integration
     #[serde(default = "default_feedback_weight")]
     pub feedback_weight: f32,
-    /// State normalization mode on intermediate cellular states: "none", "rms", "layer_norm"
+    /// State normalization mode on intermediate cellular states: "none", "rms", "bounded", "layer_norm"
     #[serde(default = "default_state_norm")]
     pub state_norm: String,
+    /// Maximum RMS threshold for "bounded" state normalization mode
+    #[serde(default = "default_bound_threshold")]
+    pub bound_threshold: f32,
+    /// Damping alpha factor on residual update (default: 1.0)
+    #[serde(default = "default_damping_alpha")]
+    pub damping_alpha: f32,
+    /// Leaky integration contraction rate lambda on state x_{t+1} = (1 - lambda)*x_t + ... (default: 0.0)
+    #[serde(default = "default_leaky_lambda")]
+    pub leaky_lambda: f32,
 }
 
 fn default_feedback_mode() -> String {
@@ -56,6 +65,18 @@ fn default_feedback_weight() -> f32 {
 
 fn default_state_norm() -> String {
     "none".to_string()
+}
+
+fn default_bound_threshold() -> f32 {
+    1.5
+}
+
+fn default_damping_alpha() -> f32 {
+    1.0
+}
+
+fn default_leaky_lambda() -> f32 {
+    0.0
 }
 
 impl NcaConfig {
@@ -75,6 +96,9 @@ impl Default for NcaConfig {
             feedback_mode: default_feedback_mode(),
             feedback_weight: default_feedback_weight(),
             state_norm: default_state_norm(),
+            bound_threshold: default_bound_threshold(),
+            damping_alpha: default_damping_alpha(),
+            leaky_lambda: default_leaky_lambda(),
         }
     }
 }
