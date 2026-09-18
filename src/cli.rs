@@ -347,6 +347,12 @@ fn validate_value(name: &str, value: &str) -> Result<()> {
                 "invalid --horizon-mode '{value}'; expected fixed, randomized, multi_tick, jitter, stability_tail, or early_exit"
             );
         }
+        "--state-norm" => {
+            ensure!(
+                matches!(value, "none" | "rms" | "bounded" | "layer_norm"),
+                "invalid --state-norm '{value}'; expected none, rms, bounded, or layer_norm"
+            );
+        }
         "--task" => {
             canonical_task(value)?;
         }

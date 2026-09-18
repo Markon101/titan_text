@@ -284,8 +284,20 @@ impl TitanConfig {
             "nca feedback_weight must be in [0, 1]"
         );
         ensure!(
-            matches!(self.nca.state_norm.as_str(), "none" | "rms" | "layer_norm"),
-            "nca state_norm must be one of: none, rms, layer_norm"
+            matches!(self.nca.state_norm.as_str(), "none" | "rms" | "bounded" | "layer_norm"),
+            "nca state_norm must be one of: none, rms, bounded, layer_norm"
+        );
+        ensure!(
+            self.nca.bound_threshold.is_finite() && self.nca.bound_threshold > 0.0,
+            "nca bound_threshold must be finite and positive"
+        );
+        ensure!(
+            self.nca.damping_alpha.is_finite() && self.nca.damping_alpha > 0.0 && self.nca.damping_alpha <= 2.0,
+            "nca damping_alpha must be in (0, 2]"
+        );
+        ensure!(
+            self.nca.leaky_lambda.is_finite() && self.nca.leaky_lambda >= 0.0 && self.nca.leaky_lambda < 1.0,
+            "nca leaky_lambda must be in [0, 1)"
         );
         ensure!(
             self.nca.viscosity.is_finite() && self.nca.viscosity >= 0.0,

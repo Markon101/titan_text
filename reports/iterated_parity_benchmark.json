@@ -1,0 +1,52 @@
+{
+  "detected_hardware_concurrency": 4,
+  "models": {
+    "gru": {
+      "acc": 0.0,
+      "loss": 4.003501892089844,
+      "params": 37731
+    },
+    "nca": {
+      "acc": 0.0,
+      "loss": 6.789482116699219,
+      "params": 43715
+    },
+    "simple_rnn": {
+      "acc": 0.0,
+      "loss": 5.026956558227539,
+      "params": 21091
+    },
+    "transformer": {
+      "acc": 0.0,
+      "loss": 12.88837718963623,
+      "params": 41859
+    },
+    "untied_ff": {
+      "acc": 0.0,
+      "loss": 25.22015953063965,
+      "params": 79075
+    }
+  },
+  "parallelism_benchmark": {
+    "efficiency_pct": 68.79867966750491,
+    "parallel": {
+      "duration_ms": 823.790677,
+      "latency_ms_per_batch": 34.32461154166666,
+      "threads": 4,
+      "tokens_per_sec": 14916.41061628572
+    },
+    "single_thread": {
+      "duration_ms": 2267.028436,
+      "latency_ms_per_batch": 94.45951816666667,
+      "tokens_per_sec": 5420.311366575201
+    },
+    "speedup": 2.7519471867001966,
+    "workload_tokens": 12288.0
+  },
+  "seeds": [
+    0
+  ],
+  "task": "iterated-parity",
+  "threads": 4,
+  "trained_comparison": {}
+}
