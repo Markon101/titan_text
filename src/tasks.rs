@@ -18,6 +18,7 @@ pub enum TaskKind {
     Associative,
     AmbiguousBasin,
     ColumnArithmetic,
+    IteratedParity,
 }
 
 impl TaskKind {
@@ -33,6 +34,7 @@ impl TaskKind {
             "associative" | "assoc" => Some(Self::Associative),
             "ambiguous" | "ambiguous-basin" | "attractor" | "basin" => Some(Self::AmbiguousBasin),
             "column-arithmetic" | "arithmetic" | "addition" | "carry" => Some(Self::ColumnArithmetic),
+            "iterated-parity" | "chunked-parity" | "state-parity" | "ippr" => Some(Self::IteratedParity),
             _ => None,
         }
     }
@@ -49,6 +51,7 @@ impl TaskKind {
             Self::Associative => "associative",
             Self::AmbiguousBasin => "ambiguous-basin",
             Self::ColumnArithmetic => "column-arithmetic",
+            Self::IteratedParity => "iterated-parity",
         }
     }
 }
@@ -546,6 +549,26 @@ impl TaskEngine {
                     mask[pos] = 1.;
                 }
             }
+            TaskKind::IteratedParity => {
+                // Chunked / Iterated Parity with Positional Readout (IPPR)
+                // Divides sequence into chunks of 4 tokens: 3 data bits + 1 query slot '?'.
+                // Target at query slot is the cumulative parity of all data bits up to that chunk.
+                let chunk_size = 4;
+                let num_chunks = l / chunk_size;
+                let mut cum_parity = 0u8;
+                for chunk in 0..num_chunks {
+                    let base = chunk * chunk_size;
+                    for j in 0..chunk_size - 1 {
+                        let bit = rng.gen_range(0..2);
+                        input[base + j] = (b'0' + bit) as char;
+                        cum_parity ^= bit;
+                    }
+                    let q_pos = base + chunk_size - 1;
+                    input[q_pos] = '?';
+                    target[q_pos] = (b'0' + cum_parity) as char;
+                    mask[q_pos] = 1.0;
+                }
+            }
             TaskKind::Text | TaskKind::Dyck => unreachable!(),
         }
         (input, target, mask)
@@ -600,7 +623,7 @@ impl TaskEngine {
     }
 }
 
-pub const ALGORITHMIC_TASKS: [TaskKind; 8] = [
+pub const ALGORITHMIC_TASKS: [TaskKind; 9] = [
     TaskKind::DelayedRecall,
     TaskKind::BracketDepth,
     TaskKind::Parity,
@@ -609,6 +632,7 @@ pub const ALGORITHMIC_TASKS: [TaskKind; 8] = [
     TaskKind::Associative,
     TaskKind::AmbiguousBasin,
     TaskKind::ColumnArithmetic,
+    TaskKind::IteratedParity,
 ];
 
 #[cfg(test)]
@@ -743,6 +767,18 @@ mod tests {
                                 .map(|(i, c)| (10 + i, c))
                                 .collect()
                         }
+                        TaskKind::IteratedParity => {
+                            let mut expected = Vec::new();
+                            let mut cum = 0u8;
+                            for chunk in 0..4 {
+                                let base = chunk * 4;
+                                for j in 0..3 {
+                                    cum ^= s[base + j].to_digit(10).unwrap() as u8;
+                                }
+                                expected.push((base + 3, (b'0' + cum) as char));
+                            }
+                            expected
+                        }
                         _ => unreachable!(),
                     };
                     assert_eq!(m.iter().filter(|&&v| v == 1.).count(), expected.len());
@@ -844,6 +880,174 @@ mod tests {
         let b_bounded = e.generate_stratified_arithmetic_batch(32, 32, None, Some(3), 42, &Device::Cpu)?;
         let depths_b = b_bounded.carry_depths.unwrap();
         assert!(depths_b.iter().all(|&d| d <= 3), "Bounded batch must not exceed max_carry_depth");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_audit_max_ripple_constant_zero_bias_demonstration() -> Result<()> {
+        let e = TaskEngine::new();
+        // Generate MaxRipple batch: 99..9 + 1 = 100..0
+        let b_ripple = e.generate_stratified_arithmetic_batch(
+            64, 32, Some(ArithmeticStratum::MaxRipple), None, 42, &Device::Cpu)?;
+        let tgts = b_ripple.targets.to_vec2::<u32>()?;
+        let masks = b_ripple.loss_mask.to_vec2::<f32>()?;
+        let zero_id = e.vocab.encode("0")[0] as u32;
+
+        let mut ripple_zero_matches = 0;
+        let mut ripple_total_queries = 0;
+        let mut ripple_complete_zeros = 0;
+
+        for (row_t, row_m) in tgts.iter().zip(&masks) {
+            let mut all_zero = true;
+            for (&t, &m) in row_t.iter().zip(row_m) {
+                if m == 1.0 {
+                    ripple_total_queries += 1;
+                    if t == zero_id {
+                        ripple_zero_matches += 1;
+                    } else {
+                        all_zero = false;
+                    }
+                }
+            }
+            if all_zero {
+                ripple_complete_zeros += 1;
+            }
+        }
+        let ripple_digit_acc = ripple_zero_matches as f32 / ripple_total_queries as f32;
+        let ripple_complete_acc = ripple_complete_zeros as f32 / tgts.len() as f32;
+
+        // On MaxRipple, constant-0 achieves > 75% digit accuracy because of leading 1 followed by zeros
+        assert!(
+            ripple_digit_acc > 0.75,
+            "MaxRipple digit accuracy for constant-0 must exceed 75% due to zeros in 100..0: got {:.2}%",
+            ripple_digit_acc * 100.0
+        );
+        // BUT complete-answer accuracy is strictly 0.0% because the leading digit is '1'
+        assert_eq!(
+            ripple_complete_acc, 0.0,
+            "Complete-answer accuracy for constant-0 on MaxRipple must be strictly 0%"
+        );
+
+        // Compare with generic/random addition
+        let b_random = e.generate_batch_seeded(TaskKind::ColumnArithmetic, 64, 32, false, 42, &Device::Cpu)?;
+        let rand_tgts = b_random.targets.to_vec2::<u32>()?;
+        let rand_masks = b_random.loss_mask.to_vec2::<f32>()?;
+        let mut rand_zero_matches = 0;
+        let mut rand_total_queries = 0;
+        for (row_t, row_m) in rand_tgts.iter().zip(&rand_masks) {
+            for (&t, &m) in row_t.iter().zip(row_m) {
+                if m == 1.0 {
+                    rand_total_queries += 1;
+                    if t == zero_id {
+                        rand_zero_matches += 1;
+                    }
+                }
+            }
+        }
+        let rand_digit_acc = rand_zero_matches as f32 / rand_total_queries as f32;
+
+        // On legacy random arithmetic, the hard-coded `hostile_carry = rng.gen_bool(0.5)`
+        // causes 50% of examples to be 99..9 + b, artificially driving constant-0 digit accuracy
+        // to ~43-45% (matching Codex Review Finding 2: seed 42 = 44.26%, seed 101 = 45.39%).
+        assert!(
+            rand_digit_acc > 0.38 && rand_digit_acc < 0.50,
+            "Legacy ColumnArithmetic has 50% hostile carry, yielding ~43-45% zeros: got {:.2}%",
+            rand_digit_acc * 100.0
+        );
+
+        println!(
+            "Audit verification passed: MaxRipple constant-0 digit_acc={:.2}% vs legacy random digit_acc={:.2}%, complete_acc=0%",
+            ripple_digit_acc * 100.0,
+            rand_digit_acc * 100.0
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_audit_train_val_split_disjointness_and_carry_depth_labels() -> Result<()> {
+        let e = TaskEngine::new();
+        // Check train vs validation split disjointness
+        let train_b = e.generate_batch_seeded(TaskKind::ColumnArithmetic, 256, 32, false, 100, &Device::Cpu)?;
+        let val_b = e.generate_batch_seeded(TaskKind::ColumnArithmetic, 256, 32, true, 100, &Device::Cpu)?;
+
+        let train_ins = train_b.inputs.to_vec2::<u32>()?;
+        let val_ins = val_b.inputs.to_vec2::<u32>()?;
+
+        let train_set: HashSet<Vec<u32>> = train_ins.into_iter().collect();
+        let val_set: HashSet<Vec<u32>> = val_ins.into_iter().collect();
+
+        assert!(
+            train_set.is_disjoint(&val_set),
+            "Train and validation observation sets must be strictly disjoint"
+        );
+
+        // Check carry depth bounds for in-distribution vs extrapolation
+        let id_b = e.generate_stratified_arithmetic_batch(64, 32, None, Some(2), 123, &Device::Cpu)?;
+        let ood_b = e.generate_stratified_arithmetic_batch(64, 32, Some(ArithmeticStratum::LongPartial), None, 123, &Device::Cpu)?;
+
+        let id_depths = id_b.carry_depths.unwrap();
+        let ood_depths = ood_b.carry_depths.unwrap();
+
+        assert!(
+            id_depths.iter().all(|&d| d <= 2),
+            "In-distribution carry depths must be <= 2"
+        );
+        assert!(
+            ood_depths.iter().all(|&d| d >= 2),
+            "Extrapolation carry depths must be >= 2"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_iterated_parity_oracle_and_recurrent_depth_requirement() -> Result<()> {
+        let e = TaskEngine::new();
+        let batch = e.generate_batch_seeded(TaskKind::IteratedParity, 128, 32, false, 777, &Device::Cpu)?;
+        let ins = batch.inputs.to_vec2::<u32>()?;
+        let tgts = batch.targets.to_vec2::<u32>()?;
+        let masks = batch.loss_mask.to_vec2::<f32>()?;
+
+        let zero_id = e.vocab.encode("0")[0] as u32;
+        let one_id = e.vocab.encode("1")[0] as u32;
+
+        let mut zero_count = 0;
+        let mut one_count = 0;
+        let mut query_count = 0;
+
+        for ((row_in, row_t), row_m) in ins.iter().zip(&tgts).zip(&masks) {
+            let s: Vec<char> = e.vocab.decode(&row_in.iter().map(|&v| v as usize).collect::<Vec<_>>()).chars().collect();
+            let mut cum = 0u8;
+            for chunk in 0..8 {
+                let base = chunk * 4;
+                for j in 0..3 {
+                    cum ^= s[base + j].to_digit(10).unwrap() as u8;
+                }
+                let q_pos = base + 3;
+                assert_eq!(row_m[q_pos], 1.0, "Mask must be 1 at query position {}", q_pos);
+                let expected_c = (b'0' + cum) as char;
+                let actual_id = row_t[q_pos];
+                assert_eq!(actual_id, e.vocab.encode(&expected_c.to_string())[0] as u32);
+
+                if actual_id == zero_id {
+                    zero_count += 1;
+                } else if actual_id == one_id {
+                    one_count += 1;
+                }
+                query_count += 1;
+            }
+        }
+
+        // Verify balanced label distribution
+        let zero_frac = zero_count as f32 / query_count as f32;
+        let one_frac = one_count as f32 / query_count as f32;
+        assert!(
+            (zero_frac - 0.5).abs() < 0.08,
+            "IteratedParity targets must be balanced: zero_frac={:.3}, one_frac={:.3}",
+            zero_frac, one_frac
+        );
 
         Ok(())
     }
