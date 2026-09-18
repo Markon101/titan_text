@@ -172,6 +172,9 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
     if args.flag("--zero-boundary") {
         config.field.periodic_boundary = false;
     }
+    if args.flag("--coord-channel") {
+        config.nca.coord_channel = true;
+    }
     config.validate()?;
     start_step
         .checked_add(config.train.epochs)
@@ -206,6 +209,9 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
     );
     if config.nca.state_norm != "none" {
         println!("  State Normalization : {}", config.nca.state_norm);
+    }
+    if config.nca.coord_channel {
+        println!("  Coordinate Channel  : ENABLED (p_i in [-1, 1] per cell)");
     }
     if config.train.tail_equilibrium_weight > 0.0 {
         println!(
@@ -1084,6 +1090,12 @@ fn cmd_sweep(args: &cli::Options, device: &Device) -> Result<()> {
     }
     if args.flag("--zero-boundary") {
         config.field.periodic_boundary = false;
+    }
+    if args.flag("--coord-channel") {
+        config.nca.coord_channel = true;
+    }
+    if let Some(cm) = args.value::<String>("--coord-mode")? {
+        intervention.coord_mode = Some(cm);
     }
 
     config.validate()?;
@@ -2066,6 +2078,145 @@ fn cmd_falsify(args: &cli::Options, device: &Device) -> Result<()> {
     Ok(())
 }
 
+fn cmd_influence(args: &cli::Options, device: &Device) -> Result<()> {
+    let load_dir: Option<String> = args.value("--load-dir")?;
+    let task_opt: Option<String> = args.value("--task")?;
+    let budgets_str: Option<String> = args.value("--budgets")?;
+    let seq_len_opt: Option<usize> = args.value("--seq-len")?;
+    let batch_size: usize = args.value("--batch-size")?.unwrap_or(64);
+    let output_path: Option<String> = args.value("--output")?;
+    let seed: usize = args.value("--seed")?.unwrap_or(42);
+
+    let (mut config, default_task) = if let Some(ref dir) = load_dir {
+        let manifest = CheckpointManager::load_manifest(dir)?;
+        (manifest.config, manifest.task.clone())
+    } else {
+        (TitanConfig::default(), "iterated-parity".to_string())
+    };
+
+    let task = cli::resolve_task(task_opt, &default_task, load_dir.is_some())?;
+    if let Some(s) = seq_len_opt {
+        config.field.seq_len = s;
+    }
+    if args.flag("--zero-boundary") {
+        config.field.periodic_boundary = false;
+    }
+    if args.flag("--coord-channel") {
+        config.nca.coord_channel = true;
+    }
+    config.validate()?;
+
+    let task_kind = tasks::TaskKind::parse(&task).unwrap_or(tasks::TaskKind::IteratedParity);
+    let budgets: Vec<usize> = match budgets_str {
+        Some(s) => s
+            .split(',')
+            .filter_map(|b| b.trim().parse::<usize>().ok())
+            .collect(),
+        None => vec![0, 1, 2, 4, 8],
+    };
+
+    let mut varmap = candle_nn::VarMap::new();
+    let vb = candle_nn::VarBuilder::from_varmap(&varmap, candle_core::DType::F32, device);
+
+    let vocab = vocab::Vocab::new_ascii();
+    let nca = NeuralCellularAutomaton::new(vb.pp("nca"), &config.nca, &config.field)?;
+    let interface = TokenInterface::new(vb.pp("interface"), vocab.size(), config.field.channels)?;
+
+    if let Some(ref dir) = load_dir {
+        println!("Loading checkpoint weights from '{}'...", dir);
+        CheckpointManager::load_weights(dir, &mut varmap, device)?;
+    }
+
+    let executor = latent::LatentExecutor::new(&nca, &interface, &vocab);
+
+    println!("╔══════════════════════════════════════════════════════════════════════════════════════╗");
+    println!("║ TITAN TEXT · EMPIRICAL CAUSAL INFLUENCE & DEPENDENCY MAP                             ║");
+    println!("╚══════════════════════════════════════════════════════════════════════════════════════╝");
+    println!("  Task                : {}", task_kind.name());
+    println!("  Sequence Length (L) : {}", config.field.seq_len);
+    println!("  Budgets Evaluated   : {:?}", budgets);
+    println!("  Batch Size          : {}", batch_size);
+    println!("  Seed                : {}", seed);
+    println!("  Zero Boundary       : {}", !config.field.periodic_boundary);
+    println!("  Coord Channel       : {}", config.nca.coord_channel);
+
+    let report = executor.compute_causal_influence_matrix(
+        task_kind,
+        &budgets,
+        batch_size,
+        config.field.seq_len,
+        !config.field.periodic_boundary,
+        seed,
+        device,
+    )?;
+
+    for (b_idx, &tau) in budgets.iter().enumerate() {
+        println!("\n─── LATENT TICK τ = {} ─────────────────────────────────────────────────────────────", tau);
+        for (s_idx, &q_pos) in report.query_slot_indices.iter().enumerate() {
+            println!("  [Query Slot {} (pos {})]", s_idx, q_pos);
+            print!("    Pos   : ");
+            for j in 0..config.field.seq_len {
+                print!("{:>6} ", j);
+            }
+            println!();
+            print!("    Reach : ");
+            for j in 0..config.field.seq_len {
+                let r = if report.theoretical_reachability[b_idx][s_idx][j] { "YES" } else { " no" };
+                print!("{:>6} ", r);
+            }
+            println!();
+            print!("    NumSens: ");
+            for j in 0..config.field.seq_len {
+                print!("{:>6.3} ", report.numerical_influence[b_idx][s_idx][j]);
+            }
+            println!();
+            print!("    FlipPr: ");
+            for j in 0..config.field.seq_len {
+                print!("{:>5.1}% ", report.flip_probability[b_idx][s_idx][j] * 100.0);
+            }
+            println!();
+        }
+    }
+
+    if task_kind == tasks::TaskKind::IteratedParity {
+        let max_ticks = budgets.last().copied().unwrap_or(config.latent.latent_ticks_per_token);
+        println!("\n╔══════════════════════════════════════════════════════════════════════════════════════╗");
+        println!("║ TITAN TEXT · BOUNDARY RELOCATION PROBE (3-bit Parity Shift Test)                     ║");
+        println!("╚══════════════════════════════════════════════════════════════════════════════════════╝");
+        println!("  Evaluating identical 3-bit parity shifted across chunks at τ = {}", max_ticks);
+        let reloc_report = executor.run_boundary_relocation_probe(max_ticks, config.field.seq_len, device)?;
+        println!("  Placement Query Positions  : {:?}", reloc_report.placement_positions);
+        println!("  Zero-Padded Accuracy       : {:?}", reloc_report.zero_padded_accuracies);
+        println!("  Random-Ctx Local Accuracy  : {:?}", reloc_report.random_context_local_accuracies);
+        println!("  Random-Ctx Cumul Accuracy  : {:?}", reloc_report.random_context_cumulative_accuracies);
+
+        println!("\n╔══════════════════════════════════════════════════════════════════════════════════════╗");
+        println!("║ TITAN TEXT · LATENT REPRESENTATION PROBE (Linear & Non-linear MLP)                   ║");
+        println!("╚══════════════════════════════════════════════════════════════════════════════════════╝");
+        println!("  Evaluating latent hidden state representations at τ = {}", max_ticks);
+        let latent_probe = executor.run_latent_representation_probe(max_ticks, config.field.seq_len, device)?;
+        println!("  Query Slot Cell Indices    : {:?}", latent_probe.slot_indices);
+        println!("  Linear Chunk0 Parity Acc   : {:?}", latent_probe.linear_chunk0_parity_acc);
+        println!("  Linear Local Parity Acc    : {:?}", latent_probe.linear_local_parity_acc);
+        println!("  Linear Cumulative Acc      : {:?}", latent_probe.linear_cumulative_parity_acc);
+        println!("  MLP Chunk0 Parity Acc      : {:?}", latent_probe.mlp_chunk0_parity_acc);
+        println!("  MLP Local Parity Acc       : {:?}", latent_probe.mlp_local_parity_acc);
+        println!("  MLP Cumulative Acc         : {:?}", latent_probe.mlp_cumulative_parity_acc);
+    }
+
+    if let Some(ref out_p) = output_path {
+        let p = std::path::Path::new(out_p);
+        if let Some(parent) = p.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let f = std::fs::File::create(p)?;
+        serde_json::to_writer_pretty(f, &report)?;
+        println!("\n✓ Saved causal influence report to '{}'", out_p);
+    }
+
+    Ok(())
+}
+
 fn main() -> std::process::ExitCode {
     let args: Vec<String> = match env::args_os()
         .skip(1)
@@ -2108,6 +2259,7 @@ fn main() -> std::process::ExitCode {
                 cli::Command::Attractor => cmd_attractor(&args, &device),
                 cli::Command::Benchmark => cmd_benchmark(&args, &device),
                 cli::Command::Memory => cmd_memory(&args, &device),
+                cli::Command::Influence => cmd_influence(&args, &device),
             }
         }
     };

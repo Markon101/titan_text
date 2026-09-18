@@ -53,6 +53,9 @@ pub struct NcaConfig {
     /// Leaky integration contraction rate lambda on state x_{t+1} = (1 - lambda)*x_t + ... (default: 0.0)
     #[serde(default = "default_leaky_lambda")]
     pub leaky_lambda: f32,
+    /// Whether to append a static 1D spatial coordinate channel p_i in [-1, 1] to the perception vector
+    #[serde(default)]
+    pub coord_channel: bool,
 }
 
 fn default_feedback_mode() -> String {
@@ -99,6 +102,7 @@ impl Default for NcaConfig {
             bound_threshold: default_bound_threshold(),
             damping_alpha: default_damping_alpha(),
             leaky_lambda: default_leaky_lambda(),
+            coord_channel: false,
         }
     }
 }

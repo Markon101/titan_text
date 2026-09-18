@@ -14,6 +14,7 @@ pub enum Command {
     Attractor,
     Benchmark,
     Memory,
+    Influence,
 }
 
 impl Command {
@@ -29,6 +30,7 @@ impl Command {
             "attractor" | "attractor-probe" | "basin" => Ok(Self::Attractor),
             "benchmark" | "compare" | "baselines" => Ok(Self::Benchmark),
             "memory" | "memory-dynamics" => Ok(Self::Memory),
+            "influence" | "causal-map" | "dependency-map" => Ok(Self::Influence),
             _ => bail!("unknown command '{name}'; use --help for usage"),
         }
     }
@@ -45,6 +47,7 @@ impl Command {
             Self::Attractor => "attractor",
             Self::Benchmark => "benchmark",
             Self::Memory => "memory",
+            Self::Influence => "influence",
         }
     }
 
@@ -78,6 +81,7 @@ impl Command {
                 "--trace-output",
                 "--record-activations",
                 "--zero-boundary",
+                "--coord-channel",
             ],
             Self::Rollout => &[
                 "--load-dir",
@@ -105,6 +109,8 @@ impl Command {
                 "--trace-output",
                 "--record-activations",
                 "--zero-boundary",
+                "--coord-channel",
+                "--coord-mode",
             ],
             Self::Probe => &[
                 "--load-dir",
@@ -165,6 +171,8 @@ impl Command {
                 "--trace-output",
                 "--record-activations",
                 "--zero-boundary",
+                "--coord-channel",
+                "--coord-mode",
             ],
             Self::Associate => &[
                 "--load-dir",
@@ -214,6 +222,19 @@ impl Command {
                 "--ticks",
                 "--output",
                 "--threads",
+            ],
+            Self::Influence => &[
+                "--load-dir",
+                "--task",
+                "--budgets",
+                "--seq-len",
+                "--batch-size",
+                "--seed",
+                "--threads",
+                "--output",
+                "--zero-boundary",
+                "--coord-channel",
+                "--coord-mode",
             ],
         }
     }
@@ -288,6 +309,7 @@ fn is_flag_option(name: &str) -> bool {
             | "--train"
             | "--record-activations"
             | "--zero-boundary"
+            | "--coord-channel"
     )
 }
 
@@ -365,6 +387,12 @@ fn validate_value(name: &str, value: &str) -> Result<()> {
             ensure!(
                 matches!(value, "none" | "rms" | "bounded" | "layer_norm"),
                 "invalid --state-norm '{value}'; expected none, rms, bounded, or layer_norm"
+            );
+        }
+        "--coord-mode" => {
+            ensure!(
+                matches!(value, "intact" | "zeroed" | "shuffled" | "reversed" | "constant"),
+                "invalid --coord-mode '{value}'; expected intact, zeroed, shuffled, reversed, or constant"
             );
         }
         "--task" => {
@@ -533,6 +561,8 @@ pub fn print_help(command: Option<Command>) {
             "--trace-output" => "<FILE>    Write detailed per-step activation traces to JSON file",
             "--record-activations" => "    Record full spatial activation matrices across rollout steps",
             "--zero-boundary" => "         Enforce zero-padding spatial boundary (disable periodic wrap-around)",
+            "--coord-channel" => "         Append static 1D spatial coordinate channel [-1, 1] to perception",
+            "--coord-mode" => "<NAME>      Coordinate counterfactual mode (intact, zeroed, shuffled, reversed, constant)",
             _ => unreachable!(),
         };
         println!("  {name} {description}");

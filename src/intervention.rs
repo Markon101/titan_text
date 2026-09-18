@@ -57,6 +57,10 @@ pub struct InterventionConfig {
     /// If true, permutes/rotates state across batch dimension at each tick (shuffled-recurrence control).
     #[serde(default)]
     pub shuffle_batch: bool,
+
+    /// Coordinate channel counterfactual mode: None ("intact"), "zeroed", "shuffled", "reversed", "constant"
+    #[serde(default)]
+    pub coord_mode: Option<String>,
 }
 
 fn default_gain() -> f32 {
@@ -79,6 +83,7 @@ impl Default for InterventionConfig {
             bypass_perception: false,
             identity_only_perception: false,
             shuffle_batch: false,
+            coord_mode: None,
         }
     }
 }
@@ -99,6 +104,7 @@ impl InterventionConfig {
             || self.bypass_perception
             || self.identity_only_perception
             || self.shuffle_batch
+            || self.coord_mode.is_some()
     }
 
     /// Applies state-level interventions (reset, noise, freeze check) before/after tick.
@@ -188,16 +194,33 @@ impl InterventionConfig {
         }
     }
 
-    /// Modifies perception tensor [B, L, 3*C] when spatial perception is bypassed.
+    /// Modifies perception tensor when spatial perception is bypassed or coordinate counterfactual is active.
     pub fn apply_to_perception(&self, perception: &Tensor, identity: &Tensor) -> Result<Tensor> {
-        if self.bypass_perception || self.identity_only_perception {
+        let (b, l, c) = identity.dims3()?;
+        let (_, _, cin) = perception.dims3()?;
+
+        let mut perc = if self.bypass_perception || self.identity_only_perception {
             // Replace gradient and laplacian parts with zeros
-            let (b, l, c) = identity.dims3()?;
             let zero_spatial = Tensor::zeros((b, l, 2 * c), DType::F32, identity.device())?;
-            Ok(Tensor::cat(&[identity, &zero_spatial], 2)?)
+            if cin > 3 * c {
+                let extra = perception.narrow(2, 3 * c, cin - 3 * c)?;
+                Tensor::cat(&[identity, &zero_spatial, &extra], 2)?
+            } else {
+                Tensor::cat(&[identity, &zero_spatial], 2)?
+            }
         } else {
-            Ok(perception.clone())
+            perception.clone()
+        };
+
+        if let Some(ref mode) = self.coord_mode {
+            if cin % c == 1 {
+                let new_coords = crate::nca::NeuralCellularAutomaton::generate_coordinates(b, l, Some(mode), perc.device())?;
+                let prefix = perc.narrow(2, 0, cin - 1)?;
+                perc = Tensor::cat(&[&prefix, &new_coords], 2)?;
+            }
         }
+
+        Ok(perc)
     }
 }
 

@@ -29,11 +29,14 @@ impl NeuralCellularAutomaton {
     pub fn new(vb: VarBuilder, nca_cfg: &NcaConfig, field_cfg: &FieldConfig) -> Result<Self> {
         // Local 1D perception: [Identity (C), Gradient (C), Laplacian (C)] = 3 * C
         // Macro recursive feedback adds global collective state: + C = 4 * C
-        let in_channels = if nca_cfg.has_feedback() {
+        let mut in_channels = if nca_cfg.has_feedback() {
             field_cfg.channels * 4
         } else {
             field_cfg.channels * 3
         };
+        if nca_cfg.coord_channel {
+            in_channels += 1;
+        }
 
         let dense1 = linear(in_channels, nca_cfg.hidden_dim, vb.pp("dense1"))?;
         let dense_delta = linear(nca_cfg.hidden_dim, field_cfg.channels, vb.pp("dense_delta"))?;
@@ -64,7 +67,52 @@ impl NeuralCellularAutomaton {
         if self.nca_cfg.has_feedback() {
             breakdown.push(("macro_recursive_feedback_loop".to_string(), 0));
         }
+        if self.nca_cfg.coord_channel {
+            breakdown.push(("spatial_coordinate_channel".to_string(), 0));
+        }
         breakdown
+    }
+
+    /// Generates static 1D spatial coordinate channel p_i in [-1, 1] for B sequences of length L
+    pub fn generate_coordinates(b: usize, l: usize, mode: Option<&str>, device: &Device) -> Result<Tensor> {
+        let mut coords = Vec::with_capacity(l);
+        if l <= 1 {
+            coords.push(0.0f32);
+        } else {
+            for i in 0..l {
+                let p = 2.0 * (i as f32) / ((l - 1) as f32) - 1.0;
+                coords.push(p);
+            }
+        }
+
+        match mode.unwrap_or("intact") {
+            "zeroed" => {
+                for c in coords.iter_mut() {
+                    *c = 0.0;
+                }
+            }
+            "constant" => {
+                for c in coords.iter_mut() {
+                    *c = 0.5;
+                }
+            }
+            "reversed" => {
+                coords.reverse();
+            }
+            "shuffled" => {
+                use rand::seq::SliceRandom;
+                use rand::SeedableRng;
+                let mut rng = rand::rngs::StdRng::seed_from_u64(42);
+                coords.shuffle(&mut rng);
+            }
+            "intact" | _ => {}
+        }
+
+        let mut batch_coords = Vec::with_capacity(b * l);
+        for _ in 0..b {
+            batch_coords.extend_from_slice(&coords);
+        }
+        Ok(Tensor::from_vec(batch_coords, (b, l, 1), device)?)
     }
 
     /// Circular spatial shift: rolls tensor [B, L, C] along spatial dimension L
@@ -92,17 +140,25 @@ impl NeuralCellularAutomaton {
         let diff = (&right - &double_x)?;
         let laplacian = (&diff + &left)?;
 
-        if self.nca_cfg.has_feedback() {
+        let base_perc = if self.nca_cfg.has_feedback() {
             let (_, l, _) = x.dims3()?;
             let s = match slow_state {
                 Some(s_ten) => s_ten.clone(),
                 None => x.mean(1)?.unsqueeze(1)?,
             };
             let s_broadcast = s.repeat((1, l, 1))?;
-            Ok(Tensor::cat(&[x, &grad, &laplacian, &s_broadcast], 2)?)
+            Tensor::cat(&[x, &grad, &laplacian, &s_broadcast], 2)?
         } else {
             // Concatenate along channels: [B, L, 3 * C]
-            Ok(Tensor::cat(&[x, &grad, &laplacian], 2)?)
+            Tensor::cat(&[x, &grad, &laplacian], 2)?
+        };
+
+        if self.nca_cfg.coord_channel {
+            let (b, l, _) = x.dims3()?;
+            let coords = Self::generate_coordinates(b, l, None, x.device())?;
+            Ok(Tensor::cat(&[&base_perc, &coords], 2)?)
+        } else {
+            Ok(base_perc)
         }
     }
 
@@ -557,6 +613,54 @@ mod tests {
         // Energy must be exactly 0.5 * mean(sq) = 0.5 * 1.0 = 0.5
         let energy = rolled.energy()?;
         assert!((energy - 0.5).abs() < 1e-3, "Field energy on compact manifold must be bounded to 0.5");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_coordinate_channel_and_counterfactuals() -> Result<()> {
+        let dev = Device::Cpu;
+        let b = 2;
+        let l = 5;
+
+        // 1. Coordinate generation
+        let intact = NeuralCellularAutomaton::generate_coordinates(b, l, None, &dev)?;
+        let intact_v = intact.to_vec3::<f32>()?;
+        assert_eq!(intact_v[0][0][0], -1.0);
+        assert_eq!(intact_v[0][2][0], 0.0);
+        assert_eq!(intact_v[0][4][0], 1.0);
+
+        let zeroed = NeuralCellularAutomaton::generate_coordinates(b, l, Some("zeroed"), &dev)?;
+        let zeroed_v = zeroed.to_vec3::<f32>()?;
+        for cell in 0..l {
+            assert_eq!(zeroed_v[0][cell][0], 0.0);
+        }
+
+        let constant = NeuralCellularAutomaton::generate_coordinates(b, l, Some("constant"), &dev)?;
+        let constant_v = constant.to_vec3::<f32>()?;
+        for cell in 0..l {
+            assert_eq!(constant_v[0][cell][0], 0.5);
+        }
+
+        let reversed = NeuralCellularAutomaton::generate_coordinates(b, l, Some("reversed"), &dev)?;
+        let reversed_v = reversed.to_vec3::<f32>()?;
+        assert_eq!(reversed_v[0][0][0], 1.0);
+        assert_eq!(reversed_v[0][4][0], -1.0);
+
+        // 2. NCA Perception dimension
+        let channels = 8;
+        let field_cfg = FieldConfig { seq_len: l, channels, periodic_boundary: true };
+        let nca_cfg = NcaConfig {
+            coord_channel: true,
+            ..NcaConfig::default()
+        };
+        let varmap = VarMap::new();
+        let vb = VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+        let nca = NeuralCellularAutomaton::new(vb, &nca_cfg, &field_cfg)?;
+
+        let x = Tensor::zeros((b, l, channels), candle_core::DType::F32, &dev)?;
+        let perc = nca.perceive(&x)?;
+        assert_eq!(perc.dims3()?, (b, l, 3 * channels + 1));
 
         Ok(())
     }

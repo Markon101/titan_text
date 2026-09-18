@@ -867,6 +867,548 @@ impl<'a> LatentExecutor<'a> {
             optimal_ticks: best_ticks,
         })
     }
+
+    /// Computes the empirical causal dependency map: input position -> output query slot across latent ticks.
+    pub fn compute_causal_influence_matrix(
+        &self,
+        task_kind: crate::tasks::TaskKind,
+        budgets: &[usize],
+        batch_size: usize,
+        seq_len: usize,
+        zero_boundary: bool,
+        seed: usize,
+        device: &Device,
+    ) -> Result<CausalInfluenceReport> {
+        let task_engine = crate::tasks::TaskEngine::new();
+        let batch = task_engine.generate_batch_seeded(task_kind, batch_size, seq_len, true, seed, device)?;
+        let mask_vec = batch.loss_mask.to_vec2::<f32>()?;
+        let inputs_vec = batch.inputs.to_vec2::<u32>()?;
+        let b = inputs_vec.len();
+        let l = if b > 0 { inputs_vec[0].len() } else { 0 };
+
+        let mut query_positions = Vec::new();
+        if b > 0 {
+            for j in 0..l {
+                if mask_vec[0][j] > 0.5 {
+                    query_positions.push(j);
+                }
+            }
+        }
+        let num_slots = query_positions.len();
+
+        let zero_id = self.vocab.encode("0")[0] as u32;
+        let one_id = self.vocab.encode("1")[0] as u32;
+
+        let mut num_inf = Vec::with_capacity(budgets.len());
+        let mut flip_prob = Vec::with_capacity(budgets.len());
+        let mut theo_reach = Vec::with_capacity(budgets.len());
+
+        let cfg = LatentConfig::default();
+        let intervention = InterventionConfig::default();
+
+        for &ticks in budgets {
+            let clean_seed = self.interface.embed_tokens(&batch.inputs)?;
+            let mut clean_field = MorphogenicField::from_tensor(clean_seed, &self.nca.field_cfg);
+            let clean_origin = clean_field.x.clone();
+            for t in 0..ticks {
+                let (next_f, _, _) = self.step_latent(&clean_field, t, None, &cfg, &intervention, &clean_origin, None, device)?;
+                clean_field = next_f;
+            }
+            let clean_logits = self.interface.logits(&clean_field.x)?;
+            let clean_preds = clean_logits.argmax(candle_core::D::Minus1)?.to_vec2::<u32>()?;
+            let clean_logits_vec = clean_logits.to_vec3::<f32>()?;
+
+            let mut budget_num = vec![vec![0.0f32; l]; num_slots];
+            let mut budget_flip = vec![vec![0.0f32; l]; num_slots];
+            let mut budget_theo = vec![vec![false; l]; num_slots];
+
+            for (s_idx, &q_pos) in query_positions.iter().enumerate() {
+                for j in 0..l {
+                    let dist = if zero_boundary {
+                        (q_pos as isize - j as isize).abs() as usize
+                    } else {
+                        let d1 = (q_pos as isize - j as isize).abs() as usize;
+                        let d2 = l - d1;
+                        d1.min(d2)
+                    };
+                    budget_theo[s_idx][j] = dist <= ticks;
+
+                    let mut flipped_inputs_vec = inputs_vec.clone();
+                    for row in 0..b {
+                        let cur = flipped_inputs_vec[row][j];
+                        if cur == zero_id {
+                            flipped_inputs_vec[row][j] = one_id;
+                        } else if cur == one_id {
+                            flipped_inputs_vec[row][j] = zero_id;
+                        }
+                    }
+                    let flipped_tokens = Tensor::from_vec(
+                        flipped_inputs_vec.into_iter().flatten().collect(),
+                        (b, l),
+                        device,
+                    )?;
+
+                    let flipped_seed = self.interface.embed_tokens(&flipped_tokens)?;
+                    let mut flipped_field = MorphogenicField::from_tensor(flipped_seed, &self.nca.field_cfg);
+                    let flipped_origin = flipped_field.x.clone();
+                    for t in 0..ticks {
+                        let (next_f, _, _) = self.step_latent(&flipped_field, t, None, &cfg, &intervention, &flipped_origin, None, device)?;
+                        flipped_field = next_f;
+                    }
+                    let flipped_logits = self.interface.logits(&flipped_field.x)?;
+                    let flipped_preds = flipped_logits.argmax(candle_core::D::Minus1)?.to_vec2::<u32>()?;
+                    let flipped_logits_vec = flipped_logits.to_vec3::<f32>()?;
+
+                    let mut sum_l2 = 0.0f32;
+                    let mut flip_count = 0usize;
+                    for row in 0..b {
+                        let mut diff_sq = 0.0f32;
+                        for v in 0..clean_logits_vec[row][q_pos].len() {
+                            let diff = flipped_logits_vec[row][q_pos][v] - clean_logits_vec[row][q_pos][v];
+                            diff_sq += diff * diff;
+                        }
+                        sum_l2 += diff_sq.sqrt();
+                        if flipped_preds[row][q_pos] != clean_preds[row][q_pos] {
+                            flip_count += 1;
+                        }
+                    }
+                    budget_num[s_idx][j] = sum_l2 / b as f32;
+                    budget_flip[s_idx][j] = flip_count as f32 / b as f32;
+                }
+            }
+
+            num_inf.push(budget_num);
+            flip_prob.push(budget_flip);
+            theo_reach.push(budget_theo);
+        }
+
+        Ok(CausalInfluenceReport {
+            task_name: task_kind.name().to_string(),
+            seq_len,
+            budgets: budgets.to_vec(),
+            query_slots: (0..num_slots).collect(),
+            query_slot_indices: query_positions,
+            numerical_influence: num_inf,
+            flip_probability: flip_prob,
+            theoretical_reachability: theo_reach,
+        })
+    }
+
+    /// Boundary Relocation Probe (Phase 5):
+    /// Tests whether competence on 3-bit parity tracks physical distance to a spatial boundary
+    /// rather than logical task depth by evaluating an identical 3-bit parity problem shifted
+    /// across all chunk positions within the sequence length.
+    pub fn run_boundary_relocation_probe(
+        &self,
+        ticks: usize,
+        seq_len: usize,
+        device: &Device,
+    ) -> Result<BoundaryRelocationReport> {
+        use rand::rngs::StdRng;
+        use rand::{Rng, SeedableRng};
+
+        let chunk_size = 4;
+        let num_placements = seq_len / chunk_size;
+        let mut query_positions = Vec::with_capacity(num_placements);
+        let mut zero_padded_accuracies = Vec::with_capacity(num_placements);
+
+        let zero_id = self.vocab.encode("0")[0] as u32;
+        let one_id = self.vocab.encode("1")[0] as u32;
+        let query_id = self.vocab.encode("?")[0] as u32;
+
+        let cfg = LatentConfig::default();
+        let intervention = InterventionConfig::default();
+
+        let all_bits = [
+            [0, 0, 0], [0, 0, 1], [0, 1, 0], [0, 1, 1],
+            [1, 0, 0], [1, 0, 1], [1, 1, 0], [1, 1, 1],
+        ];
+        let repeat = 16;
+        let b_zp = all_bits.len() * repeat;
+
+        // Condition 1: Zero-padded background (all non-target chunks are '000?')
+        for p in 0..num_placements {
+            let base = p * chunk_size;
+            let q_pos = base + 3;
+            query_positions.push(q_pos);
+
+            let mut batch_inputs = vec![vec![zero_id; seq_len]; b_zp];
+            for row in 0..b_zp {
+                for c in 0..num_placements {
+                    batch_inputs[row][c * chunk_size + 3] = query_id;
+                }
+            }
+            let mut batch_targets = vec![0u32; b_zp];
+
+            let mut row = 0;
+            for _ in 0..repeat {
+                for bits in &all_bits {
+                    let parity = bits[0] ^ bits[1] ^ bits[2];
+                    for j in 0..3 {
+                        batch_inputs[row][base + j] = if bits[j] == 1 { one_id } else { zero_id };
+                    }
+                    batch_targets[row] = if parity == 1 { one_id } else { zero_id };
+                    row += 1;
+                }
+            }
+
+            let input_tensor = Tensor::from_vec(
+                batch_inputs.into_iter().flatten().collect(),
+                (b_zp, seq_len),
+                device,
+            )?;
+
+            let seed = self.interface.embed_tokens(&input_tensor)?;
+            let mut field = MorphogenicField::from_tensor(seed, &self.nca.field_cfg);
+            let origin = field.x.clone();
+
+            for t in 0..ticks {
+                let (next_f, _, _) = self.step_latent(&field, t, None, &cfg, &intervention, &origin, None, device)?;
+                field = next_f;
+            }
+
+            let logits = self.interface.logits(&field.x)?;
+            let preds = logits.argmax(candle_core::D::Minus1)?.to_vec2::<u32>()?;
+
+            let mut correct = 0;
+            for i in 0..b_zp {
+                if preds[i][q_pos] == batch_targets[i] {
+                    correct += 1;
+                }
+            }
+            zero_padded_accuracies.push(correct as f32 / b_zp as f32);
+        }
+
+        // Condition 2 & 3: Random context background (all chunks have uniform random bits and '?')
+        let b_rand = 256;
+        let mut rng = StdRng::seed_from_u64(42);
+        let mut rand_inputs = vec![vec![zero_id; seq_len]; b_rand];
+        let mut local_targets = vec![vec![0u32; num_placements]; b_rand];
+        let mut cum_targets = vec![vec![0u32; num_placements]; b_rand];
+
+        for row in 0..b_rand {
+            let mut cum_p = 0u32;
+            for c in 0..num_placements {
+                let c_base = c * chunk_size;
+                let mut loc_p = 0u32;
+                for j in 0..3 {
+                    let bit = rng.gen_range(0..2);
+                    rand_inputs[row][c_base + j] = if bit == 1 { one_id } else { zero_id };
+                    loc_p ^= bit;
+                    cum_p ^= bit;
+                }
+                rand_inputs[row][c_base + 3] = query_id;
+                local_targets[row][c] = if loc_p == 1 { one_id } else { zero_id };
+                cum_targets[row][c] = if cum_p == 1 { one_id } else { zero_id };
+            }
+        }
+
+        let rand_tensor = Tensor::from_vec(
+            rand_inputs.into_iter().flatten().collect(),
+            (b_rand, seq_len),
+            device,
+        )?;
+        let rand_seed = self.interface.embed_tokens(&rand_tensor)?;
+        let mut rand_field = MorphogenicField::from_tensor(rand_seed, &self.nca.field_cfg);
+        let rand_origin = rand_field.x.clone();
+
+        for t in 0..ticks {
+            let (next_f, _, _) = self.step_latent(&rand_field, t, None, &cfg, &intervention, &rand_origin, None, device)?;
+            rand_field = next_f;
+        }
+
+        let rand_logits = self.interface.logits(&rand_field.x)?;
+        let rand_preds = rand_logits.argmax(candle_core::D::Minus1)?.to_vec2::<u32>()?;
+
+        let mut random_context_local_accuracies = Vec::with_capacity(num_placements);
+        let mut random_context_cumulative_accuracies = Vec::with_capacity(num_placements);
+
+        for c in 0..num_placements {
+            let q_pos = c * chunk_size + 3;
+            let mut loc_corr = 0;
+            let mut cum_corr = 0;
+            for row in 0..b_rand {
+                if rand_preds[row][q_pos] == local_targets[row][c] {
+                    loc_corr += 1;
+                }
+                if rand_preds[row][q_pos] == cum_targets[row][c] {
+                    cum_corr += 1;
+                }
+            }
+            random_context_local_accuracies.push(loc_corr as f32 / b_rand as f32);
+            random_context_cumulative_accuracies.push(cum_corr as f32 / b_rand as f32);
+        }
+
+        Ok(BoundaryRelocationReport {
+            task_name: "boundary-relocation-3bit-parity".to_string(),
+            seq_len,
+            ticks,
+            placement_positions: query_positions,
+            zero_padded_accuracies,
+            random_context_local_accuracies,
+            random_context_cumulative_accuracies,
+        })
+    }
+
+    /// Latent Representation Probe:
+    /// Trains linear and non-linear (2-layer MLP) probes on the 64-dimensional latent state
+    /// at each query cell q_k to determine whether prefix parity is encoded in the latent space
+    /// but unread by the projection head (readout failure), or completely absent (transport failure).
+    pub fn run_latent_representation_probe(
+        &self,
+        ticks: usize,
+        seq_len: usize,
+        device: &Device,
+    ) -> Result<LatentRepresentationProbeReport> {
+        use rand::rngs::StdRng;
+        use rand::{Rng, SeedableRng};
+
+        let chunk_size = 4;
+        let num_slots = seq_len / chunk_size;
+        let channels = self.nca.field_cfg.channels;
+
+        let zero_id = self.vocab.encode("0")[0] as u32;
+        let one_id = self.vocab.encode("1")[0] as u32;
+        let query_id = self.vocab.encode("?")[0] as u32;
+
+        let cfg = LatentConfig::default();
+        let intervention = InterventionConfig::default();
+
+        let generate_data = |b: usize, seed: u64| -> Result<(Tensor, Vec<Vec<u32>>, Vec<Vec<u32>>, Vec<u32>)> {
+            let mut rng = StdRng::seed_from_u64(seed);
+            let mut inputs = vec![vec![zero_id; seq_len]; b];
+            let mut c0_parity = vec![0u32; b];
+            let mut local_parity = vec![vec![0u32; num_slots]; b];
+            let mut cumul_parity = vec![vec![0u32; num_slots]; b];
+
+            for row in 0..b {
+                let mut cum_p = 0u32;
+                for c in 0..num_slots {
+                    let c_base = c * chunk_size;
+                    let mut loc_p = 0u32;
+                    for j in 0..3 {
+                        let bit = rng.gen_range(0..2);
+                        inputs[row][c_base + j] = if bit == 1 { one_id } else { zero_id };
+                        loc_p ^= bit;
+                        cum_p ^= bit;
+                    }
+                    inputs[row][c_base + 3] = query_id;
+                    local_parity[row][c] = loc_p;
+                    cumul_parity[row][c] = cum_p;
+                    if c == 0 {
+                        c0_parity[row] = loc_p;
+                    }
+                }
+            }
+
+            let input_tensor = Tensor::from_vec(
+                inputs.into_iter().flatten().collect(),
+                (b, seq_len),
+                device,
+            )?;
+            Ok((input_tensor, local_parity, cumul_parity, c0_parity))
+        };
+
+        let (train_inputs, train_loc, train_cum, train_c0) = generate_data(256, 42)?;
+        let (val_inputs, val_loc, val_cum, val_c0) = generate_data(128, 999)?;
+
+        let forward_to_states = |inputs: &Tensor| -> Result<Tensor> {
+            let seed = self.interface.embed_tokens(inputs)?;
+            let mut field = MorphogenicField::from_tensor(seed, &self.nca.field_cfg);
+            let origin = field.x.clone();
+            for t in 0..ticks {
+                let (next_f, _, _) = self.step_latent(&field, t, None, &cfg, &intervention, &origin, None, device)?;
+                field = next_f;
+            }
+            Ok(field.x)
+        };
+
+        let train_x = forward_to_states(&train_inputs)?; // [256, L, C]
+        let val_x = forward_to_states(&val_inputs)?;     // [128, L, C]
+
+        let mut slot_indices = Vec::with_capacity(num_slots);
+        let mut lin_c0_acc = Vec::with_capacity(num_slots);
+        let mut lin_loc_acc = Vec::with_capacity(num_slots);
+        let mut lin_cum_acc = Vec::with_capacity(num_slots);
+        let mut mlp_c0_acc = Vec::with_capacity(num_slots);
+        let mut mlp_loc_acc = Vec::with_capacity(num_slots);
+        let mut mlp_cum_acc = Vec::with_capacity(num_slots);
+
+        let train_x_vec = train_x.to_vec3::<f32>()?;
+        let val_x_vec = val_x.to_vec3::<f32>()?;
+
+        // Closed-form Ridge linear regression: (X^T * X + lambda * I) w = X^T * y
+        let solve_ridge_probe = |x_tr: &[Vec<f32>], y_tr: &[u32], x_va: &[Vec<f32>], y_va: &[u32], d_in: usize| -> f32 {
+            let d = d_in + 1; // + 1 for bias
+            let n_tr = x_tr.len();
+            let n_va = y_va.len();
+            let lambda = 1e-2f32;
+
+            let mut a = vec![vec![0.0f32; d]; d];
+            let mut b = vec![0.0f32; d];
+
+            for row in 0..n_tr {
+                let y_val = if y_tr[row] == 1 { 1.0f32 } else { -1.0f32 };
+                let feat = &x_tr[row];
+                for i in 0..d {
+                    let xi = if i < d_in { feat[i] } else { 1.0 };
+                    b[i] += xi * y_val;
+                    for j in 0..d {
+                        let xj = if j < d_in { feat[j] } else { 1.0 };
+                        a[i][j] += xi * xj;
+                    }
+                }
+            }
+
+            for i in 0..d {
+                a[i][i] += lambda;
+            }
+
+            for i in 0..d {
+                let mut pivot = i;
+                for k in (i + 1)..d {
+                    if a[k][i].abs() > a[pivot][i].abs() {
+                        pivot = k;
+                    }
+                }
+                a.swap(i, pivot);
+                b.swap(i, pivot);
+
+                let diag = a[i][i];
+                if diag.abs() > 1e-9 {
+                    for k in (i + 1)..d {
+                        let factor = a[k][i] / diag;
+                        for j in i..d {
+                            a[k][j] -= factor * a[i][j];
+                        }
+                        b[k] -= factor * b[i];
+                    }
+                }
+            }
+
+            let mut w = vec![0.0f32; d];
+            for i in (0..d).rev() {
+                let mut sum = b[i];
+                for j in (i + 1)..d {
+                    sum -= a[i][j] * w[j];
+                }
+                let diag = a[i][i];
+                w[i] = if diag.abs() > 1e-9 { sum / diag } else { 0.0 };
+            }
+
+            let mut correct = 0usize;
+            for row in 0..n_va {
+                let feat = &x_va[row];
+                let mut dot = w[d_in]; // bias
+                for i in 0..d_in {
+                    dot += w[i] * feat[i];
+                }
+                let pred = if dot >= 0.0 { 1u32 } else { 0u32 };
+                if pred == y_va[row] {
+                    correct += 1;
+                }
+            }
+
+            correct as f32 / n_va as f32
+        };
+
+        // Fixed random projection matrix for non-linear extreme learning machine (ELM) probe
+        let d_rf = 64;
+        let mut rng_rf = StdRng::seed_from_u64(1337);
+        let mut w_rf = vec![vec![0.0f32; d_rf]; channels];
+        for i in 0..channels {
+            for j in 0..d_rf {
+                w_rf[i][j] = rng_rf.gen_range(-1.0f32..1.0f32) / (channels as f32).sqrt();
+            }
+        }
+        let project_rf = |x_raw: &[Vec<f32>]| -> Vec<Vec<f32>> {
+            x_raw.iter().map(|row| {
+                let mut h = vec![0.0f32; d_rf];
+                for j in 0..d_rf {
+                    let mut dot = 0.0f32;
+                    for i in 0..channels {
+                        dot += row[i] * w_rf[i][j];
+                    }
+                    let x = dot;
+                    let inner = 0.7978846 * (x + 0.044715 * x * x * x);
+                    h[j] = 0.5 * x * (1.0 + inner.tanh());
+                }
+                h
+            }).collect()
+        };
+
+        for c in 0..num_slots {
+            let q_pos = c * chunk_size + 3;
+            slot_indices.push(q_pos);
+
+            let x_tr_slot: Vec<Vec<f32>> = train_x_vec.iter().map(|row| row[q_pos].clone()).collect();
+            let x_va_slot: Vec<Vec<f32>> = val_x_vec.iter().map(|row| row[q_pos].clone()).collect();
+
+            let y_tr_loc: Vec<u32> = train_loc.iter().map(|row| row[c]).collect();
+            let y_va_loc: Vec<u32> = val_loc.iter().map(|row| row[c]).collect();
+
+            let y_tr_cum: Vec<u32> = train_cum.iter().map(|row| row[c]).collect();
+            let y_va_cum: Vec<u32> = val_cum.iter().map(|row| row[c]).collect();
+
+            let y_tr_c0 = &train_c0;
+            let y_va_c0 = &val_c0;
+
+            let x_tr_rf = project_rf(&x_tr_slot);
+            let x_va_rf = project_rf(&x_va_slot);
+
+            lin_c0_acc.push(solve_ridge_probe(&x_tr_slot, y_tr_c0, &x_va_slot, y_va_c0, channels));
+            lin_loc_acc.push(solve_ridge_probe(&x_tr_slot, &y_tr_loc, &x_va_slot, &y_va_loc, channels));
+            lin_cum_acc.push(solve_ridge_probe(&x_tr_slot, &y_tr_cum, &x_va_slot, &y_va_cum, channels));
+
+            mlp_c0_acc.push(solve_ridge_probe(&x_tr_rf, y_tr_c0, &x_va_rf, y_va_c0, d_rf));
+            mlp_loc_acc.push(solve_ridge_probe(&x_tr_rf, &y_tr_loc, &x_va_rf, &y_va_loc, d_rf));
+            mlp_cum_acc.push(solve_ridge_probe(&x_tr_rf, &y_tr_cum, &x_va_rf, &y_va_cum, d_rf));
+        }
+
+        Ok(LatentRepresentationProbeReport {
+            slot_indices,
+            linear_chunk0_parity_acc: lin_c0_acc,
+            linear_local_parity_acc: lin_loc_acc,
+            linear_cumulative_parity_acc: lin_cum_acc,
+            mlp_chunk0_parity_acc: mlp_c0_acc,
+            mlp_local_parity_acc: mlp_loc_acc,
+            mlp_cumulative_parity_acc: mlp_cum_acc,
+        })
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CausalInfluenceReport {
+    pub task_name: String,
+    pub seq_len: usize,
+    pub budgets: Vec<usize>,
+    pub query_slots: Vec<usize>,
+    pub query_slot_indices: Vec<usize>,
+    pub numerical_influence: Vec<Vec<Vec<f32>>>,
+    pub flip_probability: Vec<Vec<Vec<f32>>>,
+    pub theoretical_reachability: Vec<Vec<Vec<bool>>>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct BoundaryRelocationReport {
+    pub task_name: String,
+    pub seq_len: usize,
+    pub ticks: usize,
+    pub placement_positions: Vec<usize>,
+    pub zero_padded_accuracies: Vec<f32>,
+    pub random_context_local_accuracies: Vec<f32>,
+    pub random_context_cumulative_accuracies: Vec<f32>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct LatentRepresentationProbeReport {
+    pub slot_indices: Vec<usize>,
+    pub linear_chunk0_parity_acc: Vec<f32>,
+    pub linear_local_parity_acc: Vec<f32>,
+    pub linear_cumulative_parity_acc: Vec<f32>,
+    pub mlp_chunk0_parity_acc: Vec<f32>,
+    pub mlp_local_parity_acc: Vec<f32>,
+    pub mlp_cumulative_parity_acc: Vec<f32>,
 }
 
 fn softmax_slice(logits: &[f32]) -> Vec<f32> {
