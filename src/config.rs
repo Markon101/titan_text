@@ -56,6 +56,9 @@ pub struct NcaConfig {
     /// Whether to append a static 1D spatial coordinate channel p_i in [-1, 1] to the perception vector
     #[serde(default)]
     pub coord_channel: bool,
+    /// Whether to use a strictly causal / directed spatial stencil N(i) = {i-1, i} (DAG fold)
+    #[serde(default)]
+    pub causal_stencil: bool,
     /// Macro grid stride s for hierarchy mode (default: 2; 1 for degenerate control)
     #[serde(default = "default_macro_stride")]
     pub macro_stride: usize,
@@ -156,6 +159,7 @@ impl Default for NcaConfig {
             damping_alpha: default_damping_alpha(),
             leaky_lambda: default_leaky_lambda(),
             coord_channel: false,
+            causal_stencil: false,
             macro_stride: default_macro_stride(),
             macro_period: default_macro_period(),
             macro_channels: default_macro_channels(),
@@ -209,6 +213,9 @@ pub struct TrainConfig {
     /// Number of tail steps K to apply equilibrium loss on
     #[serde(default = "default_tail_equilibrium_ticks")]
     pub tail_equilibrium_ticks: usize,
+    /// Optional single query slot to supervise (e.g. 3 for Slot 3 only)
+    #[serde(default)]
+    pub target_slot: Option<usize>,
 }
 
 fn default_horizon_mode() -> String {
@@ -255,6 +262,7 @@ impl Default for TrainConfig {
             multi_tick_decay: default_multi_tick_decay(),
             tail_equilibrium_weight: default_tail_equilibrium_weight(),
             tail_equilibrium_ticks: default_tail_equilibrium_ticks(),
+            target_slot: None,
         }
     }
 }

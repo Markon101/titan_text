@@ -203,6 +203,12 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
     if args.flag("--coord-channel") {
         config.nca.coord_channel = true;
     }
+    if args.flag("--causal-stencil") {
+        config.nca.causal_stencil = true;
+    }
+    if let Some(ts) = args.value::<usize>("--target-slot")? {
+        config.train.target_slot = Some(ts);
+    }
     config.validate()?;
     start_step
         .checked_add(config.train.epochs)
@@ -240,6 +246,12 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
     }
     if config.nca.coord_channel {
         println!("  Coordinate Channel  : ENABLED (p_i in [-1, 1] per cell)");
+    }
+    if config.nca.causal_stencil {
+        println!("  Causal Stencil      : ENABLED (directed DAG fold N(i) = {{i-1, i}})");
+    }
+    if let Some(ts) = config.train.target_slot {
+        println!("  Target Slot Filter  : Slot {} only (cell {})", ts, (ts + 1) * 4 - 1);
     }
     if config.train.tail_equilibrium_weight > 0.0 {
         println!(
@@ -1121,6 +1133,9 @@ fn cmd_sweep(args: &cli::Options, device: &Device) -> Result<()> {
     }
     if args.flag("--coord-channel") {
         config.nca.coord_channel = true;
+    }
+    if args.flag("--causal-stencil") {
+        config.nca.causal_stencil = true;
     }
     if let Some(cm) = args.value::<String>("--coord-mode")? {
         intervention.coord_mode = Some(cm);
@@ -2158,6 +2173,9 @@ fn cmd_influence(args: &cli::Options, device: &Device) -> Result<()> {
     }
     if args.flag("--coord-channel") {
         config.nca.coord_channel = true;
+    }
+    if args.flag("--causal-stencil") {
+        config.nca.causal_stencil = true;
     }
     config.validate()?;
 

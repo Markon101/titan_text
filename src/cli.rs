@@ -82,6 +82,7 @@ impl Command {
                 "--record-activations",
                 "--zero-boundary",
                 "--coord-channel",
+                "--causal-stencil",
                 "--macro-stride",
                 "--macro-period",
                 "--macro-channels",
@@ -89,6 +90,7 @@ impl Command {
                 "--macro-coupling",
                 "--macro-gamma",
                 "--macro-lambda",
+                "--target-slot",
             ],
             Self::Rollout => &[
                 "--load-dir",
@@ -118,6 +120,7 @@ impl Command {
                 "--zero-boundary",
                 "--coord-channel",
                 "--coord-mode",
+                "--causal-stencil",
             ],
             Self::Probe => &[
                 "--load-dir",
@@ -180,6 +183,7 @@ impl Command {
                 "--zero-boundary",
                 "--coord-channel",
                 "--coord-mode",
+                "--causal-stencil",
                 "--macro-stride",
                 "--macro-period",
                 "--macro-channels",
@@ -251,6 +255,7 @@ impl Command {
                 "--zero-boundary",
                 "--coord-channel",
                 "--coord-mode",
+                "--causal-stencil",
             ],
         }
     }
@@ -329,6 +334,7 @@ fn is_flag_option(name: &str) -> bool {
             | "--record-activations"
             | "--zero-boundary"
             | "--coord-channel"
+            | "--causal-stencil"
     )
 }
 
@@ -345,7 +351,7 @@ fn validate_value(name: &str, value: &str) -> Result<()> {
                 );
             }
         }
-        "--pause-ticks" | "--lesion-freeze" | "--lesion-reset" | "--horizon-jitter" => {
+        "--pause-ticks" | "--lesion-freeze" | "--lesion-reset" | "--horizon-jitter" | "--target-slot" => {
             let _number: usize = value.parse().with_context(invalid)?;
         }
         "--seed" => {
@@ -582,6 +588,7 @@ pub fn print_help(command: Option<Command>) {
             "--zero-boundary" => "         Enforce zero-padding spatial boundary (disable periodic wrap-around)",
             "--coord-channel" => "         Append static 1D spatial coordinate channel [-1, 1] to perception",
             "--coord-mode" => "<NAME>      Coordinate counterfactual mode (intact, zeroed, shuffled, reversed, constant)",
+            "--causal-stencil" => "        Use strictly causal / directed spatial stencil N(i) = {i-1, i} (DAG fold)",
             "--macro-stride" => "<NUM>     Macro grid stride s for hierarchy mode (default: 2; 1 for degenerate control)",
             "--macro-period" => "<NUM>     Macro update clock period k in ticks (default: 2)",
             "--macro-channels" => "<NUM>   Macro field channel dimension C_M (default: 32)",
@@ -589,6 +596,7 @@ pub fn print_help(command: Option<Command>) {
             "--macro-coupling" => "<NAME>   Coupling locus: perception or state_derivative (default: state_derivative)",
             "--macro-gamma" => "<FLOAT>    State-derivative coupling gain gamma (default: 0.2)",
             "--macro-lambda" => "<FLOAT>   Emergent bistable potential restoring force lambda (default: 0.1)",
+            "--target-slot" => "<NUM>      Supervise only a single query slot index (e.g. 3 for Slot 3 only)",
             _ => unreachable!(),
         };
         println!("  {name} {description}");

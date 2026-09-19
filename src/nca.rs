@@ -181,69 +181,121 @@ impl NeuralCellularAutomaton {
         Ok(Tensor::cat(&[&left_part, &right_part], 1)?)
     }
 
-    /// Computes spatial perception: [x, grad, laplacian] and optional macroscopic slow feedback [s]
+    /// Computes spatial perception: [x, grad, laplacian] (symmetric) or [x, left, x - left] (causal DAG)
     pub fn perceive_with_feedback(&self, x: &Tensor, slow_state: Option<&Tensor>) -> Result<Tensor> {
-        let (left, right) = self.neighbors(x)?;
+        let base_perc = if self.nca_cfg.causal_stencil {
+            let left = self.left_neighbor(x)?;
+            // Causal basis: [x_i, x_{i-1}, x_i - x_{i-1}]
+            // Spans the 2-point causal stencil {i-1, i} with strictly lower-bidiagonal Jacobian.
+            let diff = (x - &left)?;
 
-        // 1st spatial derivative: (right - left) / 2
-        let grad = ((&right - &left)? / 2.0)?;
+            if self.nca_cfg.is_hierarchy() {
+                if self.nca_cfg.macro_coupling == "perception" {
+                    let (b, l, _) = x.dims3()?;
+                    let s = self.nca_cfg.macro_stride.max(1);
+                    let lm = (l / s).max(1);
+                    let cm = self.nca_cfg.macro_channels.max(1);
 
-        // 2nd spatial derivative (Laplacian): right - 2 * x + left
-        let double_x = (x * 2.0)?;
-        let diff = (&right - &double_x)?;
-        let laplacian = (&diff + &left)?;
+                    let m = match slow_state {
+                        Some(s_ten) if s_ten.dims3().map(|d| d.1 == lm && d.2 == cm).unwrap_or(false) => s_ten.clone(),
+                        _ => Tensor::zeros((b, lm, cm), candle_core::DType::F32, x.device())?,
+                    };
 
-        let base_perc = if self.nca_cfg.is_hierarchy() {
-            if self.nca_cfg.macro_coupling == "perception" {
-                let (b, l, _) = x.dims3()?;
-                let s = self.nca_cfg.macro_stride.max(1);
-                let lm = (l / s).max(1);
-                let cm = self.nca_cfg.macro_channels.max(1);
+                    let m_left = self.left_neighbor(&m)?;
+                    let w_macro = (&m - &m_left)?;
 
-                let m = match slow_state {
-                    Some(s_ten) if s_ten.dims3().map(|d| d.1 == lm && d.2 == cm).unwrap_or(false) => s_ten.clone(),
-                    _ => Tensor::zeros((b, lm, cm), candle_core::DType::F32, x.device())?,
-                };
+                    let w = if s > 1 {
+                        w_macro.unsqueeze(2)?.repeat((1, 1, s, 1))?.reshape((b, lm * s, cm))?
+                    } else {
+                        w_macro
+                    };
+                    let w = if w.dim(1)? > l {
+                        w.narrow(1, 0, l)?
+                    } else {
+                        w
+                    };
 
-                // Local discrete high-pass / difference stencil on macro grid:
-                // w_macro_j = M_j - 0.5 * (M_{j-1} + M_{j+1})
-                // Zero DC response guaranteed by construction!
-                let (m_left, m_right) = self.neighbors(&m)?;
-                let lap_avg = ((&m_left + &m_right)? * 0.5)?;
-                let w_macro = (&m - &lap_avg)?;
+                    let gamma = (self.nca_cfg.feedback_weight as f64).clamp(0.001, 0.10);
+                    let scaled_w = (w * gamma)?;
 
-                // Nearest-neighbor upsampling to micro resolution:
-                let w = if s > 1 {
-                    w_macro.unsqueeze(2)?.repeat((1, 1, s, 1))?.reshape((b, lm * s, cm))?
+                    Tensor::cat(&[x, &left, &diff, &scaled_w], 2)?
                 } else {
-                    w_macro.clone()
+                    Tensor::cat(&[x, &left, &diff], 2)?
+                }
+            } else if self.nca_cfg.has_feedback() {
+                let (_, l, _) = x.dims3()?;
+                let s = match slow_state {
+                    Some(s_ten) => s_ten.clone(),
+                    None => x.mean(1)?.unsqueeze(1)?,
                 };
-                let w = if w.dim(1)? > l {
-                    w.narrow(1, 0, l)?
-                } else {
-                    w
-                };
-
-                // Hard-bounded coupling gain: gamma in [0.001, 0.10]
-                let gamma = (self.nca_cfg.feedback_weight as f64).clamp(0.001, 0.10);
-                let scaled_w = (w * gamma)?;
-
-                Tensor::cat(&[x, &grad, &laplacian, &scaled_w], 2)?
+                let s_broadcast = s.repeat((1, l, 1))?;
+                Tensor::cat(&[x, &left, &diff, &s_broadcast], 2)?
             } else {
-                // In state_derivative coupling mode, micro perception is strictly local
+                Tensor::cat(&[x, &left, &diff], 2)?
+            }
+        } else {
+            let (left, right) = self.neighbors(x)?;
+
+            // 1st spatial derivative: (right - left) / 2
+            let grad = ((&right - &left)? / 2.0)?;
+
+            // 2nd spatial derivative (Laplacian): right - 2 * x + left
+            let double_x = (x * 2.0)?;
+            let diff = (&right - &double_x)?;
+            let laplacian = (&diff + &left)?;
+
+            if self.nca_cfg.is_hierarchy() {
+                if self.nca_cfg.macro_coupling == "perception" {
+                    let (b, l, _) = x.dims3()?;
+                    let s = self.nca_cfg.macro_stride.max(1);
+                    let lm = (l / s).max(1);
+                    let cm = self.nca_cfg.macro_channels.max(1);
+
+                    let m = match slow_state {
+                        Some(s_ten) if s_ten.dims3().map(|d| d.1 == lm && d.2 == cm).unwrap_or(false) => s_ten.clone(),
+                        _ => Tensor::zeros((b, lm, cm), candle_core::DType::F32, x.device())?,
+                    };
+
+                    // Local discrete high-pass / difference stencil on macro grid:
+                    // w_macro_j = M_j - 0.5 * (M_{j-1} + M_{j+1})
+                    // Zero DC response guaranteed by construction!
+                    let (m_left, m_right) = self.neighbors(&m)?;
+                    let lap_avg = ((&m_left + &m_right)? * 0.5)?;
+                    let w_macro = (&m - &lap_avg)?;
+
+                    // Nearest-neighbor upsampling to micro resolution:
+                    let w = if s > 1 {
+                        w_macro.unsqueeze(2)?.repeat((1, 1, s, 1))?.reshape((b, lm * s, cm))?
+                    } else {
+                        w_macro.clone()
+                    };
+                    let w = if w.dim(1)? > l {
+                        w.narrow(1, 0, l)?
+                    } else {
+                        w
+                    };
+
+                    // Hard-bounded coupling gain: gamma in [0.001, 0.10]
+                    let gamma = (self.nca_cfg.feedback_weight as f64).clamp(0.001, 0.10);
+                    let scaled_w = (w * gamma)?;
+
+                    Tensor::cat(&[x, &grad, &laplacian, &scaled_w], 2)?
+                } else {
+                    // In state_derivative coupling mode, micro perception is strictly local
+                    Tensor::cat(&[x, &grad, &laplacian], 2)?
+                }
+            } else if self.nca_cfg.has_feedback() {
+                let (_, l, _) = x.dims3()?;
+                let s = match slow_state {
+                    Some(s_ten) => s_ten.clone(),
+                    None => x.mean(1)?.unsqueeze(1)?,
+                };
+                let s_broadcast = s.repeat((1, l, 1))?;
+                Tensor::cat(&[x, &grad, &laplacian, &s_broadcast], 2)?
+            } else {
+                // Concatenate along channels: [B, L, 3 * C]
                 Tensor::cat(&[x, &grad, &laplacian], 2)?
             }
-        } else if self.nca_cfg.has_feedback() {
-            let (_, l, _) = x.dims3()?;
-            let s = match slow_state {
-                Some(s_ten) => s_ten.clone(),
-                None => x.mean(1)?.unsqueeze(1)?,
-            };
-            let s_broadcast = s.repeat((1, l, 1))?;
-            Tensor::cat(&[x, &grad, &laplacian, &s_broadcast], 2)?
-        } else {
-            // Concatenate along channels: [B, L, 3 * C]
-            Tensor::cat(&[x, &grad, &laplacian], 2)?
         };
 
         if self.nca_cfg.coord_channel {
@@ -272,17 +324,31 @@ impl NeuralCellularAutomaton {
             Tensor::cat(&[&x.narrow(1, 1, l - 1)?, &zero], 1)?))
     }
 
+    /// Causal neighbor: strictly left neighbor x_{i-1} with zero Dirichlet boundary at i=0 (DAG fold)
+    pub fn left_neighbor(&self, x: &Tensor) -> Result<Tensor> {
+        let (b, l, c) = x.dims3()?;
+        let zero = Tensor::zeros((b, 1, c), x.dtype(), x.device())?;
+        if l == 1 { return Ok(zero); }
+        Ok(Tensor::cat(&[&zero, &x.narrow(1, 0, l - 1)?], 1)?)
+    }
+
     pub fn dissipate(&self, tensor: &Tensor, effective_diff: f32) -> Result<Tensor> {
-        if self.field_cfg.periodic_boundary {
+        if self.field_cfg.periodic_boundary && !self.nca_cfg.causal_stencil {
             return Self::apply_viscous_dissipation(tensor, effective_diff);
         }
         if effective_diff <= 0.0 { return Ok(tensor.clone()); }
         let n = (effective_diff / 0.25).ceil().max(1.0) as usize;
         let mut x = tensor.clone();
         for _ in 0..n {
-            let (left, right) = self.neighbors(&x)?;
-            let lap = ((left + right)? - (&x * 2.0)?)?;
-            x = (&x + (lap * (effective_diff as f64 / n as f64))?)?;
+            if self.nca_cfg.causal_stencil {
+                let left = self.left_neighbor(&x)?;
+                let upwind_diff = (&left - &x)?;
+                x = (&x + (upwind_diff * (effective_diff as f64 / n as f64))?)?;
+            } else {
+                let (left, right) = self.neighbors(&x)?;
+                let lap = ((left + right)? - (&x * 2.0)?)?;
+                x = (&x + (lap * (effective_diff as f64 / n as f64))?)?;
+            }
         }
         Ok(x)
     }
@@ -416,9 +482,14 @@ impl NeuralCellularAutomaton {
                     _ => Tensor::zeros((b, lm, cm), candle_core::DType::F32, device)?,
                 };
 
-                let (m_left, m_right) = self.neighbors(&m)?;
-                let lap_avg = ((&m_left + &m_right)? * 0.5)?;
-                let w_macro = (&m - &lap_avg)?;
+                let w_macro = if self.nca_cfg.causal_stencil {
+                    let m_left = self.left_neighbor(&m)?;
+                    (&m - &m_left)?
+                } else {
+                    let (m_left, m_right) = self.neighbors(&m)?;
+                    let lap_avg = ((&m_left + &m_right)? * 0.5)?;
+                    (&m - &lap_avg)?
+                };
 
                 let w = if s > 1 {
                     w_macro.unsqueeze(2)?.repeat((1, 1, s, 1))?.reshape((b, lm * s, cm))?
@@ -491,8 +562,14 @@ impl NeuralCellularAutomaton {
                 };
 
                 if let (Some(md1), Some(mdd)) = (&self.macro_dense1, &self.macro_dense_delta) {
-                    let (m_left, m_right) = self.neighbors(&prev_m)?;
-                    let macro_perc = Tensor::cat(&[&m_left, &prev_m, &m_right, &downsampled_micro], 2)?;
+                    let macro_perc = if self.nca_cfg.causal_stencil {
+                        let m_left = self.left_neighbor(&prev_m)?;
+                        let m_diff = (&prev_m - &m_left)?;
+                        Tensor::cat(&[&m_left, &prev_m, &m_diff, &downsampled_micro], 2)?
+                    } else {
+                        let (m_left, m_right) = self.neighbors(&prev_m)?;
+                        Tensor::cat(&[&m_left, &prev_m, &m_right, &downsampled_micro], 2)?
+                    };
                     let mh1 = md1.forward(&macro_perc)?.tanh()?;
                     let m_delta = mdd.forward(&mh1)?.tanh()?;
                     let m_alpha = (self.nca_cfg.step_size * 0.5) as f64;
@@ -1031,6 +1108,84 @@ mod tests {
         // Verify macro state exists and has correct dimensions [B, L/2, C_M]
         let m = field.slow_state.expect("Macro state should exist");
         assert_eq!(m.dims3()?, (2, 8, 4));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_causal_stencil_dag_property() -> Result<()> {
+        let dev = Device::Cpu;
+        let seq_len = 16;
+        let channels = 8;
+        let field_cfg = FieldConfig { seq_len, channels, periodic_boundary: false };
+
+        let nca_cfg = NcaConfig {
+            causal_stencil: true,
+            viscosity: 0.05, // Upwind dissipation must also be strictly causal
+            ..NcaConfig::default()
+        };
+
+        let varmap = VarMap::new();
+        let vb = VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+        let nca = NeuralCellularAutomaton::new(vb, &nca_cfg, &field_cfg)?;
+
+        // Base field with random initial values
+        let x1 = Tensor::randn(0.0f32, 1.0f32, (1, seq_len, channels), &dev)?;
+        let f1 = MorphogenicField::from_tensor(x1, &field_cfg);
+
+        // Perturbed field: identical to f1 everywhere except at slot k=8
+        let mut x_pert_vals = f1.x.to_vec3::<f32>()?;
+        for c in 0..channels {
+            x_pert_vals[0][8][c] += 1.0;
+        }
+        let f2 = MorphogenicField {
+            x: Tensor::from_vec(
+                x_pert_vals.into_iter().flatten().flatten().collect(),
+                (1, seq_len, channels),
+                &dev,
+            )?,
+            config: field_cfg.clone(),
+            slow_state: None,
+            tick: 0,
+        };
+
+        // Step both fields forward by multiple developmental ticks
+        let mut curr1 = f1;
+        let mut curr2 = f2;
+        for _ in 0..5 {
+            let (next1, _) = nca.step(&curr1, &dev)?;
+            let (next2, _) = nca.step(&curr2, &dev)?;
+            curr1 = next1;
+            curr2 = next2;
+        }
+
+        // Check difference: For all cells i < 8, diff must be strictly 0.0 (exact DAG property)
+        let diff = (&curr1.x - &curr2.x)?.abs()?;
+        let diff_vals = diff.to_vec3::<f32>()?;
+
+        for i in 0..8 {
+            for c in 0..channels {
+                let d = diff_vals[0][i][c];
+                assert_eq!(
+                    d, 0.0,
+                    "Cell {} (upstream of perturbation at 8) was affected by perturbation (diff = {})! Anti-causal leakage detected!",
+                    i, d
+                );
+            }
+        }
+
+        // Cell 8 and downstream cells MUST reflect the perturbation
+        let mut downstream_diff: f32 = 0.0;
+        for i in 8..seq_len {
+            for c in 0..channels {
+                downstream_diff += diff_vals[0][i][c];
+            }
+        }
+        assert!(
+            downstream_diff > 1e-4,
+            "Perturbation failed to propagate forward downstream (downstream diff = {})",
+            downstream_diff
+        );
 
         Ok(())
     }

@@ -4,7 +4,7 @@ use crate::field::{FrequencyDecomposition, MorphogenicField};
 use crate::nca::NeuralCellularAutomaton;
 use crate::vocab::TokenInterface;
 use anyhow::Result;
-use candle_core::{DType, Device};
+use candle_core::{DType, Device, Tensor};
 use candle_nn::{AdamW, Optimizer, ParamsAdamW, VarBuilder, VarMap};
 use serde::{Deserialize, Serialize};
 
@@ -65,9 +65,35 @@ impl Trainer {
         })
     }
 
+    fn apply_target_slot_filter(&self, maybe_mask: Option<&Tensor>) -> Result<Option<Tensor>> {
+        match (maybe_mask, self.config.train.target_slot) {
+            (Some(mask), Some(slot)) => {
+                let (b, l) = mask.dims2()?;
+                let mut mask_vals = mask.to_vec2::<f32>()?;
+                let chunk_size = 4;
+                let target_pos = (slot + 1) * chunk_size - 1;
+                for row in mask_vals.iter_mut() {
+                    for i in 0..l {
+                        if i != target_pos {
+                            row[i] = 0.0;
+                        }
+                    }
+                }
+                Ok(Some(Tensor::from_vec(
+                    mask_vals.into_iter().flatten().collect(),
+                    (b, l),
+                    &self.device,
+                )?))
+            }
+            (Some(mask), None) => Ok(Some(mask.clone())),
+            (None, _) => Ok(None),
+        }
+    }
+
     /// Evaluates model performance on the held-out validation sequences
     pub fn evaluate_val(&self, batch_size: usize) -> Result<(f32, f32)> {
-        let (val_inputs, val_targets, maybe_mask) = self.dataset.sample_val_batch_with_mask(batch_size, self.config.field.seq_len, &self.device)?;
+        let (val_inputs, val_targets, raw_mask) = self.dataset.sample_val_batch_with_mask(batch_size, self.config.field.seq_len, &self.device)?;
+        let maybe_mask = self.apply_target_slot_filter(raw_mask.as_ref())?;
         let seed = self.interface.embed_tokens(&val_inputs)?;
         let mut field = MorphogenicField::from_tensor(seed, &self.config.field);
 
@@ -91,7 +117,8 @@ impl Trainer {
 
     /// Performs one training step with complete dynamical diagnostics and horizon-robust training regimes
     pub fn train_step(&mut self, batch_size: usize) -> Result<StepDiagnostics> {
-        let (inputs, targets, maybe_mask) = self.dataset.sample_train_batch_with_mask(batch_size, self.config.field.seq_len, &self.device)?;
+        let (inputs, targets, raw_mask) = self.dataset.sample_train_batch_with_mask(batch_size, self.config.field.seq_len, &self.device)?;
+        let maybe_mask = self.apply_target_slot_filter(raw_mask.as_ref())?;
 
         // 1. Embed initial tokens into continuous seed field: [B, L, C]
         let seed_embeddings = self.interface.embed_tokens(&inputs)?;
