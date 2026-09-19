@@ -19,27 +19,31 @@ pub enum TaskKind {
     AmbiguousBasin,
     ColumnArithmetic,
     IteratedParity,
+    IteratedParityDense,
+    IteratedParityCarrier,
 }
 
 impl TaskKind {
-    pub fn parse(name: &str) -> Option<Self> {
-        match name {
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
             "text" => Some(Self::Text),
-            "dyck" | "paren" => Some(Self::Dyck),
-            "delayed-recall" | "delayed-copy" | "delay" => Some(Self::DelayedRecall),
-            "bracket" | "bracket-depth" => Some(Self::BracketDepth),
-            "parity" | "counting" => Some(Self::Parity),
-            "reverse" | "reversal" => Some(Self::Reverse),
-            "hidden-rule" | "rule" => Some(Self::HiddenRule),
-            "associative" | "assoc" => Some(Self::Associative),
-            "ambiguous" | "ambiguous-basin" | "attractor" | "basin" => Some(Self::AmbiguousBasin),
-            "column-arithmetic" | "arithmetic" | "addition" | "carry" => Some(Self::ColumnArithmetic),
+            "dyck" => Some(Self::Dyck),
+            "delayed-recall" | "delayed_recall" => Some(Self::DelayedRecall),
+            "bracket-depth" | "bracket_depth" | "bracket" => Some(Self::BracketDepth),
+            "parity" => Some(Self::Parity),
+            "reverse" | "string-reverse" => Some(Self::Reverse),
+            "hidden-rule" | "hidden_rule" => Some(Self::HiddenRule),
+            "associative" | "associative-recall" => Some(Self::Associative),
+            "ambiguous-basin" | "ambiguous_basin" | "ambiguous" => Some(Self::AmbiguousBasin),
+            "column-arithmetic" | "column_arithmetic" | "arithmetic" => Some(Self::ColumnArithmetic),
             "iterated-parity" | "chunked-parity" | "state-parity" | "ippr" => Some(Self::IteratedParity),
+            "iterated-parity-dense" | "ippr-dense" | "dense-parity" => Some(Self::IteratedParityDense),
+            "iterated-parity-carrier" | "ippr-carrier" | "carrier-parity" => Some(Self::IteratedParityCarrier),
             _ => None,
         }
     }
 
-    pub fn name(self) -> &'static str {
+    pub fn name(&self) -> &'static str {
         match self {
             Self::Text => "text",
             Self::Dyck => "dyck",
@@ -52,7 +56,13 @@ impl TaskKind {
             Self::AmbiguousBasin => "ambiguous-basin",
             Self::ColumnArithmetic => "column-arithmetic",
             Self::IteratedParity => "iterated-parity",
+            Self::IteratedParityDense => "iterated-parity-dense",
+            Self::IteratedParityCarrier => "iterated-parity-carrier",
         }
+    }
+
+    pub fn is_iterated_parity(&self) -> bool {
+        matches!(self, Self::IteratedParity | Self::IteratedParityDense | Self::IteratedParityCarrier)
     }
 }
 
@@ -213,7 +223,7 @@ impl TaskEngine {
         for b in 0..batch_size {
             let mut selected = None;
             for _ in 0..10_000 {
-                let row = Self::generate_row(kind, seq_len, &mut rng);
+                let row = Self::generate_row(kind, seq_len, is_val, &mut rng);
                 if (observation_hash(&row.0) % 5 == 0) == is_val {
                     selected = Some(row);
                     break;
@@ -406,6 +416,7 @@ impl TaskEngine {
     fn generate_row(
         kind: TaskKind,
         l: usize,
+        is_val: bool,
         rng: &mut StdRng,
     ) -> (Vec<char>, Vec<char>, Vec<f32>) {
         let mut input = vec![' '; l];
@@ -549,7 +560,7 @@ impl TaskEngine {
                     mask[pos] = 1.;
                 }
             }
-            TaskKind::IteratedParity => {
+            TaskKind::IteratedParity | TaskKind::IteratedParityDense | TaskKind::IteratedParityCarrier => {
                 // Chunked / Iterated Parity with Positional Readout (IPPR)
                 // Divides sequence into chunks of 4 tokens: 3 data bits + 1 query slot '?'.
                 // Target at query slot is the cumulative parity of all data bits up to that chunk.
@@ -562,6 +573,21 @@ impl TaskEngine {
                         let bit = rng.gen_range(0..2);
                         input[base + j] = (b'0' + bit) as char;
                         cum_parity ^= bit;
+
+                        match kind {
+                            TaskKind::IteratedParityDense => {
+                                target[base + j] = (b'0' + cum_parity) as char;
+                                mask[base + j] = if !is_val { 0.5 } else { 0.0 };
+                            }
+                            TaskKind::IteratedParityCarrier => {
+                                if j == chunk_size - 2 {
+                                    // Carrier bit: last data bit before query slot
+                                    target[base + j] = (b'0' + cum_parity) as char;
+                                    mask[base + j] = if !is_val { 0.5 } else { 0.0 };
+                                }
+                            }
+                            _ => {}
+                        }
                     }
                     let q_pos = base + chunk_size - 1;
                     input[q_pos] = '?';
@@ -1048,6 +1074,68 @@ mod tests {
             "IteratedParity targets must be balanced: zero_frac={:.3}, one_frac={:.3}",
             zero_frac, one_frac
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_iterated_parity_dense_and_carrier_auxiliary_masks() -> Result<()> {
+        let e = TaskEngine::new();
+        let dev = Device::Cpu;
+
+        // 1. Check Dense Train (is_val = false)
+        let tr_dense = e.generate_batch_seeded(TaskKind::IteratedParityDense, 16, 16, false, 42, &dev)?;
+        let tr_dense_m = tr_dense.loss_mask.to_vec2::<f32>()?;
+        for row in tr_dense_m {
+            for chunk in 0..4 {
+                let base = chunk * 4;
+                // data bits should have mask 0.5
+                assert_eq!(row[base], 0.5);
+                assert_eq!(row[base + 1], 0.5);
+                assert_eq!(row[base + 2], 0.5);
+                // query slot has mask 1.0
+                assert_eq!(row[base + 3], 1.0);
+            }
+        }
+
+        // 2. Check Dense Val (is_val = true) -> data bits must be 0.0, query slots 1.0
+        let va_dense = e.generate_batch_seeded(TaskKind::IteratedParityDense, 16, 16, true, 42, &dev)?;
+        let va_dense_m = va_dense.loss_mask.to_vec2::<f32>()?;
+        for row in va_dense_m {
+            for chunk in 0..4 {
+                let base = chunk * 4;
+                assert_eq!(row[base], 0.0);
+                assert_eq!(row[base + 1], 0.0);
+                assert_eq!(row[base + 2], 0.0);
+                assert_eq!(row[base + 3], 1.0);
+            }
+        }
+
+        // 3. Check Carrier Train (is_val = false) -> only carrier bit base + 2 has 0.5
+        let tr_carrier = e.generate_batch_seeded(TaskKind::IteratedParityCarrier, 16, 16, false, 42, &dev)?;
+        let tr_carrier_m = tr_carrier.loss_mask.to_vec2::<f32>()?;
+        for row in tr_carrier_m {
+            for chunk in 0..4 {
+                let base = chunk * 4;
+                assert_eq!(row[base], 0.0);
+                assert_eq!(row[base + 1], 0.0);
+                assert_eq!(row[base + 2], 0.5);
+                assert_eq!(row[base + 3], 1.0);
+            }
+        }
+
+        // 4. Check Carrier Val (is_val = true) -> all data bits 0.0, query slots 1.0
+        let va_carrier = e.generate_batch_seeded(TaskKind::IteratedParityCarrier, 16, 16, true, 42, &dev)?;
+        let va_carrier_m = va_carrier.loss_mask.to_vec2::<f32>()?;
+        for row in va_carrier_m {
+            for chunk in 0..4 {
+                let base = chunk * 4;
+                assert_eq!(row[base], 0.0);
+                assert_eq!(row[base + 1], 0.0);
+                assert_eq!(row[base + 2], 0.0);
+                assert_eq!(row[base + 3], 1.0);
+            }
+        }
 
         Ok(())
     }

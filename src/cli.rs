@@ -279,6 +279,8 @@ pub fn canonical_task(task: &str) -> Result<&'static str> {
         "ambiguous" | "ambiguous-basin" | "attractor" | "basin" => Ok("ambiguous-basin"),
         "column-arithmetic" | "arithmetic" | "addition" | "carry" => Ok("column-arithmetic"),
         "iterated-parity" | "ippr" => Ok("iterated-parity"),
+        "iterated-parity-dense" | "ippr-dense" | "dense-parity" => Ok("iterated-parity-dense"),
+        "iterated-parity-carrier" | "ippr-carrier" | "carrier-parity" => Ok("iterated-parity-carrier"),
         _ => bail!("invalid --task '{task}'; expected text or dyck (alias: paren)"),
     }
 }

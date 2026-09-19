@@ -2178,7 +2178,7 @@ fn cmd_influence(args: &cli::Options, device: &Device) -> Result<()> {
         }
     }
 
-    if task_kind == tasks::TaskKind::IteratedParity {
+    if task_kind.is_iterated_parity() {
         let max_ticks = budgets.last().copied().unwrap_or(config.latent.latent_ticks_per_token);
         println!("\n╔══════════════════════════════════════════════════════════════════════════════════════╗");
         println!("║ TITAN TEXT · BOUNDARY RELOCATION PROBE (3-bit Parity Shift Test)                     ║");
