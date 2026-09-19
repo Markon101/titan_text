@@ -208,6 +208,7 @@ impl<'a> LatentExecutor<'a> {
                     x: modified_x,
                     config: field.config.clone(),
                     slow_state: field.slow_state.clone(),
+                    tick: field.tick,
                 },
                 metrics,
                 probs,
@@ -369,6 +370,7 @@ impl<'a> LatentExecutor<'a> {
             x: new_x,
             config: field.config.clone(),
             slow_state: field.slow_state.clone(),
+            tick: field.tick + 1,
         };
 
         Ok((next_field, metrics, current_probs))

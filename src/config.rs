@@ -56,6 +56,27 @@ pub struct NcaConfig {
     /// Whether to append a static 1D spatial coordinate channel p_i in [-1, 1] to the perception vector
     #[serde(default)]
     pub coord_channel: bool,
+    /// Macro grid stride s for hierarchy mode (default: 2; 1 for degenerate control)
+    #[serde(default = "default_macro_stride")]
+    pub macro_stride: usize,
+    /// Macro update clock period k (default: 2; macro updates every k ticks)
+    #[serde(default = "default_macro_period")]
+    pub macro_period: usize,
+    /// Macro channel dimension (default: 32)
+    #[serde(default = "default_macro_channels")]
+    pub macro_channels: usize,
+}
+
+fn default_macro_stride() -> usize {
+    2
+}
+
+fn default_macro_period() -> usize {
+    2
+}
+
+fn default_macro_channels() -> usize {
+    32
 }
 
 fn default_feedback_mode() -> String {
@@ -86,6 +107,10 @@ impl NcaConfig {
     pub fn has_feedback(&self) -> bool {
         self.feedback_mode != "none"
     }
+
+    pub fn is_hierarchy(&self) -> bool {
+        self.feedback_mode == "hierarchy"
+    }
 }
 
 impl Default for NcaConfig {
@@ -103,6 +128,9 @@ impl Default for NcaConfig {
             damping_alpha: default_damping_alpha(),
             leaky_lambda: default_leaky_lambda(),
             coord_channel: false,
+            macro_stride: default_macro_stride(),
+            macro_period: default_macro_period(),
+            macro_channels: default_macro_channels(),
         }
     }
 }
@@ -280,12 +308,24 @@ impl TitanConfig {
             "NCA activation must be gelu or tanh"
         );
         ensure!(
-            matches!(self.nca.feedback_mode.as_str(), "none" | "global_pool" | "dual_timescale"),
-            "nca feedback_mode must be one of: none, global_pool, dual_timescale"
+            matches!(self.nca.feedback_mode.as_str(), "none" | "global_pool" | "dual_timescale" | "hierarchy"),
+            "nca feedback_mode must be one of: none, global_pool, dual_timescale, hierarchy"
         );
         ensure!(
             self.nca.feedback_weight.is_finite() && (0.0..=1.0).contains(&self.nca.feedback_weight),
             "nca feedback_weight must be in [0, 1]"
+        );
+        ensure!(
+            self.nca.macro_stride >= 1,
+            "nca macro_stride must be >= 1"
+        );
+        ensure!(
+            self.nca.macro_period >= 1,
+            "nca macro_period must be >= 1"
+        );
+        ensure!(
+            self.nca.macro_channels >= 1,
+            "nca macro_channels must be >= 1"
         );
         ensure!(
             matches!(self.nca.state_norm.as_str(), "none" | "rms" | "bounded" | "layer_norm"),

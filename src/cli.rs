@@ -82,6 +82,9 @@ impl Command {
                 "--record-activations",
                 "--zero-boundary",
                 "--coord-channel",
+                "--macro-stride",
+                "--macro-period",
+                "--macro-channels",
             ],
             Self::Rollout => &[
                 "--load-dir",
@@ -173,6 +176,11 @@ impl Command {
                 "--zero-boundary",
                 "--coord-channel",
                 "--coord-mode",
+                "--macro-stride",
+                "--macro-period",
+                "--macro-channels",
+                "--feedback-mode",
+                "--feedback-weight",
             ],
             Self::Associate => &[
                 "--load-dir",
@@ -565,6 +573,9 @@ pub fn print_help(command: Option<Command>) {
             "--zero-boundary" => "         Enforce zero-padding spatial boundary (disable periodic wrap-around)",
             "--coord-channel" => "         Append static 1D spatial coordinate channel [-1, 1] to perception",
             "--coord-mode" => "<NAME>      Coordinate counterfactual mode (intact, zeroed, shuffled, reversed, constant)",
+            "--macro-stride" => "<NUM>     Macro grid stride s for hierarchy mode (default: 2; 1 for degenerate control)",
+            "--macro-period" => "<NUM>     Macro update clock period k in ticks (default: 2)",
+            "--macro-channels" => "<NUM>   Macro field channel dimension C_M (default: 32)",
             _ => unreachable!(),
         };
         println!("  {name} {description}");

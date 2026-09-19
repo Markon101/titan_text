@@ -33,8 +33,10 @@ pub struct MorphogenicField {
     /// 1D spatial cell states: [batch, seq_len, channels]
     pub x: Tensor,
     pub config: FieldConfig,
-    /// Macroscopic slow feedback state: [batch, 1, channels]
+    /// Macroscopic slow feedback state: [batch, 1, channels] or [batch, L_M, channels_M]
     pub slow_state: Option<Tensor>,
+    /// Developmental tick counter
+    pub tick: usize,
 }
 
 impl MorphogenicField {
@@ -45,6 +47,7 @@ impl MorphogenicField {
             x,
             config: config.clone(),
             slow_state: None,
+            tick: 0,
         })
     }
 
@@ -54,6 +57,7 @@ impl MorphogenicField {
             x,
             config: config.clone(),
             slow_state: None,
+            tick: 0,
         }
     }
 
@@ -150,6 +154,7 @@ impl MorphogenicField {
             x: perturbed_x,
             config: self.config.clone(),
             slow_state: self.slow_state.clone(),
+            tick: self.tick,
         })
     }
 
@@ -173,6 +178,7 @@ impl MorphogenicField {
             x: new_x,
             config: self.config.clone(),
             slow_state: self.slow_state.clone(),
+            tick: self.tick,
         })
     }
 

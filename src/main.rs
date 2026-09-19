@@ -89,6 +89,9 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
     let seed_opt: Option<u64> = args.value("--seed")?;
     let feedback_mode_opt: Option<String> = args.value("--feedback-mode")?;
     let feedback_weight_opt: Option<f32> = args.value("--feedback-weight")?;
+    let macro_stride_opt: Option<usize> = args.value("--macro-stride")?;
+    let macro_period_opt: Option<usize> = args.value("--macro-period")?;
+    let macro_channels_opt: Option<usize> = args.value("--macro-channels")?;
     let tail_eq_weight_opt: Option<f32> = args.value("--tail-eq-weight")?;
     let tail_eq_ticks_opt: Option<usize> = args.value("--tail-eq-ticks")?;
     let state_norm_opt: Option<String> = args.value("--state-norm")?;
@@ -159,6 +162,15 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
     }
     if let Some(fw) = feedback_weight_opt {
         config.nca.feedback_weight = fw;
+    }
+    if let Some(ms) = macro_stride_opt {
+        config.nca.macro_stride = ms;
+    }
+    if let Some(mp) = macro_period_opt {
+        config.nca.macro_period = mp;
+    }
+    if let Some(mc) = macro_channels_opt {
+        config.nca.macro_channels = mc;
     }
     if let Some(tew) = tail_eq_weight_opt {
         config.train.tail_equilibrium_weight = tew;
@@ -1096,6 +1108,21 @@ fn cmd_sweep(args: &cli::Options, device: &Device) -> Result<()> {
     }
     if let Some(cm) = args.value::<String>("--coord-mode")? {
         intervention.coord_mode = Some(cm);
+    }
+    if let Some(fm) = args.value::<String>("--feedback-mode")? {
+        config.nca.feedback_mode = fm;
+    }
+    if let Some(fw) = args.value::<f32>("--feedback-weight")? {
+        config.nca.feedback_weight = fw;
+    }
+    if let Some(ms) = args.value::<usize>("--macro-stride")? {
+        config.nca.macro_stride = ms;
+    }
+    if let Some(mp) = args.value::<usize>("--macro-period")? {
+        config.nca.macro_period = mp;
+    }
+    if let Some(mc) = args.value::<usize>("--macro-channels")? {
+        config.nca.macro_channels = mc;
     }
 
     config.validate()?;

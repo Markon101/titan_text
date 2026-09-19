@@ -18,6 +18,8 @@ import subprocess
 import sys
 import time
 from typing import Any
+import urllib.error
+import urllib.request
 from urllib.parse import urlsplit
 
 
@@ -169,74 +171,49 @@ def call_openrouter(
     payload: dict[str, Any],
     api_key: str,
     base_url: str = DEFAULT_BASE_URL,
-    timeout: int = 120,
+    timeout: int = 300,
     retries: int = 2,
 ) -> dict[str, Any]:
     endpoint = f"{base_url.rstrip('/')}/chat/completions"
     data = json.dumps(payload).encode("utf-8")
-    deadline = time.monotonic() + timeout
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://github.com/antigravity-ai/titan_text",
+        "X-Title": "Titan Text Subagent",
+    }
     last_error = ""
 
     for attempt in range(retries + 1):
-        remaining = max(1.0, deadline - time.monotonic())
-        attempt_timeout = max(5, min(45, int(remaining)))
-
-        cmd = [
-            "curl",
-            "-sS",
-            "--fail-with-body",
-            "-X",
-            "POST",
-            endpoint,
-            "-H",
-            f"Authorization: Bearer {api_key}",
-            "-H",
-            "Content-Type: application/json",
-            "-H",
-            "HTTP-Referer: https://github.com/antigravity-ai/titan_text",
-            "-H",
-            "X-Title: Titan Text Subagent",
-            "--max-time",
-            str(attempt_timeout),
-            "--connect-timeout",
-            "10",
-            "--data-binary",
-            "@-",
-        ]
-
+        req = urllib.request.Request(endpoint, data=data, headers=headers)
         try:
-            proc = subprocess.run(
-                cmd,
-                input=data,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=False,
-                timeout=attempt_timeout + 2,
-            )
-        except subprocess.TimeoutExpired:
-            last_error = f"Subprocess timeout after {attempt_timeout}s"
-            if attempt < retries:
-                time.sleep(1.0 * (attempt + 1))
-                continue
-            raise SubagentError(f"OpenRouter API timed out after {timeout}s total.")
-
-        if proc.returncode != 0:
-            err_msg = proc.stderr.decode("utf-8", errors="replace").strip()
-            out_msg = proc.stdout.decode("utf-8", errors="replace").strip()
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                raw_output = resp.read().decode("utf-8", errors="replace")
+                return json.loads(raw_output)
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode("utf-8", errors="replace")
             try:
-                err_json = json.loads(out_msg)
-                api_err = err_json.get("error", {}).get("message", out_msg)
+                err_json = json.loads(err_body)
+                api_err = err_json.get("error", {}).get("message", err_body)
             except Exception:
-                api_err = out_msg or err_msg
-            last_error = f"Exit {proc.returncode}: {api_err}"
-            if attempt < retries and ("timed out" in last_error.lower() or proc.returncode in (28, 52, 56)):
+                api_err = err_body
+            last_error = f"HTTP {e.code}: {api_err}"
+            if attempt < retries and e.code in (429, 500, 502, 503, 504):
                 time.sleep(1.0 * (attempt + 1))
                 continue
             raise SubagentError(f"OpenRouter API error: {last_error}")
-
-        raw_output = proc.stdout.decode("utf-8", errors="replace")
-        try:
-            return json.loads(raw_output)
+        except urllib.error.URLError as e:
+            last_error = f"URLError: {e.reason}"
+            if attempt < retries:
+                time.sleep(1.0 * (attempt + 1))
+                continue
+            raise SubagentError(f"OpenRouter network error: {last_error}")
+        except TimeoutError:
+            last_error = f"Timeout after {timeout}s"
+            if attempt < retries:
+                time.sleep(1.0 * (attempt + 1))
+                continue
+            raise SubagentError(f"OpenRouter API timed out after {timeout}s.")
         except json.JSONDecodeError as e:
             if attempt < retries:
                 time.sleep(1.0 * (attempt + 1))
@@ -259,7 +236,7 @@ def run_subagent(
     enable_reasoning: bool = False,
     json_answer: bool = False,
     root: str | Path = ".",
-    timeout: int = 120,
+    timeout: int = 300,
 ) -> dict[str, Any]:
     root_path = Path(root).resolve()
     api_key = load_api_key()
@@ -365,6 +342,7 @@ def main(argv: list[str] | None = None) -> int:
     run_parser.add_argument("--model", default=DEFAULT_MODEL)
     run_parser.add_argument("--temperature", type=float, default=0.2)
     run_parser.add_argument("--max-tokens", type=int, default=4096)
+    run_parser.add_argument("--timeout", type=int, default=300, help="Total request timeout in seconds")
     run_parser.add_argument("--reasoning", action="store_true", help="Enable DeepSeek reasoning tokens")
     run_parser.add_argument("--json-answer", action="store_true", help="Request structured JSON output")
     run_parser.add_argument("--output-json", action="store_true", help="Print entire result envelope as JSON")
@@ -429,6 +407,7 @@ def main(argv: list[str] | None = None) -> int:
                 max_tokens=args.max_tokens,
                 enable_reasoning=args.reasoning,
                 json_answer=args.json_answer,
+                timeout=args.timeout,
             )
             if args.output_json:
                 print(json.dumps(res, indent=2))

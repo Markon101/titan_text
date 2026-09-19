@@ -9,6 +9,8 @@ pub struct NeuralCellularAutomaton {
     pub dense1: Linear,
     pub dense_delta: Linear,
     pub dense_gate: Linear,
+    pub macro_dense1: Option<Linear>,
+    pub macro_dense_delta: Option<Linear>,
     pub nca_cfg: NcaConfig,
     pub field_cfg: FieldConfig,
 }
@@ -22,14 +24,21 @@ impl NeuralCellularAutomaton {
             dense1: self.dense1.clone(),
             dense_delta: self.dense_delta.clone(),
             dense_gate: self.dense_gate.clone(),
+            macro_dense1: self.macro_dense1.clone(),
+            macro_dense_delta: self.macro_dense_delta.clone(),
             nca_cfg: cfg,
             field_cfg: self.field_cfg.clone(),
         }
     }
     pub fn new(vb: VarBuilder, nca_cfg: &NcaConfig, field_cfg: &FieldConfig) -> Result<Self> {
         // Local 1D perception: [Identity (C), Gradient (C), Laplacian (C)] = 3 * C
+        // Macro hierarchy adds local coarsened modulation channel: + C_M
         // Macro recursive feedback adds global collective state: + C = 4 * C
-        let mut in_channels = if nca_cfg.has_feedback() {
+        let is_hierarchy = nca_cfg.is_hierarchy();
+        let macro_channels = if is_hierarchy { nca_cfg.macro_channels.max(1) } else { 0 };
+        let mut in_channels = if is_hierarchy {
+            field_cfg.channels * 3 + macro_channels
+        } else if nca_cfg.has_feedback() {
             field_cfg.channels * 4
         } else {
             field_cfg.channels * 3
@@ -42,10 +51,22 @@ impl NeuralCellularAutomaton {
         let dense_delta = linear(nca_cfg.hidden_dim, field_cfg.channels, vb.pp("dense_delta"))?;
         let dense_gate = linear(nca_cfg.hidden_dim, field_cfg.channels, vb.pp("dense_gate"))?;
 
+        let (macro_dense1, macro_dense_delta) = if is_hierarchy {
+            let m_in_channels = macro_channels * 3 + field_cfg.channels;
+            let m_hidden = (nca_cfg.hidden_dim / 2).max(16);
+            let md1 = linear(m_in_channels, m_hidden, vb.pp("macro_dense1"))?;
+            let mdd = linear(m_hidden, macro_channels, vb.pp("macro_dense_delta"))?;
+            (Some(md1), Some(mdd))
+        } else {
+            (None, None)
+        };
+
         Ok(Self {
             dense1,
             dense_delta,
             dense_gate,
+            macro_dense1,
+            macro_dense_delta,
             nca_cfg: nca_cfg.clone(),
             field_cfg: field_cfg.clone(),
         })
@@ -64,7 +85,17 @@ impl NeuralCellularAutomaton {
             ("adaptive_gate_dense_gate".to_string(), p_gate),
             ("viscous_dissipation_damping".to_string(), 0), // physical continuum operator
         ];
-        if self.nca_cfg.has_feedback() {
+        if self.nca_cfg.is_hierarchy() {
+            if let Some(ref md1) = self.macro_dense1 {
+                let p = md1.weight().elem_count() + md1.bias().map_or(0, |b| b.elem_count());
+                breakdown.push(("macro_hierarchy_mlp_dense1".to_string(), p));
+            }
+            if let Some(ref mdd) = self.macro_dense_delta {
+                let p = mdd.weight().elem_count() + mdd.bias().map_or(0, |b| b.elem_count());
+                breakdown.push(("macro_hierarchy_directional_delta".to_string(), p));
+            }
+            breakdown.push(("macro_local_highpass_modulation".to_string(), 0));
+        } else if self.nca_cfg.has_feedback() {
             breakdown.push(("macro_recursive_feedback_loop".to_string(), 0));
         }
         if self.nca_cfg.coord_channel {
@@ -140,7 +171,42 @@ impl NeuralCellularAutomaton {
         let diff = (&right - &double_x)?;
         let laplacian = (&diff + &left)?;
 
-        let base_perc = if self.nca_cfg.has_feedback() {
+        let base_perc = if self.nca_cfg.is_hierarchy() {
+            let (b, l, _) = x.dims3()?;
+            let s = self.nca_cfg.macro_stride.max(1);
+            let lm = (l / s).max(1);
+            let cm = self.nca_cfg.macro_channels.max(1);
+
+            let m = match slow_state {
+                Some(s_ten) if s_ten.dims3().map(|d| d.1 == lm && d.2 == cm).unwrap_or(false) => s_ten.clone(),
+                _ => Tensor::zeros((b, lm, cm), candle_core::DType::F32, x.device())?,
+            };
+
+            // Local discrete high-pass / difference stencil on macro grid:
+            // w_macro_j = M_j - 0.5 * (M_{j-1} + M_{j+1})
+            // Zero DC response guaranteed by construction!
+            let (m_left, m_right) = self.neighbors(&m)?;
+            let lap_avg = ((&m_left + &m_right)? * 0.5)?;
+            let w_macro = (&m - &lap_avg)?;
+
+            // Nearest-neighbor upsampling to micro resolution:
+            let w = if s > 1 {
+                w_macro.unsqueeze(2)?.repeat((1, 1, s, 1))?.reshape((b, lm * s, cm))?
+            } else {
+                w_macro.clone()
+            };
+            let w = if w.dim(1)? > l {
+                w.narrow(1, 0, l)?
+            } else {
+                w
+            };
+
+            // Hard-bounded coupling gain: gamma in [0.001, 0.10]
+            let gamma = (self.nca_cfg.feedback_weight as f64).clamp(0.001, 0.10);
+            let scaled_w = (w * gamma)?;
+
+            Tensor::cat(&[x, &grad, &laplacian, &scaled_w], 2)?
+        } else if self.nca_cfg.has_feedback() {
             let (_, l, _) = x.dims3()?;
             let s = match slow_state {
                 Some(s_ten) => s_ten.clone(),
@@ -331,9 +397,43 @@ impl NeuralCellularAutomaton {
             interim_x
         };
 
-        // 8. Recursive feedback loop:
-        // Update macroscopic slow state s_{t+1} = (1 - beta) s_t + beta * pool(new_x)
-        let new_slow_state = if self.nca_cfg.has_feedback() {
+        // 8. Macro hierarchy or recursive feedback loop:
+        let new_slow_state = if self.nca_cfg.is_hierarchy() {
+            let (b, l, c) = new_x.dims3()?;
+            let s = self.nca_cfg.macro_stride.max(1);
+            let lm = (l / s).max(1);
+            let cm = self.nca_cfg.macro_channels.max(1);
+
+            let prev_m = match &field.slow_state {
+                Some(st) if st.dims3().map(|d| d.1 == lm && d.2 == cm).unwrap_or(false) => st.clone(),
+                _ => Tensor::zeros((b, lm, cm), candle_core::DType::F32, device)?,
+            };
+
+            let is_macro_tick = (field.tick + 1) % self.nca_cfg.macro_period.max(1) == 0;
+            if is_macro_tick {
+                let pooled_micro = if s > 1 && l >= lm * s {
+                    let truncated_x = new_x.narrow(1, 0, lm * s)?;
+                    truncated_x.reshape((b, lm, s, c))?.mean(candle_core::D::Minus2)?
+                } else {
+                    new_x.narrow(1, 0, lm)?
+                };
+
+                if let (Some(md1), Some(mdd)) = (&self.macro_dense1, &self.macro_dense_delta) {
+                    let (m_left, m_right) = self.neighbors(&prev_m)?;
+                    let macro_perc = Tensor::cat(&[&m_left, &prev_m, &m_right, &pooled_micro], 2)?;
+                    let mh1 = md1.forward(&macro_perc)?.tanh()?;
+                    let m_delta = mdd.forward(&mh1)?.tanh()?;
+                    let m_alpha = (self.nca_cfg.step_size * 0.5) as f64;
+                    let scaled_md = (m_delta * m_alpha)?;
+                    let updated_m = (&prev_m + &scaled_md)?;
+                    Some(updated_m)
+                } else {
+                    Some(prev_m)
+                }
+            } else {
+                Some(prev_m)
+            }
+        } else if self.nca_cfg.has_feedback() {
             let pool_x = new_x.mean(1)?.unsqueeze(1)?; // [B, 1, C]
             if self.nca_cfg.feedback_mode == "dual_timescale" {
                 let beta = (self.nca_cfg.feedback_weight as f64).clamp(0.01, 1.0);
@@ -363,6 +463,7 @@ impl NeuralCellularAutomaton {
                 x: new_x,
                 config: self.field_cfg.clone(),
                 slow_state: new_slow_state,
+                tick: field.tick + 1,
             },
             update_norm,
         ))
@@ -661,6 +762,148 @@ mod tests {
         let x = Tensor::zeros((b, l, channels), candle_core::DType::F32, &dev)?;
         let perc = nca.perceive(&x)?;
         assert_eq!(perc.dims3()?, (b, l, 3 * channels + 1));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_hierarchy_zero_dc_response() -> Result<()> {
+        let dev = Device::Cpu;
+        let seq_len = 16;
+        let channels = 8;
+        let field_cfg = FieldConfig { seq_len, channels, periodic_boundary: true };
+
+        let nca_cfg = NcaConfig {
+            feedback_mode: "hierarchy".to_string(),
+            macro_stride: 2,
+            macro_channels: 4,
+            macro_period: 2,
+            feedback_weight: 0.1,
+            ..NcaConfig::default()
+        };
+
+        let varmap = VarMap::new();
+        let vb = VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+        let nca = NeuralCellularAutomaton::new(vb, &nca_cfg, &field_cfg)?;
+
+        // Construct a constant macro field: M_j = 3.5 for all j in 0..8
+        let macro_len = 8;
+        let const_macro = (Tensor::ones((1, macro_len, 4), candle_core::DType::F32, &dev)? * 3.5)?;
+        let zero_micro = Tensor::zeros((1, seq_len, channels), candle_core::DType::F32, &dev)?;
+
+        // Perceive with the constant macro state
+        let perc = nca.perceive_with_feedback(&zero_micro, Some(&const_macro))?;
+        // Micro perception has channels: 3 * C + C_M = 3 * 8 + 4 = 28
+        assert_eq!(perc.dims3()?, (1, seq_len, 28));
+
+        // The last 4 channels correspond to scaled_w.
+        // Under a spatially constant macro field, the local difference stencil
+        // w_j = M_j - 0.5 * (M_{j-1} + M_{j+1}) = 3.5 - 3.5 = 0.0!
+        let w_channels = perc.narrow(2, 24, 4)?;
+        let w_rms = w_channels.sqr()?.mean_all()?.to_scalar::<f32>()?.sqrt();
+        assert!(
+            w_rms < 1e-6,
+            "Local difference stencil must produce EXACT zero response to constant DC field, got RMS {}",
+            w_rms
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_hierarchy_step_and_slow_clock() -> Result<()> {
+        let dev = Device::Cpu;
+        let seq_len = 16;
+        let channels = 8;
+        let field_cfg = FieldConfig { seq_len, channels, periodic_boundary: true };
+
+        let nca_cfg = NcaConfig {
+            feedback_mode: "hierarchy".to_string(),
+            macro_stride: 2,
+            macro_channels: 4,
+            macro_period: 2, // macro updates every 2 ticks
+            step_size: 0.5,
+            ..NcaConfig::default()
+        };
+
+        let varmap = VarMap::new();
+        let vb = VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+        let nca = NeuralCellularAutomaton::new(vb, &nca_cfg, &field_cfg)?;
+
+        let initial_field = MorphogenicField::zeros(1, &field_cfg, &dev)?;
+        assert_eq!(initial_field.tick, 0);
+
+        // Step 1: field.tick goes from 0 -> 1.
+        // (0 + 1) % 2 == 1 != 0, so macro clock is not active; macro state remains all zeros
+        let (field_step1, _) = nca.step(&initial_field, &dev)?;
+        assert_eq!(field_step1.tick, 1);
+        let m1 = field_step1.slow_state.as_ref().expect("macro state should exist");
+        assert_eq!(m1.dims3()?, (1, 8, 4));
+        let m1_norm = m1.sqr()?.mean_all()?.to_scalar::<f32>()?;
+        assert_eq!(m1_norm, 0.0, "Macro state should remain frozen on non-macro ticks");
+
+        // Step 2: field.tick goes from 1 -> 2.
+        // (1 + 1) % 2 == 0, so macro clock fires! Macro field updates
+        let (field_step2, _) = nca.step(&field_step1, &dev)?;
+        assert_eq!(field_step2.tick, 2);
+        assert!(field_step2.slow_state.is_some());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_hierarchy_degenerate_stride_control() -> Result<()> {
+        let dev = Device::Cpu;
+        let seq_len = 16;
+        let channels = 8;
+        let field_cfg = FieldConfig { seq_len, channels, periodic_boundary: true };
+
+        // Degenerate control: stride s = 1 (no spatial coarsening)
+        let nca_cfg = NcaConfig {
+            feedback_mode: "hierarchy".to_string(),
+            macro_stride: 1,
+            macro_channels: 4,
+            macro_period: 2,
+            ..NcaConfig::default()
+        };
+
+        let varmap = VarMap::new();
+        let vb = VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+        let nca = NeuralCellularAutomaton::new(vb, &nca_cfg, &field_cfg)?;
+
+        let initial_field = MorphogenicField::zeros(1, &field_cfg, &dev)?;
+        let (field_step1, _) = nca.step(&initial_field, &dev)?;
+        let m1 = field_step1.slow_state.as_ref().expect("macro state should exist");
+        // With stride 1, macro grid length is L_M = L = 16
+        assert_eq!(m1.dims3()?, (1, 16, 4));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_hierarchy_parameter_breakdown() -> Result<()> {
+        let dev = Device::Cpu;
+        let seq_len = 16;
+        let channels = 8;
+        let field_cfg = FieldConfig { seq_len, channels, periodic_boundary: true };
+
+        let nca_cfg = NcaConfig {
+            feedback_mode: "hierarchy".to_string(),
+            macro_stride: 2,
+            macro_channels: 4,
+            hidden_dim: 32,
+            ..NcaConfig::default()
+        };
+
+        let varmap = VarMap::new();
+        let vb = VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+        let nca = NeuralCellularAutomaton::new(vb, &nca_cfg, &field_cfg)?;
+
+        let breakdown = nca.parameter_breakdown();
+        let names: Vec<&str> = breakdown.iter().map(|(n, _)| n.as_str()).collect();
+        assert!(names.contains(&"macro_hierarchy_mlp_dense1"));
+        assert!(names.contains(&"macro_hierarchy_directional_delta"));
+        assert!(names.contains(&"macro_local_highpass_modulation"));
 
         Ok(())
     }
