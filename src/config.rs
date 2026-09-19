@@ -65,6 +65,18 @@ pub struct NcaConfig {
     /// Macro channel dimension (default: 32)
     #[serde(default = "default_macro_channels")]
     pub macro_channels: usize,
+    /// Macro downsampling mode: "mean" or "walsh" (default: "walsh")
+    #[serde(default = "default_macro_downsampler")]
+    pub macro_downsampler: String,
+    /// Macro coupling mode: "perception" or "state_derivative" (default: "state_derivative")
+    #[serde(default = "default_macro_coupling")]
+    pub macro_coupling: String,
+    /// Macro state-derivative coupling gain gamma (default: 0.2)
+    #[serde(default = "default_macro_gamma")]
+    pub macro_gamma: f32,
+    /// Macro emergent bistable potential lambda (default: 0.1)
+    #[serde(default = "default_macro_lambda")]
+    pub macro_lambda: f32,
 }
 
 fn default_macro_stride() -> usize {
@@ -77,6 +89,22 @@ fn default_macro_period() -> usize {
 
 fn default_macro_channels() -> usize {
     32
+}
+
+fn default_macro_downsampler() -> String {
+    "walsh".to_string()
+}
+
+fn default_macro_coupling() -> String {
+    "state_derivative".to_string()
+}
+
+fn default_macro_gamma() -> f32 {
+    0.2
+}
+
+fn default_macro_lambda() -> f32 {
+    0.1
 }
 
 fn default_feedback_mode() -> String {
@@ -131,6 +159,10 @@ impl Default for NcaConfig {
             macro_stride: default_macro_stride(),
             macro_period: default_macro_period(),
             macro_channels: default_macro_channels(),
+            macro_downsampler: default_macro_downsampler(),
+            macro_coupling: default_macro_coupling(),
+            macro_gamma: default_macro_gamma(),
+            macro_lambda: default_macro_lambda(),
         }
     }
 }
@@ -326,6 +358,22 @@ impl TitanConfig {
         ensure!(
             self.nca.macro_channels >= 1,
             "nca macro_channels must be >= 1"
+        );
+        ensure!(
+            matches!(self.nca.macro_downsampler.as_str(), "mean" | "walsh"),
+            "nca macro_downsampler must be one of: mean, walsh"
+        );
+        ensure!(
+            matches!(self.nca.macro_coupling.as_str(), "perception" | "state_derivative"),
+            "nca macro_coupling must be one of: perception, state_derivative"
+        );
+        ensure!(
+            self.nca.macro_gamma.is_finite() && (0.0..=1.0).contains(&self.nca.macro_gamma),
+            "nca macro_gamma must be in [0, 1]"
+        );
+        ensure!(
+            self.nca.macro_lambda.is_finite() && (0.0..=1.0).contains(&self.nca.macro_lambda),
+            "nca macro_lambda must be in [0, 1]"
         );
         ensure!(
             matches!(self.nca.state_norm.as_str(), "none" | "rms" | "bounded" | "layer_norm"),

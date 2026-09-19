@@ -85,6 +85,10 @@ impl Command {
                 "--macro-stride",
                 "--macro-period",
                 "--macro-channels",
+                "--macro-downsampler",
+                "--macro-coupling",
+                "--macro-gamma",
+                "--macro-lambda",
             ],
             Self::Rollout => &[
                 "--load-dir",
@@ -179,6 +183,10 @@ impl Command {
                 "--macro-stride",
                 "--macro-period",
                 "--macro-channels",
+                "--macro-downsampler",
+                "--macro-coupling",
+                "--macro-gamma",
+                "--macro-lambda",
                 "--feedback-mode",
                 "--feedback-weight",
             ],
@@ -289,6 +297,7 @@ pub fn canonical_task(task: &str) -> Result<&'static str> {
         "iterated-parity" | "ippr" => Ok("iterated-parity"),
         "iterated-parity-dense" | "ippr-dense" | "dense-parity" => Ok("iterated-parity-dense"),
         "iterated-parity-carrier" | "ippr-carrier" | "carrier-parity" => Ok("iterated-parity-carrier"),
+        "iterated-sum-dense" | "chunked-sum" | "sum-dense" | "iterated-sum" => Ok("iterated-sum-dense"),
         _ => bail!("invalid --task '{task}'; expected text or dyck (alias: paren)"),
     }
 }
@@ -576,6 +585,10 @@ pub fn print_help(command: Option<Command>) {
             "--macro-stride" => "<NUM>     Macro grid stride s for hierarchy mode (default: 2; 1 for degenerate control)",
             "--macro-period" => "<NUM>     Macro update clock period k in ticks (default: 2)",
             "--macro-channels" => "<NUM>   Macro field channel dimension C_M (default: 32)",
+            "--macro-downsampler" => "<NAME> Downsampling operator: mean or walsh (default: walsh)",
+            "--macro-coupling" => "<NAME>   Coupling locus: perception or state_derivative (default: state_derivative)",
+            "--macro-gamma" => "<FLOAT>    State-derivative coupling gain gamma (default: 0.2)",
+            "--macro-lambda" => "<FLOAT>   Emergent bistable potential restoring force lambda (default: 0.1)",
             _ => unreachable!(),
         };
         println!("  {name} {description}");

@@ -21,6 +21,7 @@ pub enum TaskKind {
     IteratedParity,
     IteratedParityDense,
     IteratedParityCarrier,
+    IteratedSumDense,
 }
 
 impl TaskKind {
@@ -39,6 +40,7 @@ impl TaskKind {
             "iterated-parity" | "chunked-parity" | "state-parity" | "ippr" => Some(Self::IteratedParity),
             "iterated-parity-dense" | "ippr-dense" | "dense-parity" => Some(Self::IteratedParityDense),
             "iterated-parity-carrier" | "ippr-carrier" | "carrier-parity" => Some(Self::IteratedParityCarrier),
+            "iterated-sum-dense" | "chunked-sum" | "sum-dense" | "iterated-sum" => Some(Self::IteratedSumDense),
             _ => None,
         }
     }
@@ -58,11 +60,16 @@ impl TaskKind {
             Self::IteratedParity => "iterated-parity",
             Self::IteratedParityDense => "iterated-parity-dense",
             Self::IteratedParityCarrier => "iterated-parity-carrier",
+            Self::IteratedSumDense => "iterated-sum-dense",
         }
     }
 
     pub fn is_iterated_parity(&self) -> bool {
         matches!(self, Self::IteratedParity | Self::IteratedParityDense | Self::IteratedParityCarrier)
+    }
+
+    pub fn is_chunked_sequential(&self) -> bool {
+        matches!(self, Self::IteratedParity | Self::IteratedParityDense | Self::IteratedParityCarrier | Self::IteratedSumDense)
     }
 }
 
@@ -592,6 +599,36 @@ impl TaskEngine {
                     let q_pos = base + chunk_size - 1;
                     input[q_pos] = '?';
                     target[q_pos] = (b'0' + cum_parity) as char;
+                    mask[q_pos] = 1.0;
+                }
+            }
+            TaskKind::IteratedSumDense => {
+                // Chunked / Iterated Bounded Running Sum (Lipschitz Continuous Invariant)
+                // Divides sequence into chunks of 4 tokens: 3 step tokens + 1 query slot '?'.
+                // Step tokens are '+', '-', '0' (increments +1, -1, 0).
+                // Target at query slot is cumulative bounded sum S in [0, 9], encoded as ASCII '0'..'9'.
+                // Initial sum starts centered at 5.
+                let chunk_size = 4;
+                let num_chunks = l / chunk_size;
+                let mut sum: i32 = 5;
+                for chunk in 0..num_chunks {
+                    let base = chunk * chunk_size;
+                    for j in 0..chunk_size - 1 {
+                        let delta: i32 = rng.gen_range(-1..=1);
+                        let c = match delta {
+                            -1 => '-',
+                            0 => '0',
+                            1 => '+',
+                            _ => unreachable!(),
+                        };
+                        input[base + j] = c;
+                        sum = (sum + delta).clamp(0, 9);
+                        target[base + j] = (b'0' + sum as u8) as char;
+                        mask[base + j] = if !is_val { 0.5 } else { 0.0 };
+                    }
+                    let q_pos = base + chunk_size - 1;
+                    input[q_pos] = '?';
+                    target[q_pos] = (b'0' + sum as u8) as char;
                     mask[q_pos] = 1.0;
                 }
             }
@@ -1134,6 +1171,59 @@ mod tests {
                 assert_eq!(row[base + 1], 0.0);
                 assert_eq!(row[base + 2], 0.0);
                 assert_eq!(row[base + 3], 1.0);
+            }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_iterated_sum_dense_generation() -> Result<()> {
+        let e = TaskEngine::new();
+        let dev = Device::Cpu;
+
+        let batch_train = e.generate_batch_seeded(TaskKind::IteratedSumDense, 8, 16, false, 123, &dev)?;
+        let m_train = batch_train.loss_mask.to_vec2::<f32>()?;
+        assert_eq!(m_train.len(), 8);
+        assert_eq!(m_train[0].len(), 16);
+
+        // Verify training masks: step bits 0.5, query bits 1.0
+        for row in &m_train {
+            for chunk in 0..4 {
+                let base = chunk * 4;
+                assert_eq!(row[base], 0.5);
+                assert_eq!(row[base + 1], 0.5);
+                assert_eq!(row[base + 2], 0.5);
+                assert_eq!(row[base + 3], 1.0);
+            }
+        }
+
+        // Verify validation masks: step bits 0.0, query bits 1.0
+        let batch_val = e.generate_batch_seeded(TaskKind::IteratedSumDense, 8, 16, true, 123, &dev)?;
+        let m_val = batch_val.loss_mask.to_vec2::<f32>()?;
+        for row in &m_val {
+            for chunk in 0..4 {
+                let base = chunk * 4;
+                assert_eq!(row[base], 0.0);
+                assert_eq!(row[base + 1], 0.0);
+                assert_eq!(row[base + 2], 0.0);
+                assert_eq!(row[base + 3], 1.0);
+            }
+        }
+
+        // Verify decoded characters
+        let inputs_vec = batch_val.inputs.to_vec2::<u32>()?;
+        let targets_vec = batch_val.targets.to_vec2::<u32>()?;
+        for b in 0..8 {
+            let in_chars: Vec<char> = inputs_vec[b].iter().map(|&id| e.vocab.decode(&[id as usize]).chars().next().unwrap()).collect();
+            let tgt_chars: Vec<char> = targets_vec[b].iter().map(|&id| e.vocab.decode(&[id as usize]).chars().next().unwrap()).collect();
+            for chunk in 0..4 {
+                let base = chunk * 4;
+                assert!(in_chars[base] == '+' || in_chars[base] == '-' || in_chars[base] == '0');
+                assert!(in_chars[base + 1] == '+' || in_chars[base + 1] == '-' || in_chars[base + 1] == '0');
+                assert!(in_chars[base + 2] == '+' || in_chars[base + 2] == '-' || in_chars[base + 2] == '0');
+                assert_eq!(in_chars[base + 3], '?');
+                assert!(tgt_chars[base + 3].is_ascii_digit());
             }
         }
 

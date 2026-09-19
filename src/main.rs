@@ -92,6 +92,10 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
     let macro_stride_opt: Option<usize> = args.value("--macro-stride")?;
     let macro_period_opt: Option<usize> = args.value("--macro-period")?;
     let macro_channels_opt: Option<usize> = args.value("--macro-channels")?;
+    let macro_downsampler_opt: Option<String> = args.value("--macro-downsampler")?;
+    let macro_coupling_opt: Option<String> = args.value("--macro-coupling")?;
+    let macro_gamma_opt: Option<f32> = args.value("--macro-gamma")?;
+    let macro_lambda_opt: Option<f32> = args.value("--macro-lambda")?;
     let tail_eq_weight_opt: Option<f32> = args.value("--tail-eq-weight")?;
     let tail_eq_ticks_opt: Option<usize> = args.value("--tail-eq-ticks")?;
     let state_norm_opt: Option<String> = args.value("--state-norm")?;
@@ -171,6 +175,18 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
     }
     if let Some(mc) = macro_channels_opt {
         config.nca.macro_channels = mc;
+    }
+    if let Some(md) = macro_downsampler_opt {
+        config.nca.macro_downsampler = md;
+    }
+    if let Some(mc) = macro_coupling_opt {
+        config.nca.macro_coupling = mc;
+    }
+    if let Some(mg) = macro_gamma_opt {
+        config.nca.macro_gamma = mg;
+    }
+    if let Some(ml) = macro_lambda_opt {
+        config.nca.macro_lambda = ml;
     }
     if let Some(tew) = tail_eq_weight_opt {
         config.train.tail_equilibrium_weight = tew;
@@ -1123,6 +1139,18 @@ fn cmd_sweep(args: &cli::Options, device: &Device) -> Result<()> {
     }
     if let Some(mc) = args.value::<usize>("--macro-channels")? {
         config.nca.macro_channels = mc;
+    }
+    if let Some(md) = args.value::<String>("--macro-downsampler")? {
+        config.nca.macro_downsampler = md;
+    }
+    if let Some(mc) = args.value::<String>("--macro-coupling")? {
+        config.nca.macro_coupling = mc;
+    }
+    if let Some(mg) = args.value::<f32>("--macro-gamma")? {
+        config.nca.macro_gamma = mg;
+    }
+    if let Some(ml) = args.value::<f32>("--macro-lambda")? {
+        config.nca.macro_lambda = ml;
     }
 
     config.validate()?;
