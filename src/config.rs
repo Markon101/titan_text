@@ -59,6 +59,21 @@ pub struct NcaConfig {
     /// Whether to use a strictly causal / directed spatial stencil N(i) = {i-1, i} (DAG fold)
     #[serde(default)]
     pub causal_stencil: bool,
+    /// Explicit Carry Register (ECR): number of dedicated carry channels Cc in state x (default: 0)
+    #[serde(default)]
+    pub carry_channels: usize,
+    /// Fast carry skip stride k (default: 1; if > 1, carry channels include k-cell skip transport)
+    #[serde(default = "default_carry_skip_stride")]
+    pub carry_skip_stride: usize,
+    /// Whether carry channels are bidirectional (split between forward left-to-right and backward right-to-left)
+    #[serde(default)]
+    pub carry_bidirectional: bool,
+    /// Discrete carry projection / drift mitigation mode: "none", "ste_round", "ste_sign", "bistable"
+    #[serde(default = "default_carry_quantization")]
+    pub carry_quantization: String,
+    /// Persistent Input: whether to concatenate initial token seed embedding to perception vector
+    #[serde(default)]
+    pub persistent_input: bool,
     /// Macro grid stride s for hierarchy mode (default: 2; 1 for degenerate control)
     #[serde(default = "default_macro_stride")]
     pub macro_stride: usize,
@@ -134,6 +149,14 @@ fn default_leaky_lambda() -> f32 {
     0.0
 }
 
+fn default_carry_skip_stride() -> usize {
+    1
+}
+
+fn default_carry_quantization() -> String {
+    "none".to_string()
+}
+
 impl NcaConfig {
     pub fn has_feedback(&self) -> bool {
         self.feedback_mode != "none"
@@ -160,6 +183,11 @@ impl Default for NcaConfig {
             leaky_lambda: default_leaky_lambda(),
             coord_channel: false,
             causal_stencil: false,
+            carry_channels: 0,
+            carry_skip_stride: 1,
+            carry_bidirectional: false,
+            carry_quantization: default_carry_quantization(),
+            persistent_input: false,
             macro_stride: default_macro_stride(),
             macro_period: default_macro_period(),
             macro_channels: default_macro_channels(),
@@ -384,8 +412,8 @@ impl TitanConfig {
             "nca macro_lambda must be in [0, 1]"
         );
         ensure!(
-            matches!(self.nca.state_norm.as_str(), "none" | "rms" | "bounded" | "layer_norm"),
-            "nca state_norm must be one of: none, rms, bounded, layer_norm"
+            matches!(self.nca.state_norm.as_str(), "none" | "rms" | "bounded" | "bounded_h_only" | "layer_norm"),
+            "nca state_norm must be one of: none, rms, bounded, bounded_h_only, layer_norm"
         );
         ensure!(
             self.nca.bound_threshold.is_finite() && self.nca.bound_threshold > 0.0,

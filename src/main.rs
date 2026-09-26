@@ -1,4 +1,6 @@
 pub mod arithmetic_corpus;
+pub mod ascii_corpus;
+pub mod ascii_sampler;
 mod baselines;
 mod checkpoint;
 mod cli;
@@ -29,6 +31,7 @@ use std::env;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use train::Trainer;
 use vocab::TokenInterface;
+use rand::prelude::*;
 
 fn write_output_file(path: &str, content: impl AsRef<[u8]>) -> Result<()> {
     if let Some(parent) = std::path::Path::new(path).parent() {
@@ -70,6 +73,21 @@ fn init_thread_pool(threads: Option<usize>) -> usize {
     num_threads
 }
 
+fn parse_channel_indices(s: &str) -> Vec<usize> {
+    let mut indices = Vec::new();
+    for part in s.split(',') {
+        let part = part.trim();
+        if let Some((start, end)) = part.split_once("..") {
+            if let (Ok(st), Ok(en)) = (start.trim().parse::<usize>(), end.trim().parse::<usize>()) {
+                indices.extend(st..en);
+            }
+        } else if let Ok(idx) = part.parse::<usize>() {
+            indices.push(idx);
+        }
+    }
+    indices
+}
+
 fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
     let load_dir: Option<String> = args.value("--load-dir")?;
     let save_dir_opt: Option<String> = args.value("--save-dir")?;
@@ -77,6 +95,7 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
     let epochs_opt: Option<usize> = args.value("--epochs")?;
     let dev_steps_opt: Option<usize> = args.value("--dev-steps")?;
     let seq_len_opt: Option<usize> = args.value("--seq-len")?;
+    let batch_size_opt: Option<usize> = args.value("--batch-size")?;
     let lr_opt: Option<f64> = args.value("--lr")?;
     let viscosity_opt: Option<f32> = args.value("--viscosity")?;
     let horizon_opt: Option<usize> = args.value("--horizon")?;
@@ -130,6 +149,9 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
     }
     if let Some(s) = seq_len_opt {
         config.field.seq_len = s;
+    }
+    if let Some(bs) = batch_size_opt {
+        config.train.batch_size = bs;
     }
     if let Some(lr) = lr_opt {
         config.train.lr = lr;
@@ -205,6 +227,21 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
     }
     if args.flag("--causal-stencil") {
         config.nca.causal_stencil = true;
+    }
+    if let Some(cc) = args.value::<usize>("--carry-channels")? {
+        config.nca.carry_channels = cc;
+    }
+    if let Some(css) = args.value::<usize>("--carry-skip-stride")? {
+        config.nca.carry_skip_stride = css;
+    }
+    if args.flag("--carry-bidirectional") {
+        config.nca.carry_bidirectional = true;
+    }
+    if let Some(ref cq) = args.value::<String>("--carry-quantization")? {
+        config.nca.carry_quantization = cq.clone();
+    }
+    if args.flag("--persistent-input") {
+        config.nca.persistent_input = true;
     }
     if let Some(ts) = args.value::<usize>("--target-slot")? {
         config.train.target_slot = Some(ts);
@@ -1063,6 +1100,109 @@ fn cmd_rollout(args: &cli::Options, device: &Device) -> Result<()> {
     Ok(())
 }
 
+fn cmd_generate(args: &cli::Options, device: &Device) -> Result<()> {
+    let load_dir: Option<String> = args.value("--load-dir")?;
+    let task_opt: Option<String> = args.value("--task")?;
+    let prompt: String = args.value("--prompt")?.unwrap_or_else(|| "<BOX>\n".to_string());
+    let max_len: usize = args.value("--max-len")?.unwrap_or(64);
+    let temperature: f32 = args.value("--temperature")?.unwrap_or(0.7);
+    let top_k: usize = args.value("--top-k")?.unwrap_or(0);
+    let tau_opt: Option<usize> = args.value("--tau")?;
+    let seed: u64 = args.value("--seed")?.unwrap_or(42);
+    let lesion_state = args.flag("--lesion-state");
+    let output_path: Option<String> = args.value("--output")?;
+    let format: String = args.value("--format")?.unwrap_or_else(|| "raw".to_string());
+
+    let (config, default_task) = if let Some(ref dir) = load_dir {
+        let manifest = CheckpointManager::load_manifest(dir)?;
+        let t = manifest.task.clone();
+        (manifest.config, t)
+    } else {
+        let mut cfg = TitanConfig::default();
+        cfg.field.seq_len = 48;
+        cfg.field.channels = 32;
+        cfg.nca.hidden_dim = 64;
+        cfg.nca.causal_stencil = true;
+        cfg.field.periodic_boundary = false;
+        (cfg, "ascii".to_string())
+    };
+
+    let task = cli::resolve_task(task_opt, &default_task, load_dir.is_some())?;
+    config.validate()?;
+
+    let dataset = SequenceDataset::new(&task);
+    let mut varmap = candle_nn::VarMap::new();
+    let vb = candle_nn::VarBuilder::from_varmap(&varmap, candle_core::DType::F32, device);
+
+    let nca = NeuralCellularAutomaton::new(vb.pp("nca"), &config.nca, &config.field)?;
+    let interface = crate::vocab::TokenInterface::new(
+        vb.pp("interface"),
+        dataset.vocab.size(),
+        config.field.channels,
+    )?;
+
+    if format != "json" {
+        if let Some(ref dir) = load_dir {
+            println!("Loading model weights from '{}'...", dir);
+        } else {
+            println!("Notice: Generating with untrained model baseline (seed {})...", seed);
+        }
+    }
+    if let Some(ref dir) = load_dir {
+        CheckpointManager::load_weights(dir, &mut varmap, device)?;
+    }
+
+    let tau = tau_opt.unwrap_or(config.train.dev_steps.max(1));
+    let gen_cfg = ascii_sampler::GenerationConfig {
+        prompt: prompt.clone(),
+        max_len,
+        temperature,
+        top_k,
+        tau,
+        seed,
+        lesion_state,
+    };
+
+    let sampler = ascii_sampler::AsciiSampler::new(&nca, &interface, &dataset.vocab, &config, device);
+    let sample = sampler.generate(&gen_cfg, dataset.ascii_corpus.as_ref())?;
+
+    if let Some(ref out) = output_path {
+        if format == "json" {
+            let json = serde_json::to_string_pretty(&sample)?;
+            write_output_file(out, json)?;
+        } else {
+            write_output_file(out, &sample.full_text)?;
+        }
+        println!("\n✓ Generated output saved to '{}'", out);
+    }
+
+    if format == "json" {
+        println!("{}", serde_json::to_string_pretty(&sample)?);
+    } else {
+        println!("╔══════════════════════════════════════════════════════════════════════════════════════╗");
+        println!("║ TITAN TEXT · AUTOREGRESSIVE FREE-RUNNING GENERATION                                  ║");
+        println!("╚══════════════════════════════════════════════════════════════════════════════════════╝");
+        println!("  Checkpoint       : {}", load_dir.as_deref().unwrap_or("[Untrained baseline]"));
+        println!("  Prompt           : {:?}", sample.prompt);
+        println!("  Tau (ticks)      : {}", sample.config.tau);
+        println!("  Temperature      : {:.2}", sample.config.temperature);
+        println!("  Top-K            : {}", sample.config.top_k);
+        println!("  Seed             : {}", sample.config.seed);
+        println!("  Lesion State     : {}", sample.config.lesion_state);
+        println!("  Steps Generated  : {}", sample.steps_generated);
+        println!("  Stop Reason      : {}", sample.stop_reason);
+        println!("  Lines Emitted    : {}", sample.metrics.line_count);
+        println!("  Mean Line Width  : {:.1}", sample.metrics.mean_line_width);
+        println!("  H-Symmetry       : {:.2}", sample.metrics.horizontal_symmetry);
+        println!("  Nearest Edit Sim : {:.3} (exact: {})", sample.metrics.nearest_edit_similarity, sample.metrics.exact_training_match);
+        println!("───────────────────────────────────────────────────────────────────────────────────");
+        println!("{}", sample.full_text);
+        println!("───────────────────────────────────────────────────────────────────────────────────");
+    }
+
+    Ok(())
+}
+
 fn cmd_sweep(args: &cli::Options, device: &Device) -> Result<()> {
     let load_dir: Option<String> = args.value("--load-dir")?;
     let task_opt: Option<String> = args.value("--task")?;
@@ -1120,10 +1260,7 @@ fn cmd_sweep(args: &cli::Options, device: &Device) -> Result<()> {
         intervention.reset_step = Some(r);
     }
     if let Some(ch_str) = args.value::<String>("--lesion-channels")? {
-        intervention.ablate_channel_indices = ch_str
-            .split(',')
-            .filter_map(|s| s.trim().parse::<usize>().ok())
-            .collect();
+        intervention.ablate_channel_indices = parse_channel_indices(&ch_str);
     }
     if args.flag("--lesion-shuffle") {
         intervention.shuffle_batch = true;
@@ -1531,6 +1668,46 @@ fn eval_baseline_masked(
     Ok((loss, acc))
 }
 
+fn eval_per_slot_accuracy(
+    logits: &Tensor,
+    targets: &Tensor,
+    mask: &Tensor,
+    depth: usize,
+) -> Result<Vec<f32>> {
+    let preds = logits.argmax(candle_core::D::Minus1)?;
+    let p_vec: Vec<u32> = preds.flatten_all()?.to_dtype(candle_core::DType::U32)?.to_vec1()?;
+    let t_vec: Vec<u32> = targets.flatten_all()?.to_dtype(candle_core::DType::U32)?.to_vec1()?;
+    let m_vec: Vec<f32> = mask.flatten_all()?.to_vec1()?;
+    let (b, l) = targets.dims2()?;
+    let mut slot_matches = vec![0usize; depth];
+    let mut slot_totals = vec![0usize; depth];
+
+    for i in 0..b {
+        let mut slot = 0usize;
+        for pos in 0..l {
+            let idx = i * l + pos;
+            if m_vec[idx] > 0.5 && slot < depth {
+                slot_totals[slot] += 1;
+                if p_vec[idx] == t_vec[idx] {
+                    slot_matches[slot] += 1;
+                }
+                slot += 1;
+            }
+        }
+    }
+
+    let mut slot_accs = Vec::with_capacity(depth);
+    for s in 0..depth {
+        let acc = if slot_totals[s] > 0 {
+            (slot_matches[s] as f32 / slot_totals[s] as f32) * 100.0
+        } else {
+            0.0
+        };
+        slot_accs.push(acc);
+    }
+    Ok(slot_accs)
+}
+
 fn compute_dummy_baselines(targets: &Tensor, mask: &Tensor) -> Result<(f32, f32)> {
     let t_vec: Vec<u32> = targets.flatten_all()?.to_dtype(candle_core::DType::U32)?.to_vec1()?;
     let m_vec: Vec<f32> = mask.flatten_all()?.to_vec1()?;
@@ -1575,6 +1752,26 @@ fn cmd_benchmark(args: &cli::Options, device: &Device) -> Result<()> {
     let tail_eq_weight_opt: Option<f32> = args.value("--tail-eq-weight")?;
     let tail_eq_ticks_opt: Option<usize> = args.value("--tail-eq-ticks")?;
     let state_norm_opt: Option<String> = args.value("--state-norm")?;
+    let dev_steps_opt: Option<usize> = args.value("--dev-steps")?;
+    let dev_steps = dev_steps_opt.unwrap_or(seq_len);
+    let causal_stencil = args.flag("--causal-stencil");
+    let zero_boundary = args.flag("--zero-boundary") || causal_stencil;
+    let carry_channels_opt: Option<usize> = args.value("--carry-channels")?;
+    let carry_channels = carry_channels_opt.unwrap_or(0);
+    let carry_skip_stride_opt: Option<usize> = args.value("--carry-skip-stride")?;
+    let carry_skip_stride = carry_skip_stride_opt.unwrap_or(1);
+    let carry_bidirectional = args.flag("--carry-bidirectional");
+    let carry_quantization_opt: Option<String> = args.value("--carry-quantization")?;
+    let persistent_input = args.flag("--persistent-input");
+    let lesion_channels_opt: Option<String> = args.value("--lesion-channels")?;
+    let lesion_shuffle = args.flag("--lesion-shuffle");
+    let mut intervention = crate::intervention::InterventionConfig::default();
+    if let Some(ch_str) = lesion_channels_opt {
+        intervention.ablate_channel_indices = parse_channel_indices(&ch_str);
+    }
+    if lesion_shuffle {
+        intervention.shuffle_batch = true;
+    }
 
     let detected_concurrency = std::thread::available_parallelism()
         .map(|n| n.get())
@@ -1612,7 +1809,15 @@ fn cmd_benchmark(args: &cli::Options, device: &Device) -> Result<()> {
                 );
             }
         }
-        (manifest.config.nca, manifest.config.field, ch)
+        let mut field_cfg = manifest.config.field;
+        if args.value::<usize>("--seq-len")?.is_some() {
+            field_cfg.seq_len = seq_len;
+        }
+        let mut nca_cfg = manifest.config.nca;
+        if let Some(ref cq) = carry_quantization_opt {
+            nca_cfg.carry_quantization = cq.clone();
+        }
+        (nca_cfg, field_cfg, ch)
     } else {
         let mut nca_cfg = config::NcaConfig::default();
         if let Some(ref fm) = feedback_mode_opt {
@@ -1624,10 +1829,28 @@ fn cmd_benchmark(args: &cli::Options, device: &Device) -> Result<()> {
         if let Some(ref sn) = state_norm_opt {
             nca_cfg.state_norm = sn.clone();
         }
+        if causal_stencil {
+            nca_cfg.causal_stencil = true;
+        }
+        if carry_channels > 0 {
+            nca_cfg.carry_channels = carry_channels;
+        }
+        if carry_skip_stride > 1 {
+            nca_cfg.carry_skip_stride = carry_skip_stride;
+        }
+        if carry_bidirectional {
+            nca_cfg.carry_bidirectional = true;
+        }
+        if let Some(ref cq) = carry_quantization_opt {
+            nca_cfg.carry_quantization = cq.clone();
+        }
+        if persistent_input {
+            nca_cfg.persistent_input = true;
+        }
         let field_cfg = config::FieldConfig {
             seq_len,
             channels: 64,
-            periodic_boundary: true,
+            periodic_boundary: !zero_boundary,
         };
         (nca_cfg, field_cfg, 64)
     };
@@ -1643,24 +1866,47 @@ fn cmd_benchmark(args: &cli::Options, device: &Device) -> Result<()> {
 
 
     // 2. Transformer
-    let vm_tf = candle_nn::VarMap::new();
+    let mut vm_tf = candle_nn::VarMap::new();
     let vb_tf = candle_nn::VarBuilder::from_varmap(&vm_tf, candle_core::DType::F32, device);
-    let transformer = baselines::TransformerBaseline::new(vb_tf, vocab_size, channels, 96)?;
+    let transformer = baselines::TransformerBaseline::new(vb_tf, vocab_size, channels, channels * 2)?;
+    let tf_chk = format!("checkpoints/{}_transformer/model.safetensors", task_name);
+    if std::path::Path::new(&tf_chk).exists() {
+        if let Err(e) = vm_tf.load(&tf_chk) {
+            eprintln!("  ⚠️ Failed to load Transformer checkpoint '{}': {}", tf_chk, e);
+        } else {
+            println!("  ✓ Loaded trained Transformer weights from '{}'", tf_chk);
+        }
+    }
 
     // 3. GRU
-    let vm_gru = candle_nn::VarMap::new();
+    let mut vm_gru = candle_nn::VarMap::new();
     let vb_gru = candle_nn::VarBuilder::from_varmap(&vm_gru, candle_core::DType::F32, device);
     let gru = baselines::GruBaseline::new(vb_gru, vocab_size, channels)?;
+    let gru_chk = format!("checkpoints/{}_gru/model.safetensors", task_name);
+    if std::path::Path::new(&gru_chk).exists() {
+        let _ = vm_gru.load(&gru_chk);
+        println!("  ✓ Loaded trained GRU weights from '{}'", gru_chk);
+    }
 
     // 4. Simple RNN
-    let vm_sr = candle_nn::VarMap::new();
+    let mut vm_sr = candle_nn::VarMap::new();
     let vb_sr = candle_nn::VarBuilder::from_varmap(&vm_sr, candle_core::DType::F32, device);
     let sr = baselines::SimpleRecurrentBaseline::new(vb_sr, vocab_size, channels)?;
+    let sr_chk = format!("checkpoints/{}_rnn/model.safetensors", task_name);
+    if std::path::Path::new(&sr_chk).exists() {
+        let _ = vm_sr.load(&sr_chk);
+        println!("  ✓ Loaded trained Simple RNN weights from '{}'", sr_chk);
+    }
 
     // 5. Untied Feedforward (4 layers)
-    let vm_untied = candle_nn::VarMap::new();
+    let mut vm_untied = candle_nn::VarMap::new();
     let vb_untied = candle_nn::VarBuilder::from_varmap(&vm_untied, candle_core::DType::F32, device);
     let untied = baselines::UntiedFeedforwardBaseline::new(vb_untied, vocab_size, channels, 4, channels * 2)?;
+    let untied_chk = format!("checkpoints/{}_untied/model.safetensors", task_name);
+    if std::path::Path::new(&untied_chk).exists() {
+        let _ = vm_untied.load(&untied_chk);
+        println!("  ✓ Loaded trained Untied FF weights from '{}'", untied_chk);
+    }
 
     println!("╔══════════════════════════════════════════════════════════════════════════════════════╗");
     println!("║ TITAN TEXT · SYSTEM ARCHITECTURE & BASELINE BENCHMARK                                ║");
@@ -1715,7 +1961,7 @@ fn cmd_benchmark(args: &cli::Options, device: &Device) -> Result<()> {
 
     let task_engine = tasks::TaskEngine::new();
 
-    #[derive(Clone, Copy, Debug)]
+    #[derive(Clone, Debug)]
     struct ArchMetric {
         dummy_majority: f32,
         dummy_chance: f32,
@@ -1729,44 +1975,100 @@ fn cmd_benchmark(args: &cli::Options, device: &Device) -> Result<()> {
         sr_acc: f32,
         untied_loss: f32,
         untied_acc: f32,
+        nca_slot_acc: Option<Vec<f32>>,
+        tf_slot_acc: Option<Vec<f32>>,
+        gru_slot_acc: Option<Vec<f32>>,
+        sr_slot_acc: Option<Vec<f32>>,
+        untied_slot_acc: Option<Vec<f32>>,
     }
 
+    let dyck_depth: Option<usize> = args.value("--dyck-depth")?;
+    let dyck_scramble = args.flag("--dyck-scramble");
+    let dyck_gap: usize = args.value("--dyck-gap")?.unwrap_or(0);
+    let dyck_balanced = args.flag("--dyck-balanced");
+    let dyck_per_slot = args.flag("--dyck-per-slot");
+
     let eval_for_seed = |seed: usize| -> Result<ArchMetric> {
-        let batch = task_engine.generate_batch_seeded(task_kind, batch_size, seq_len, true, seed, device)?;
+        let batch = if task_kind == tasks::TaskKind::DyckPushdown {
+            if let Some(depth) = dyck_depth {
+                if dyck_balanced || dyck_gap > 0 {
+                    task_engine.generate_adversarial_balanced_dyck_batch(
+                        batch_size, seq_len, depth, 4, dyck_gap, dyck_scramble, seed, device,
+                    )?
+                } else {
+                    task_engine.generate_stratified_dyck_batch(
+                        batch_size, seq_len, depth, 4, dyck_scramble, seed, device,
+                    )?
+                }
+            } else {
+                task_engine.generate_batch_seeded(task_kind, batch_size, seq_len, true, seed, device)?
+            }
+        } else {
+            task_engine.generate_batch_seeded(task_kind, batch_size, seq_len, true, seed, device)?
+        };
         let (dummy_majority, dummy_chance) = compute_dummy_baselines(&batch.targets, &batch.loss_mask)?;
 
         // Concurrently run model forward evaluations across all 5 architectures via nested rayon::join
         let (untied_res, (nca_res, (tf_res, (gru_res, sr_res)))) = rayon::join(
-            || -> Result<(f32, f32)> {
+            || -> Result<(f32, f32, Option<Vec<f32>>)> {
                 let logits = untied.forward(&batch.inputs)?;
-                eval_baseline_masked(&logits, &batch.targets, &batch.loss_mask)
+                let (loss, acc) = eval_baseline_masked(&logits, &batch.targets, &batch.loss_mask)?;
+                let slot = if dyck_per_slot {
+                    dyck_depth.map(|d| eval_per_slot_accuracy(&logits, &batch.targets, &batch.loss_mask, d)).transpose()?
+                } else {
+                    None
+                };
+                Ok((loss, acc, slot))
             },
             || {
                 rayon::join(
-                    || -> Result<(f32, f32)> {
+                    || -> Result<(f32, f32, Option<Vec<f32>>)> {
                         let seed_emb = interface.embed_tokens(&batch.inputs)?;
                         let field = MorphogenicField::from_tensor(seed_emb, &field_cfg);
-                        let developed = nca.develop(&field, 8, device)?;
+                        let developed = nca.develop_with_intervention(&field, dev_steps, Some(&intervention), device)?;
                         let logits = interface.logits(&developed.x)?;
                         let loss = interface.masked_cross_entropy_loss(&logits, &batch.targets, &batch.loss_mask)?.to_scalar::<f32>()?;
                         let acc = interface.masked_accuracy(&logits, &batch.targets, &batch.loss_mask)?;
-                        Ok((loss, acc))
+                        let slot = if dyck_per_slot {
+                            dyck_depth.map(|d| eval_per_slot_accuracy(&logits, &batch.targets, &batch.loss_mask, d)).transpose()?
+                        } else {
+                            None
+                        };
+                        Ok((loss, acc, slot))
                     },
                     || {
                         rayon::join(
-                            || -> Result<(f32, f32)> {
+                            || -> Result<(f32, f32, Option<Vec<f32>>)> {
                                 let logits = transformer.forward(&batch.inputs)?;
-                                eval_baseline_masked(&logits, &batch.targets, &batch.loss_mask)
+                                let (loss, acc) = eval_baseline_masked(&logits, &batch.targets, &batch.loss_mask)?;
+                                let slot = if dyck_per_slot {
+                                    dyck_depth.map(|d| eval_per_slot_accuracy(&logits, &batch.targets, &batch.loss_mask, d)).transpose()?
+                                } else {
+                                    None
+                                };
+                                Ok((loss, acc, slot))
                             },
                             || {
                                 rayon::join(
-                                    || -> Result<(f32, f32)> {
+                                    || -> Result<(f32, f32, Option<Vec<f32>>)> {
                                         let logits = gru.forward(&batch.inputs)?;
-                                        eval_baseline_masked(&logits, &batch.targets, &batch.loss_mask)
+                                        let (loss, acc) = eval_baseline_masked(&logits, &batch.targets, &batch.loss_mask)?;
+                                        let slot = if dyck_per_slot {
+                                            dyck_depth.map(|d| eval_per_slot_accuracy(&logits, &batch.targets, &batch.loss_mask, d)).transpose()?
+                                        } else {
+                                            None
+                                        };
+                                        Ok((loss, acc, slot))
                                     },
-                                    || -> Result<(f32, f32)> {
+                                    || -> Result<(f32, f32, Option<Vec<f32>>)> {
                                         let logits = sr.forward(&batch.inputs)?;
-                                        eval_baseline_masked(&logits, &batch.targets, &batch.loss_mask)
+                                        let (loss, acc) = eval_baseline_masked(&logits, &batch.targets, &batch.loss_mask)?;
+                                        let slot = if dyck_per_slot {
+                                            dyck_depth.map(|d| eval_per_slot_accuracy(&logits, &batch.targets, &batch.loss_mask, d)).transpose()?
+                                        } else {
+                                            None
+                                        };
+                                        Ok((loss, acc, slot))
                                     },
                                 )
                             },
@@ -1776,11 +2078,11 @@ fn cmd_benchmark(args: &cli::Options, device: &Device) -> Result<()> {
             },
         );
 
-        let (untied_loss, untied_acc) = untied_res?;
-        let (nca_loss, nca_acc) = nca_res?;
-        let (tf_loss, tf_acc) = tf_res?;
-        let (gru_loss, gru_acc) = gru_res?;
-        let (sr_loss, sr_acc) = sr_res?;
+        let (untied_loss, untied_acc, untied_slot_acc) = untied_res?;
+        let (nca_loss, nca_acc, nca_slot_acc) = nca_res?;
+        let (tf_loss, tf_acc, tf_slot_acc) = tf_res?;
+        let (gru_loss, gru_acc, gru_slot_acc) = gru_res?;
+        let (sr_loss, sr_acc, sr_slot_acc) = sr_res?;
 
         Ok(ArchMetric {
             dummy_majority,
@@ -1795,6 +2097,11 @@ fn cmd_benchmark(args: &cli::Options, device: &Device) -> Result<()> {
             sr_acc,
             untied_loss,
             untied_acc,
+            nca_slot_acc,
+            tf_slot_acc,
+            gru_slot_acc,
+            sr_slot_acc,
+            untied_slot_acc,
         })
     };
 
@@ -1853,6 +2160,39 @@ fn cmd_benchmark(args: &cli::Options, device: &Device) -> Result<()> {
         println!("  • Untied FF (4-step) : Loss = {:.4} ± {:.4}, Acc = {:5.1}% ± {:4.1}%", mean_untied_loss, std_untied_loss, mean_untied_acc * 100.0, std_untied_acc * 100.0);
     }
 
+    let mut dyck_per_slot_json = serde_json::Map::new();
+    if dyck_per_slot {
+        if let Some(depth) = dyck_depth {
+            println!("\n─── PER-SLOT PUSHDOWN ACCURACY BREAKDOWN (Depth: {}, Gap: {}) ──────────────────────────", depth, dyck_gap);
+            println!("{:<5} | {:<9} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12}", "Slot", "Distance", "Titan NCA", "Transformer", "GRU", "Simple RNN", "Untied FF");
+            println!("──────┼───────────┼──────────────┼──────────────┼──────────────┼──────────────┼─────────────");
+            for s in 0..depth {
+                let dist = dyck_gap + 2 + 2 * s;
+                let avg_slot = |extract: fn(&ArchMetric) -> &Option<Vec<f32>>| -> f32 {
+                    let vals: Vec<f32> = evals.iter().filter_map(|e| extract(e).as_ref().and_then(|v| v.get(s).copied())).collect();
+                    if !vals.is_empty() { vals.iter().sum::<f32>() / vals.len() as f32 } else { 0.0 }
+                };
+                let nca_s = avg_slot(|e| &e.nca_slot_acc);
+                let tf_s = avg_slot(|e| &e.tf_slot_acc);
+                let gru_s = avg_slot(|e| &e.gru_slot_acc);
+                let sr_s = avg_slot(|e| &e.sr_slot_acc);
+                let untied_s = avg_slot(|e| &e.untied_slot_acc);
+                println!("{:<5} | {:<9} | {:>10.1}% | {:>10.1}% | {:>10.1}% | {:>10.1}% | {:>10.1}%", s, dist, nca_s, tf_s, gru_s, sr_s, untied_s);
+
+                dyck_per_slot_json.insert(format!("slot_{}", s), serde_json::json!({
+                    "slot": s,
+                    "distance": dist,
+                    "nca_acc": nca_s,
+                    "transformer_acc": tf_s,
+                    "gru_acc": gru_s,
+                    "simple_rnn_acc": sr_s,
+                    "untied_ff_acc": untied_s,
+                }));
+            }
+            println!("────────────────────────────────────────────────────────────────────────────────────────\n");
+        }
+    }
+
     // Trained comparison if requested
     let mut trained_results_json = serde_json::Map::new();
     if args.flag("--train") {
@@ -1863,13 +2203,20 @@ fn cmd_benchmark(args: &cli::Options, device: &Device) -> Result<()> {
         println!("\n─── ARCHITECTURAL TRAINING CONVERGENCE (Task: {}, Epochs: {}, lr: {}, seed: {}) ───────", task_name, train_epochs, train_lr, base_seed);
 
         // 1. Train NCA
-        print!("  [1/5] Training Titan NCA (T=8, seed={})... ", base_seed);
+        print!("  [1/5] Training Titan NCA (T={}, seed={})... ", dev_steps, base_seed);
         let mut nca_cfg_train = config::TitanConfig::default();
         nca_cfg_train.field.seq_len = seq_len;
         nca_cfg_train.field.channels = channels;
+        nca_cfg_train.field.periodic_boundary = field_cfg.periodic_boundary;
+        nca_cfg_train.nca.causal_stencil = nca_cfg.causal_stencil;
+        nca_cfg_train.nca.carry_channels = nca_cfg.carry_channels;
+        nca_cfg_train.nca.carry_skip_stride = nca_cfg.carry_skip_stride;
+        nca_cfg_train.nca.carry_bidirectional = nca_cfg.carry_bidirectional;
+        nca_cfg_train.nca.carry_quantization = nca_cfg.carry_quantization.clone();
+        nca_cfg_train.nca.persistent_input = nca_cfg.persistent_input;
         nca_cfg_train.train.epochs = train_epochs;
         nca_cfg_train.train.batch_size = batch_size;
-        nca_cfg_train.train.dev_steps = 8;
+        nca_cfg_train.train.dev_steps = dev_steps;
         nca_cfg_train.train.lr = train_lr;
         nca_cfg_train.train.seed = base_seed;
         if let Some(ref fm) = feedback_mode_opt {
@@ -1920,7 +2267,8 @@ fn cmd_benchmark(args: &cli::Options, device: &Device) -> Result<()> {
         println!("─── TRAINED CONVERGENCE COMPARISON ─────────────────────────────────────────────────────");
         println!("{:<22} | {:<10} | {:<18} | {:<18}", "Architecture", "Params", "Train Loss (Acc)", "Val Loss (Acc)");
         println!("───────────────────────┼────────────┼────────────────────┼───────────────────");
-        println!("{:<22} | {:<10} | {:>6.4} ({:>5.1}%)    | {:>6.4} ({:>5.1}%)", "Titan NCA (T=8)", nca_total, nca_train_loss, nca_train_acc * 100.0, nca_val_loss, nca_val_acc * 100.0);
+        let nca_label = format!("Titan NCA (T={})", dev_steps);
+        println!("{:<22} | {:<10} | {:>6.4} ({:>5.1}%)    | {:>6.4} ({:>5.1}%)", nca_label, nca_total, nca_train_loss, nca_train_acc * 100.0, nca_val_loss, nca_val_acc * 100.0);
         println!("{:<22} | {:<10} | {:>6.4} ({:>5.1}%)    | {:>6.4} ({:>5.1}%)", "Transformer", tf_res.total_parameters, tf_res.final_train_loss, tf_res.final_train_acc * 100.0, tf_res.final_val_loss, tf_res.final_val_acc * 100.0);
         println!("{:<22} | {:<10} | {:>6.4} ({:>5.1}%)    | {:>6.4} ({:>5.1}%)", "GRU Recurrent", gru_res.total_parameters, gru_res.final_train_loss, gru_res.final_train_acc * 100.0, gru_res.final_val_loss, gru_res.final_val_acc * 100.0);
         println!("{:<22} | {:<10} | {:>6.4} ({:>5.1}%)    | {:>6.4} ({:>5.1}%)", "Simple RNN", sr_res.total_parameters, sr_res.final_train_loss, sr_res.final_train_acc * 100.0, sr_res.final_val_loss, sr_res.final_val_acc * 100.0);
@@ -1940,7 +2288,7 @@ fn cmd_benchmark(args: &cli::Options, device: &Device) -> Result<()> {
         let b = task_engine.generate_batch_seeded(task_kind, batch_size, seq_len, true, 10_000 + idx, device)?;
         let seed_emb = interface.embed_tokens(&b.inputs)?;
         let f = MorphogenicField::from_tensor(seed_emb, &field_cfg);
-        let dev = nca.develop(&f, 8, device)?;
+        let dev = nca.develop(&f, dev_steps, device)?;
         let logits = interface.logits(&dev.x)?;
         let _ = interface.accuracy(&logits, &b.targets)?;
         Ok(())
@@ -2021,6 +2369,7 @@ fn cmd_benchmark(args: &cli::Options, device: &Device) -> Result<()> {
                 "efficiency_pct": efficiency_pct,
             },
             "seeds": seeds,
+            "dyck_per_slot": dyck_per_slot_json,
         });
         write_output_file(path, serde_json::to_string_pretty(&report_data)?)?;
         println!("\n✓ Benchmark summary saved to '{}'", path);
@@ -2290,6 +2639,299 @@ fn cmd_influence(args: &cli::Options, device: &Device) -> Result<()> {
     Ok(())
 }
 
+fn cmd_transplant(args: &cli::Options, device: &Device) -> Result<()> {
+    let checkpoint_path: String = args
+        .value("--checkpoint")?
+        .or_else(|| args.value("--load-dir").ok().flatten())
+        .ok_or_else(|| anyhow::anyhow!("--checkpoint <DIR> is required for transplant"))?;
+    let seq_len: usize = args.value("--seq-len")?.unwrap_or(64);
+    let dev_steps: usize = args.value("--dev-steps")?.unwrap_or(24);
+    let dyck_depth: usize = args.value("--dyck-depth")?.unwrap_or(4);
+    let t_star: usize = args.value("--t-star")?.unwrap_or(12);
+    let n_pairs: usize = args.value("--n-pairs")?.unwrap_or(32);
+    let channels_str: String = args.value("--channels")?.unwrap_or_else(|| "32..64".to_string());
+    let mode: String = args.value("--mode")?.unwrap_or_else(|| "pair_swap".to_string());
+    let output_path: Option<String> = args.value("--output")?;
+
+    let (c_start, c_end) = if channels_str.contains("..") {
+        let parts: Vec<&str> = channels_str.split("..").collect();
+        let s: usize = parts[0].parse()?;
+        let e: usize = parts[1].parse()?;
+        (s, e)
+    } else {
+        (32, 64)
+    };
+
+    println!("╔══════════════════════════════════════════════════════════════════════════════════════╗");
+    println!("║ TITAN TEXT · COUNTERFACTUAL CARRY TRANSPLANTATION BENCHMARK (RD-005)                  ║");
+    println!("╚══════════════════════════════════════════════════════════════════════════════════════╝");
+    println!("  Model Checkpoint : {}", checkpoint_path);
+    println!("  Lattice Length   : {} cells", seq_len);
+    println!("  Total Horizon (T): {} developmental ticks", dev_steps);
+    println!("  Transplant Tick  : t* = {}", t_star);
+    println!("  Dyck Nesting (D) : {}", dyck_depth);
+    println!("  Transplant Range : Channels [{}..{})", c_start, c_end);
+    println!("  Transplant Mode  : {}", mode);
+    println!("  Evaluation Pairs : {} disjoint sequence pairs ({} sequences total)", n_pairs, n_pairs * 2);
+
+    let manifest = checkpoint::CheckpointManager::load_manifest(&checkpoint_path)?;
+    let mut config = manifest.config;
+    config.field.seq_len = seq_len;
+    config.validate()?;
+
+    let mut varmap = candle_nn::VarMap::new();
+    let vb = candle_nn::VarBuilder::from_varmap(&varmap, candle_core::DType::F32, device);
+    let nca = NeuralCellularAutomaton::new(vb.pp("nca"), &config.nca, &config.field)?;
+    let vocab = vocab::Vocab::new_ascii();
+    let interface = TokenInterface::new(vb.pp("interface"), vocab.size(), config.field.channels)?;
+
+    checkpoint::CheckpointManager::load_weights(&checkpoint_path, &mut varmap, device)?;
+
+    let pairs_all = [('(', ')'), ('[', ']'), ('{', '}'), ('<', '>')];
+    let mut rng = StdRng::seed_from_u64(42 ^ (t_star as u64 * 1000) ^ (dyck_depth as u64));
+
+    let mut batch_inputs: Vec<u32> = Vec::with_capacity(2 * n_pairs * seq_len);
+    let mut targets_a: Vec<Vec<char>> = Vec::with_capacity(n_pairs);
+    let mut targets_b: Vec<Vec<char>> = Vec::with_capacity(n_pairs);
+    let mut query_start_positions: Vec<usize> = Vec::with_capacity(n_pairs);
+
+    for _ in 0..n_pairs {
+        let mut in_chars_a = vec!['.'; seq_len];
+        let mut in_chars_b = vec!['.'; seq_len];
+
+        let brackets_a: Vec<usize> = (0..dyck_depth).map(|_| rng.gen_range(0..4)).collect();
+        let brackets_b: Vec<usize> = if mode == "same_bracket" {
+            brackets_a.clone()
+        } else {
+            brackets_a.iter().map(|&a_idx| {
+                let mut b_idx = rng.gen_range(0..4);
+                while b_idx == a_idx {
+                    b_idx = rng.gen_range(0..4);
+                }
+                b_idx
+            }).collect()
+        };
+
+        let mut pos = 0;
+        for i in 0..dyck_depth {
+            in_chars_a[pos] = pairs_all[brackets_a[i]].0;
+            in_chars_b[pos] = pairs_all[brackets_b[i]].0;
+            pos += 1;
+        }
+
+        in_chars_a[pos] = '?';
+        in_chars_b[pos] = '?';
+        pos += 1;
+
+        let q_start = pos;
+        query_start_positions.push(q_start);
+
+        let mut tgt_a = Vec::with_capacity(dyck_depth);
+        let mut tgt_b = Vec::with_capacity(dyck_depth);
+
+        for i in (0..dyck_depth).rev() {
+            in_chars_a[pos] = '?';
+            in_chars_b[pos] = '?';
+            tgt_a.push(pairs_all[brackets_a[i]].1);
+            tgt_b.push(pairs_all[brackets_b[i]].1);
+            pos += 1;
+        }
+
+        targets_a.push(tgt_a);
+        targets_b.push(tgt_b);
+
+        let enc_a = vocab.encode(&in_chars_a.iter().collect::<String>());
+        let enc_b = vocab.encode(&in_chars_b.iter().collect::<String>());
+        batch_inputs.extend(enc_a.into_iter().map(|x| x as u32));
+        batch_inputs.extend(enc_b.into_iter().map(|x| x as u32));
+    }
+
+    let b_size = 2 * n_pairs;
+    let in_tensor = Tensor::from_slice(&batch_inputs, (b_size, seq_len), device)?;
+    let seed_emb = interface.embed_tokens(&in_tensor)?;
+    let mut field = MorphogenicField::from_tensor(seed_emb, &config.field);
+
+    for _ in 0..t_star.min(dev_steps) {
+        field = nca.step_field(&field, device)?;
+    }
+
+    if t_star < dev_steps {
+        let (b, _, c) = field.x.dims3()?;
+        let c_end_clamped = c_end.min(c);
+        let c_start_clamped = c_start.min(c_end_clamped);
+
+        let mut mask_vec = vec![0.0f32; c];
+        for ch in c_start_clamped..c_end_clamped {
+            mask_vec[ch] = 1.0;
+        }
+        let swap_mask = Tensor::from_slice(&mask_vec, (1, 1, c), device)?;
+        let keep_mask = (1.0f64 - &swap_mask)?;
+
+        match mode.as_str() {
+            "pair_swap" | "same_bracket" => {
+                let mut perm: Vec<u32> = Vec::with_capacity(b);
+                for i in 0..b {
+                    if i % 2 == 0 {
+                        perm.push((i + 1) as u32);
+                    } else {
+                        perm.push((i - 1) as u32);
+                    }
+                }
+                let perm_t = Tensor::from_slice(&perm, b, device)?;
+                let x_perm = field.x.contiguous()?.index_select(&perm_t, 0)?;
+                field.x = (field.x.broadcast_mul(&keep_mask)? + x_perm.broadcast_mul(&swap_mask)?)?;
+            }
+            "roll_spatial_4" => {
+                let x_rolled = MorphogenicField::roll_spatial(&field.x, 4)?;
+                field.x = (field.x.broadcast_mul(&keep_mask)? + x_rolled.broadcast_mul(&swap_mask)?)?;
+            }
+            "gaussian_noise" => {
+                let noise = Tensor::randn(0.0f32, 1.0f32, field.x.shape(), device)?;
+                field.x = (field.x.broadcast_mul(&keep_mask)? + noise.broadcast_mul(&swap_mask)?)?;
+            }
+            "conjugate_reverse" => {
+                let carry_len = c_end_clamped - c_start_clamped;
+                if carry_len > 1 {
+                    let mut rev_idx: Vec<u32> = (0..c as u32).collect();
+                    for i in 0..carry_len {
+                        rev_idx[c_start_clamped + i] = (c_end_clamped - 1 - i) as u32;
+                    }
+                    let rev_t = Tensor::from_slice(&rev_idx, c, device)?;
+                    field.x = field.x.contiguous()?.index_select(&rev_t, 2)?;
+                }
+            }
+            "conjugate_cyclic_shift" => {
+                let carry_len = c_end_clamped - c_start_clamped;
+                let shift = carry_len / 4;
+                if carry_len > 1 && shift > 0 {
+                    let mut rot_idx: Vec<u32> = (0..c as u32).collect();
+                    for i in 0..carry_len {
+                        rot_idx[c_start_clamped + i] = (c_start_clamped + (i + shift) % carry_len) as u32;
+                    }
+                    let rot_t = Tensor::from_slice(&rot_idx, c, device)?;
+                    field.x = field.x.contiguous()?.index_select(&rot_t, 2)?;
+                }
+            }
+            "conjugate_subregister_swap" => {
+                let carry_len = c_end_clamped - c_start_clamped;
+                let half = carry_len / 2;
+                if half > 0 {
+                    let mut swap_idx: Vec<u32> = (0..c as u32).collect();
+                    for i in 0..carry_len {
+                        swap_idx[c_start_clamped + i] = (c_start_clamped + (i + half) % carry_len) as u32;
+                    }
+                    let swap_t = Tensor::from_slice(&swap_idx, c, device)?;
+                    field.x = field.x.contiguous()?.index_select(&swap_t, 2)?;
+                }
+            }
+            "conjugate_negate" => {
+                let neg_x = (&field.x * (-1.0f64))?;
+                field.x = (field.x.broadcast_mul(&keep_mask)? + neg_x.broadcast_mul(&swap_mask)?)?;
+            }
+            "lesion_zero" => {
+                field.x = field.x.broadcast_mul(&keep_mask)?;
+            }
+            "identity" => {}
+            _ => {}
+        }
+
+        for _ in t_star..dev_steps {
+            field = nca.step_field(&field, device)?;
+        }
+    }
+
+    let logits = interface.logits(&field.x)?;
+    let preds = logits.argmax(candle_core::D::Minus1)?;
+    let preds_vec: Vec<u32> = preds.flatten_all()?.to_vec1()?;
+
+    let mut cei_matches = 0;
+    let mut far_matches = 0;
+    let mut omr_matches = 0;
+    let mut total_query_slots = 0;
+
+    let mut pos_cei_matches = vec![0; dyck_depth];
+    let mut pos_total = vec![0; dyck_depth];
+
+    for p in 0..n_pairs {
+        let sample_a_idx = 2 * p;
+        let q_start = query_start_positions[p];
+        let tgt_a = &targets_a[p];
+        let tgt_b = &targets_b[p];
+
+        for d in 0..dyck_depth {
+            let slot_idx = sample_a_idx * seq_len + (q_start + d);
+            let pred_token_id = preds_vec[slot_idx] as usize;
+            let pred_char = vocab.decode(&[pred_token_id]).chars().next().unwrap_or('?');
+
+            let is_b = pred_char == tgt_b[d];
+            let is_a = pred_char == tgt_a[d];
+
+            if is_b {
+                cei_matches += 1;
+                pos_cei_matches[d] += 1;
+            } else if is_a {
+                far_matches += 1;
+            } else {
+                omr_matches += 1;
+            }
+            pos_total[d] += 1;
+            total_query_slots += 1;
+        }
+    }
+
+    let cei = (cei_matches as f64) / (total_query_slots as f64) * 100.0;
+    let far = (far_matches as f64) / (total_query_slots as f64) * 100.0;
+    let omr = (omr_matches as f64) / (total_query_slots as f64) * 100.0;
+
+    let mut pos_cei = Vec::new();
+    for d in 0..dyck_depth {
+        let r = (pos_cei_matches[d] as f64) / (pos_total[d] as f64) * 100.0;
+        pos_cei.push(r);
+    }
+
+    let (_, _, c_total) = field.x.dims3()?;
+    let c_carry = config.nca.carry_channels.min(c_total);
+    let c_hidden = c_total - c_carry;
+    let h_final = field.x.narrow(2, 0, c_hidden)?;
+    let c_final = field.x.narrow(2, c_hidden, c_carry)?;
+    let h_norm = h_final.sqr()?.mean_all()?.to_scalar::<f32>()?.sqrt();
+    let c_norm = c_final.sqr()?.mean_all()?.to_scalar::<f32>()?.sqrt();
+
+    println!("\n─── COUNTERFACTUAL TRANSPLANTATION RESULTS ─────────────────────────────────────────────");
+    println!("  Causal Effect Index (CEI / Target B Steering) : {:5.2}%", cei);
+    println!("  Factual Anchor Resistance (FAR / Host A Retained): {:5.2}%", far);
+    println!("  Off-Manifold Rupture Rate (OMR / Dynamical Breakdown): {:5.2}%", omr);
+    println!("  Continuous Field H-Norm (||H||)               : {:6.4}", h_norm);
+    println!("  Discrete Carry C-Norm   (||C||)               : {:6.4}", c_norm);
+    println!("────────────────────────────────────────────────────────────────────────────────────────");
+    println!("Per-Position Steering Profile (Depth d in 1..{}):", dyck_depth);
+    for d in 0..dyck_depth {
+        println!("  Position {} (Depth {}): CEI = {:5.2}%", d + 1, dyck_depth - d, pos_cei[d]);
+    }
+
+    if let Some(ref path) = output_path {
+        let res = serde_json::json!({
+            "t_star": t_star,
+            "dev_steps": dev_steps,
+            "dyck_depth": dyck_depth,
+            "channels": channels_str,
+            "mode": mode,
+            "n_pairs": n_pairs,
+            "cei": cei,
+            "far": far,
+            "omr": omr,
+            "h_norm": h_norm,
+            "c_norm": c_norm,
+            "per_position_cei": pos_cei,
+        });
+        std::fs::create_dir_all(std::path::Path::new(path).parent().unwrap_or(std::path::Path::new(".")))?;
+        std::fs::write(path, serde_json::to_string_pretty(&res)?)?;
+        println!("\n✓ Results written to '{}'", path);
+    }
+
+    Ok(())
+}
+
 fn main() -> std::process::ExitCode {
     let args: Vec<String> = match env::args_os()
         .skip(1)
@@ -2333,6 +2975,8 @@ fn main() -> std::process::ExitCode {
                 cli::Command::Benchmark => cmd_benchmark(&args, &device),
                 cli::Command::Memory => cmd_memory(&args, &device),
                 cli::Command::Influence => cmd_influence(&args, &device),
+                cli::Command::Transplant => cmd_transplant(&args, &device),
+                cli::Command::Generate => cmd_generate(&args, &device),
             }
         }
     };

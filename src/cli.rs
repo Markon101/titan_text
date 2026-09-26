@@ -15,6 +15,8 @@ pub enum Command {
     Benchmark,
     Memory,
     Influence,
+    Transplant,
+    Generate,
 }
 
 impl Command {
@@ -31,6 +33,8 @@ impl Command {
             "benchmark" | "compare" | "baselines" => Ok(Self::Benchmark),
             "memory" | "memory-dynamics" => Ok(Self::Memory),
             "influence" | "causal-map" | "dependency-map" => Ok(Self::Influence),
+            "transplant" | "carry-transplant" => Ok(Self::Transplant),
+            "generate" | "sample" => Ok(Self::Generate),
             _ => bail!("unknown command '{name}'; use --help for usage"),
         }
     }
@@ -48,6 +52,8 @@ impl Command {
             Self::Benchmark => "benchmark",
             Self::Memory => "memory",
             Self::Influence => "influence",
+            Self::Transplant => "transplant",
+            Self::Generate => "generate",
         }
     }
 
@@ -60,6 +66,7 @@ impl Command {
                 "--epochs",
                 "--dev-steps",
                 "--seq-len",
+                "--batch-size",
                 "--lr",
                 "--viscosity",
                 "--horizon",
@@ -91,6 +98,11 @@ impl Command {
                 "--macro-gamma",
                 "--macro-lambda",
                 "--target-slot",
+                "--carry-channels",
+                "--carry-skip-stride",
+                "--carry-bidirectional",
+                "--carry-quantization",
+                "--persistent-input",
             ],
             Self::Rollout => &[
                 "--load-dir",
@@ -121,6 +133,11 @@ impl Command {
                 "--coord-channel",
                 "--coord-mode",
                 "--causal-stencil",
+                "--carry-channels",
+                "--carry-skip-stride",
+                "--carry-bidirectional",
+                "--carry-quantization",
+                "--persistent-input",
             ],
             Self::Probe => &[
                 "--load-dir",
@@ -233,6 +250,21 @@ impl Command {
                 "--tail-eq-weight",
                 "--tail-eq-ticks",
                 "--state-norm",
+                "--dev-steps",
+                "--causal-stencil",
+                "--zero-boundary",
+                "--carry-channels",
+                "--carry-skip-stride",
+                "--carry-bidirectional",
+                "--carry-quantization",
+                "--persistent-input",
+                "--lesion-channels",
+                "--lesion-shuffle",
+                "--dyck-depth",
+                "--dyck-scramble",
+                "--dyck-gap",
+                "--dyck-balanced",
+                "--dyck-per-slot",
             ],
             Self::Memory => &[
                 "--load-dir",
@@ -256,6 +288,36 @@ impl Command {
                 "--coord-channel",
                 "--coord-mode",
                 "--causal-stencil",
+            ],
+            Self::Transplant => &[
+                "-h",
+                "--help",
+                "--checkpoint",
+                "--load-dir",
+                "--seq-len",
+                "--dev-steps",
+                "--dyck-depth",
+                "--t-star",
+                "--channels",
+                "--mode",
+                "--n-pairs",
+                "--output",
+                "--threads",
+            ],
+            Self::Generate => &[
+                "--load-dir",
+                "--task",
+                "--prompt",
+                "--max-len",
+                "--temperature",
+                "--top-k",
+                "--tau",
+                "--latent-ticks",
+                "--seed",
+                "--lesion-state",
+                "--output",
+                "--format",
+                "--threads",
             ],
         }
     }
@@ -291,6 +353,7 @@ pub fn canonical_task(task: &str) -> Result<&'static str> {
     match task {
         "text" => Ok("text"),
         "dyck" | "paren" => Ok("dyck"),
+        "ascii" | "ascii-art" | "ascii_art" => Ok("ascii"),
         "delayed-recall" | "delayed-copy" | "delay" => Ok("delayed-recall"),
         "bracket" | "bracket-depth" => Ok("bracket-depth"),
         "parity" | "counting" => Ok("parity"),
@@ -303,6 +366,7 @@ pub fn canonical_task(task: &str) -> Result<&'static str> {
         "iterated-parity-dense" | "ippr-dense" | "dense-parity" => Ok("iterated-parity-dense"),
         "iterated-parity-carrier" | "ippr-carrier" | "carrier-parity" => Ok("iterated-parity-carrier"),
         "iterated-sum-dense" | "chunked-sum" | "sum-dense" | "iterated-sum" => Ok("iterated-sum-dense"),
+        "dyck-pushdown" | "dyck_pushdown" | "dyck-formal" | "dyck_formal" | "pushdown" => Ok("dyck-pushdown"),
         _ => bail!("invalid --task '{task}'; expected text or dyck (alias: paren)"),
     }
 }
@@ -335,13 +399,18 @@ fn is_flag_option(name: &str) -> bool {
             | "--zero-boundary"
             | "--coord-channel"
             | "--causal-stencil"
+            | "--persistent-input"
+            | "--carry-bidirectional"
+            | "--dyck-scramble"
+            | "--dyck-balanced"
+            | "--dyck-per-slot"
     )
 }
 
 fn validate_value(name: &str, value: &str) -> Result<()> {
     let invalid = || format!("invalid value '{value}' for {name}");
     match name {
-        "--epochs" | "--dev-steps" | "--seq-len" | "--horizon" | "--latent-ticks" | "--slow-cadence" | "--ticks" | "--batch-size" | "--threads" | "--horizon-min" | "--horizon-max" | "--stability-tail" => {
+        "--epochs" | "--dev-steps" | "--seq-len" | "--horizon" | "--latent-ticks" | "--slow-cadence" | "--ticks" | "--batch-size" | "--threads" | "--horizon-min" | "--horizon-max" | "--stability-tail" | "--carry-skip-stride" | "--dyck-depth" | "--n-pairs" | "--max-len" => {
             let number: usize = value.parse().with_context(invalid)?;
             ensure!(number > 0, "{name} must be a positive integer");
             if name == "--seq-len" {
@@ -351,7 +420,7 @@ fn validate_value(name: &str, value: &str) -> Result<()> {
                 );
             }
         }
-        "--pause-ticks" | "--lesion-freeze" | "--lesion-reset" | "--horizon-jitter" | "--target-slot" => {
+        "--pause-ticks" | "--lesion-freeze" | "--lesion-reset" | "--horizon-jitter" | "--target-slot" | "--t-star" | "--dyck-gap" | "--top-k" | "--tau" => {
             let _number: usize = value.parse().with_context(invalid)?;
         }
         "--seed" => {
@@ -371,7 +440,7 @@ fn validate_value(name: &str, value: &str) -> Result<()> {
                 "{name} must be finite"
             );
         }
-        "--eps" | "--viscosity" | "--forcing-amp" | "--slow-fraction" | "--lesion-noise" => {
+        "--eps" | "--viscosity" | "--forcing-amp" | "--slow-fraction" | "--lesion-noise" | "--temperature" => {
             let number: f32 = value.parse().with_context(invalid)?;
             if name == "--eps" {
                 ensure!(
@@ -410,8 +479,14 @@ fn validate_value(name: &str, value: &str) -> Result<()> {
         }
         "--state-norm" => {
             ensure!(
-                matches!(value, "none" | "rms" | "bounded" | "layer_norm"),
-                "invalid --state-norm '{value}'; expected none, rms, bounded, or layer_norm"
+                matches!(value, "none" | "rms" | "bounded" | "bounded_h_only" | "layer_norm"),
+                "invalid --state-norm '{value}'; expected none, rms, bounded, bounded_h_only, or layer_norm"
+            );
+        }
+        "--carry-quantization" => {
+            ensure!(
+                matches!(value, "none" | "ste_round" | "ste_sign" | "bistable"),
+                "invalid --carry-quantization '{value}'; expected none, ste_round, ste_sign, or bistable"
             );
         }
         "--coord-mode" => {
@@ -423,7 +498,7 @@ fn validate_value(name: &str, value: &str) -> Result<()> {
         "--task" => {
             canonical_task(value)?;
         }
-        "--prompt" | "--prompt-a" | "--prompt-b" | "--stimulus" | "--target" | "--event-1" | "--event-2" | "--budgets" | "--lesion-channels" | "--model" | "--seeds" => {}
+        "--prompt" | "--prompt-a" | "--prompt-b" | "--stimulus" | "--target" | "--event-1" | "--event-2" | "--budgets" | "--lesion-channels" | "--model" | "--seeds" | "--channels" | "--mode" | "--checkpoint" | "--format" => {}
         _ => ensure!(!value.is_empty(), "{name} must not be empty"),
     }
     Ok(())
@@ -455,6 +530,7 @@ pub fn parse(args: &[String]) -> Result<Invocation> {
         let name = match name {
             "--raw" => "--patterns-only",
             "--steps" | "--dev-steps" if command == Command::Rollout => "--horizon",
+            "--latent-ticks" if command == Command::Generate => "--tau",
             "-h" => "--help",
             name => name,
         };
@@ -589,6 +665,8 @@ pub fn print_help(command: Option<Command>) {
             "--coord-channel" => "         Append static 1D spatial coordinate channel [-1, 1] to perception",
             "--coord-mode" => "<NAME>      Coordinate counterfactual mode (intact, zeroed, shuffled, reversed, constant)",
             "--causal-stencil" => "        Use strictly causal / directed spatial stencil N(i) = {i-1, i} (DAG fold)",
+            "--carry-channels" => "<NUM>   Dedicated Explicit Carry Register channels Cc advected left-to-right (default: 0)",
+            "--persistent-input" => "      Persist initial token seed embedding and concatenate to perception vector",
             "--macro-stride" => "<NUM>     Macro grid stride s for hierarchy mode (default: 2; 1 for degenerate control)",
             "--macro-period" => "<NUM>     Macro update clock period k in ticks (default: 2)",
             "--macro-channels" => "<NUM>   Macro field channel dimension C_M (default: 32)",
@@ -597,6 +675,9 @@ pub fn print_help(command: Option<Command>) {
             "--macro-gamma" => "<FLOAT>    State-derivative coupling gain gamma (default: 0.2)",
             "--macro-lambda" => "<FLOAT>   Emergent bistable potential restoring force lambda (default: 0.1)",
             "--target-slot" => "<NUM>      Supervise only a single query slot index (e.g. 3 for Slot 3 only)",
+            "--carry-skip-stride" => "<NUM>   Fast carry skip stride k (default: 1; if > 1, carry channels skip k cells per tick)",
+            "--carry-bidirectional" => "       Split carry channels into forward (left-to-right) and backward (right-to-left)",
+            "--carry-quantization" => "<NAME>  Carry drift mitigation mode: none, ste_round, ste_sign, bistable (default: none)",
             _ => unreachable!(),
         };
         println!("  {name} {description}");

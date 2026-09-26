@@ -18,9 +18,17 @@ pub fn initialize_seeded(varmap: &VarMap, seed: u64) -> Result<()> {
         let var = &variables[name];
         let is_embedding = name.contains("embed");
         let bound = (3.0 / var.dims().last().copied().unwrap_or(1) as f32).sqrt();
+        let is_gru_gate_bias = name.contains("w_x.bias") || name.contains("w_h.bias");
         let values: Vec<f32> = (0..var.elem_count())
-            .map(|_| {
-                if name.ends_with("bias") {
+            .map(|idx| {
+                if is_gru_gate_bias {
+                    let c = var.elem_count() / 3;
+                    if idx >= c && idx < 2 * c {
+                        -1.0f32 // b_z = -1.0 => retains past hidden state by default
+                    } else {
+                        0.0f32
+                    }
+                } else if name.ends_with("bias") {
                     0.0
                 } else if is_embedding {
                     StandardNormal.sample(&mut rng)
@@ -165,10 +173,19 @@ impl TransformerBaseline {
         let position = Tensor::from_vec(positions, (1, l, self.channels), tokens.device())?;
         let x = embedding.broadcast_add(&position)?;
 
-        // 1. Causal self-attention
-        let q = self.q_proj.forward(&x)?; // [B, L, C]
-        let k = self.k_proj.forward(&x)?; // [B, L, C]
-        let v = self.v_proj.forward(&x)?; // [B, L, C]
+        let layer_norm = |t: &Tensor| -> Result<Tensor> {
+            let mean = t.mean_keepdim(candle_core::D::Minus1)?;
+            let diff = t.broadcast_sub(&mean)?;
+            let var = diff.sqr()?.mean_keepdim(candle_core::D::Minus1)?;
+            let std = (var + 1e-5)?.sqrt()?;
+            Ok(diff.broadcast_div(&std)?)
+        };
+
+        // 1. Causal self-attention with Pre-LayerNorm
+        let x_norm1 = layer_norm(&x)?;
+        let q = self.q_proj.forward(&x_norm1)?; // [B, L, C]
+        let k = self.k_proj.forward(&x_norm1)?; // [B, L, C]
+        let v = self.v_proj.forward(&x_norm1)?; // [B, L, C]
 
         let scale = 1.0 / (self.channels as f64).sqrt();
         let q_scaled = (q * scale)?;
@@ -193,16 +210,18 @@ impl TransformerBaseline {
         // Residual 1
         let x1 = (&x + &attn_proj)?;
 
-        // 2. Feedforward MLP
-        let h = self.mlp1.forward(&x1)?;
+        // 2. Feedforward MLP with Pre-LayerNorm
+        let x1_norm = layer_norm(&x1)?;
+        let h = self.mlp1.forward(&x1_norm)?;
         let h_act = candle_nn::Activation::Gelu.forward(&h)?;
         let mlp_out = self.mlp2.forward(&h_act)?;
 
         // Residual 2
         let x2 = (&x1 + &mlp_out)?;
 
-        // Readout
-        let logits = self.readout.forward(&x2)?;
+        // Readout with Pre-LayerNorm
+        let x2_norm = layer_norm(&x2)?;
+        let logits = self.readout.forward(&x2_norm)?;
         Ok(logits)
     }
 }
@@ -813,6 +832,11 @@ pub fn train_baseline_model(
         let a_val = matches as f32 / preds_vec.len().max(1) as f32;
         (l_val, a_val)
     };
+
+    let checkpoint_dir = format!("checkpoints/{}_{}", task, model_kind);
+    let _ = std::fs::create_dir_all(&checkpoint_dir);
+    let model_path = format!("{}/model.safetensors", checkpoint_dir);
+    let _ = varmap.save(&model_path);
 
     Ok((
         model,

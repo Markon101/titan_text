@@ -52,6 +52,47 @@ impl Vocab {
         }
     }
 
+    /// Creates a dedicated ASCII art vocabulary containing:
+    /// - Special control tokens (<pad>, <bos>, <eos>, <unk>)
+    /// - Newline '\n' (id 4)
+    /// - Printable ASCII 32..=126 (ids 5..=99)
+    pub fn new_ascii_art() -> Self {
+        let mut chars = Vec::new();
+        let mut char_to_id = HashMap::new();
+
+        let pad_id = 0;
+        let bos_id = 1;
+        let eos_id = 2;
+        let unk_id = 3;
+
+        chars.push('\0'); // <pad>
+        chars.push('\u{1}'); // <bos>
+        chars.push('\u{2}'); // <eos>
+        chars.push('\u{3}'); // <unk>
+        chars.push('\n'); // <newline> id = 4
+
+        for (i, &c) in chars.iter().enumerate() {
+            char_to_id.insert(c, i);
+        }
+
+        // Add standard printable ASCII (32 to 126: space, digits, letters, punctuation)
+        for b in 32u8..=126u8 {
+            let c = b as char;
+            let id = chars.len();
+            chars.push(c);
+            char_to_id.insert(c, id);
+        }
+
+        Self {
+            chars,
+            char_to_id,
+            pad_id,
+            bos_id,
+            eos_id,
+            unk_id,
+        }
+    }
+
     /// Creates a synthetic Dyck-1 / algorithmic language vocab (parentheses, tokens, blanks)
     pub fn new_synthetic() -> Self {
         let chars = vec!['\0', '\u{1}', '\u{2}', '\u{3}', '(', ')', '[', ']', 'a', 'b', 'c', '0', '1', ' ', '#'];
@@ -91,6 +132,22 @@ impl Vocab {
                     self.chars[id]
                 } else {
                     '?'
+                }
+            })
+            .collect()
+    }
+
+    /// Decodes token ids directly into original character sequence, stopping at eos_id
+    pub fn decode_raw(&self, ids: &[usize]) -> String {
+        ids.iter()
+            .take_while(|&&id| id != self.eos_id)
+            .filter_map(|&id| {
+                if id == self.pad_id || id == self.bos_id || id == self.unk_id {
+                    None
+                } else if id < self.chars.len() {
+                    Some(self.chars[id])
+                } else {
+                    None
                 }
             })
             .collect()

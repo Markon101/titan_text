@@ -154,7 +154,7 @@ impl InterventionConfig {
                 let mut indices: Vec<u32> = (1..b as u32).collect();
                 indices.push(0);
                 let idx_tensor = Tensor::from_slice(&indices, b, device)?;
-                x = x.index_select(&idx_tensor, 0)?;
+                x = x.contiguous()?.index_select(&idx_tensor, 0)?;
             }
         }
 

@@ -1,5 +1,5 @@
 use crate::config::{FieldConfig, NcaConfig};
-use crate::field::MorphogenicField;
+use crate::field::{MorphogenicField, PingPongField};
 use anyhow::Result;
 use candle_core::{Device, Tensor};
 use candle_nn::{linear, Linear, Module, VarBuilder};
@@ -52,6 +52,9 @@ impl NeuralCellularAutomaton {
         };
         if nca_cfg.coord_channel {
             in_channels += 1;
+        }
+        if nca_cfg.persistent_input {
+            in_channels += field_cfg.channels;
         }
 
         let dense1 = linear(in_channels, nca_cfg.hidden_dim, vb.pp("dense1"))?;
@@ -123,6 +126,12 @@ impl NeuralCellularAutomaton {
         if self.nca_cfg.coord_channel {
             breakdown.push(("spatial_coordinate_channel".to_string(), 0));
         }
+        if self.nca_cfg.persistent_input {
+            breakdown.push(("persistent_input_channel".to_string(), 0));
+        }
+        if self.nca_cfg.carry_channels > 0 {
+            breakdown.push(("explicit_carry_register".to_string(), 0));
+        }
         breakdown
     }
 
@@ -183,6 +192,16 @@ impl NeuralCellularAutomaton {
 
     /// Computes spatial perception: [x, grad, laplacian] (symmetric) or [x, left, x - left] (causal DAG)
     pub fn perceive_with_feedback(&self, x: &Tensor, slow_state: Option<&Tensor>) -> Result<Tensor> {
+        self.perceive_with_feedback_and_seed(x, slow_state, None)
+    }
+
+    /// Computes spatial perception with optional macro feedback and persistent initial input seed
+    pub fn perceive_with_feedback_and_seed(
+        &self,
+        x: &Tensor,
+        slow_state: Option<&Tensor>,
+        seed: Option<&Tensor>,
+    ) -> Result<Tensor> {
         let base_perc = if self.nca_cfg.causal_stencil {
             let left = self.left_neighbor(x)?;
             // Causal basis: [x_i, x_{i-1}, x_i - x_{i-1}]
@@ -298,12 +317,22 @@ impl NeuralCellularAutomaton {
             }
         };
 
-        if self.nca_cfg.coord_channel {
+        let perc = if self.nca_cfg.coord_channel {
             let (b, l, _) = x.dims3()?;
             let coords = Self::generate_coordinates(b, l, None, x.device())?;
-            Ok(Tensor::cat(&[&base_perc, &coords], 2)?)
+            Tensor::cat(&[&base_perc, &coords], 2)?
         } else {
-            Ok(base_perc)
+            base_perc
+        };
+
+        if self.nca_cfg.persistent_input {
+            let s = match seed {
+                Some(seed_ten) => seed_ten.clone(),
+                None => x.clone(),
+            };
+            Ok(Tensor::cat(&[&perc, &s], 2)?)
+        } else {
+            Ok(perc)
         }
     }
 
@@ -331,6 +360,65 @@ impl NeuralCellularAutomaton {
         if l == 1 { return Ok(zero); }
         Ok(Tensor::cat(&[&zero, &x.narrow(1, 0, l - 1)?], 1)?)
     }
+
+    /// Anti-causal neighbor: strictly right neighbor x_{i+1} with zero Dirichlet boundary at i=L-1
+    pub fn right_neighbor(&self, x: &Tensor) -> Result<Tensor> {
+        let (b, l, c) = x.dims3()?;
+        let zero = Tensor::zeros((b, 1, c), x.dtype(), x.device())?;
+        if l == 1 { return Ok(zero); }
+        Ok(Tensor::cat(&[&x.narrow(1, 1, l - 1)?, &zero], 1)?)
+    }
+
+    /// Multi-hop left skip neighbor: x_{i-k} with zero Dirichlet boundary at i < k
+    pub fn k_left_neighbor(&self, x: &Tensor, k: usize) -> Result<Tensor> {
+        let (b, l, c) = x.dims3()?;
+        if k >= l {
+            return Ok(Tensor::zeros((b, l, c), x.dtype(), x.device())?);
+        }
+        let zero = Tensor::zeros((b, k, c), x.dtype(), x.device())?;
+        Ok(Tensor::cat(&[&zero, &x.narrow(1, 0, l - k)?], 1)?)
+    }
+
+    /// Multi-hop right skip neighbor: x_{i+k} with zero Dirichlet boundary at i >= L-k
+    pub fn k_right_neighbor(&self, x: &Tensor, k: usize) -> Result<Tensor> {
+        let (b, l, c) = x.dims3()?;
+        if k >= l {
+            return Ok(Tensor::zeros((b, l, c), x.dtype(), x.device())?);
+        }
+        let zero = Tensor::zeros((b, k, c), x.dtype(), x.device())?;
+        Ok(Tensor::cat(&[&x.narrow(1, k, l - k)?, &zero], 1)?)
+    }
+
+    /// Discrete carry projection / drift mitigation to preserve clean discrete signals over deep horizons (L >= 64).
+    /// - "none": standard continuous floating-point propagation.
+    /// - "ste_round": straight-through estimator integer rounding: c + (round(c) - c).detach().
+    /// - "ste_sign": straight-through estimator discrete sign {-1, 0, 1}: c + (sign(c) - c).detach().
+    /// - "bistable": continuous cubic Ginzburg-Landau restoring potential: c + 0.1 * c * (1 - c^2).
+    pub fn quantize_carry(carry: &Tensor, mode: &str) -> Result<Tensor> {
+        match mode {
+            "none" => Ok(carry.clone()),
+            "ste_round" => {
+                let rounded = carry.round()?;
+                let diff = (rounded.detach() - carry)?;
+                Ok((carry + diff)?)
+            }
+            "ste_sign" => {
+                let pos = carry.gt(0.0)?.to_dtype(carry.dtype())?;
+                let neg = carry.lt(0.0)?.to_dtype(carry.dtype())?;
+                let sign = (&pos - &neg)?;
+                let diff = (sign.detach() - carry)?;
+                Ok((carry + diff)?)
+            }
+            "bistable" => {
+                let one = Tensor::ones_like(carry)?;
+                let one_minus_c2 = (one - carry.sqr()?)?;
+                let restoring = carry.mul(&one_minus_c2)?;
+                Ok((carry + (restoring * 0.1)?)?)
+            }
+            other => anyhow::bail!("unknown carry_quantization mode '{}'", other),
+        }
+    }
+
 
     pub fn dissipate(&self, tensor: &Tensor, effective_diff: f32) -> Result<Tensor> {
         if self.field_cfg.periodic_boundary && !self.nca_cfg.causal_stencil {
@@ -430,8 +518,12 @@ impl NeuralCellularAutomaton {
     ) -> Result<(MorphogenicField, f32)> {
         let x = &field.x;
 
-        // 1. Spatial perception with optional recursive macro feedback
-        let perception = self.perceive_with_feedback(x, field.slow_state.as_ref())?;
+        // 1. Spatial perception with optional recursive macro feedback and persistent input
+        let perception = self.perceive_with_feedback_and_seed(
+            x,
+            field.slow_state.as_ref(),
+            field.seed.as_ref(),
+        )?;
 
         // 2. Hidden feature extraction
         let h1 = self.dense1.forward(&perception)?;
@@ -458,11 +550,73 @@ impl NeuralCellularAutomaton {
             gated_delta
         };
 
-        // 5. Residual active drift integration with optional damping and leaky contraction:
-        // x_(t+1/2) = (1 - lambda) * x_t + alpha * damping * (\delta + f)
+        // 5. Residual active drift integration with optional damping, leaky contraction, and Explicit Carry Register (ECR):
+        // For stationary channels: base_h = (1 - lambda) * h_i^t
+        // For carry channels: base_c = c_{i-1}^t (hyperbolic upwind advection shift)
         let alpha = (self.nca_cfg.step_size * self.nca_cfg.damping_alpha) as f64;
         let scaled_delta = (effective_delta * alpha)?;
-        let base_x = if self.nca_cfg.leaky_lambda > 0.0 {
+        let base_x = if self.nca_cfg.carry_channels > 0 {
+            let (_, _, c_total) = x.dims3()?;
+            let c_carry = self.nca_cfg.carry_channels.min(c_total);
+            let c_hidden = c_total - c_carry;
+            let h = x.narrow(2, 0, c_hidden)?;
+            let c = x.narrow(2, c_hidden, c_carry)?;
+            let shifted_c = if self.nca_cfg.carry_bidirectional {
+                let half = c_carry / 2;
+                let c_fwd = c.narrow(2, 0, half)?;
+                let c_bwd = c.narrow(2, half, c_carry - half)?;
+                let fwd_shifted = if self.nca_cfg.carry_skip_stride > 1 {
+                    let half_fwd = half / 2;
+                    if half_fwd > 0 {
+                        let c_fwd_slow = c_fwd.narrow(2, 0, half - half_fwd)?;
+                        let c_fwd_fast = c_fwd.narrow(2, half - half_fwd, half_fwd)?;
+                        let slow_shift = self.left_neighbor(&c_fwd_slow)?;
+                        let fast_shift = self.k_left_neighbor(&c_fwd_fast, self.nca_cfg.carry_skip_stride)?;
+                        Tensor::cat(&[&slow_shift, &fast_shift], 2)?
+                    } else {
+                        self.left_neighbor(&c_fwd)?
+                    }
+                } else {
+                    self.left_neighbor(&c_fwd)?
+                };
+                let bwd_shifted = if self.nca_cfg.carry_skip_stride > 1 {
+                    let bwd_len = c_carry - half;
+                    let half_bwd = bwd_len / 2;
+                    if half_bwd > 0 {
+                        let c_bwd_slow = c_bwd.narrow(2, 0, bwd_len - half_bwd)?;
+                        let c_bwd_fast = c_bwd.narrow(2, bwd_len - half_bwd, half_bwd)?;
+                        let slow_shift = self.right_neighbor(&c_bwd_slow)?;
+                        let fast_shift = self.k_right_neighbor(&c_bwd_fast, self.nca_cfg.carry_skip_stride)?;
+                        Tensor::cat(&[&slow_shift, &fast_shift], 2)?
+                    } else {
+                        self.right_neighbor(&c_bwd)?
+                    }
+                } else {
+                    self.right_neighbor(&c_bwd)?
+                };
+                Tensor::cat(&[&fwd_shifted, &bwd_shifted], 2)?
+            } else if self.nca_cfg.carry_skip_stride > 1 {
+                let half = c_carry / 2;
+                if half > 0 {
+                    let c_slow = c.narrow(2, 0, c_carry - half)?;
+                    let c_fast = c.narrow(2, c_carry - half, half)?;
+                    let slow_shift = self.left_neighbor(&c_slow)?;
+                    let fast_shift = self.k_left_neighbor(&c_fast, self.nca_cfg.carry_skip_stride)?;
+                    Tensor::cat(&[&slow_shift, &fast_shift], 2)?
+                } else {
+                    self.left_neighbor(&c)?
+                }
+            } else {
+                self.left_neighbor(&c)?
+            };
+
+            let base_h = if self.nca_cfg.leaky_lambda > 0.0 {
+                (h * (1.0 - self.nca_cfg.leaky_lambda.clamp(0.0, 0.99) as f64))?
+            } else {
+                h
+            };
+            Tensor::cat(&[&base_h, &shifted_c], 2)?
+        } else if self.nca_cfg.leaky_lambda > 0.0 {
             (x * (1.0 - self.nca_cfg.leaky_lambda.clamp(0.0, 0.99) as f64))?
         } else {
             x.clone()
@@ -517,20 +671,43 @@ impl NeuralCellularAutomaton {
         }
 
         // 6. State normalization: projects onto compact invariant manifold (prevents open-phase energy explosion)
-        let interim_x = if self.nca_cfg.state_norm != "none" {
-            Self::apply_state_norm_with_threshold(&interim_x, &self.nca_cfg.state_norm, self.nca_cfg.bound_threshold)?
-        } else {
-            interim_x
+        let interim_x = match self.nca_cfg.state_norm.as_str() {
+            "bounded_h_only" => {
+                if self.nca_cfg.carry_channels > 0 {
+                    let (_, _, c_total) = interim_x.dims3()?;
+                    let c_carry = self.nca_cfg.carry_channels.min(c_total);
+                    let c_hidden = c_total - c_carry;
+                    let h = interim_x.narrow(2, 0, c_hidden)?;
+                    let c = interim_x.narrow(2, c_hidden, c_carry)?;
+                    let norm_h = Self::apply_state_norm_with_threshold(&h, "bounded", self.nca_cfg.bound_threshold)?;
+                    Tensor::cat(&[&norm_h, &c], 2)?
+                } else {
+                    Self::apply_state_norm_with_threshold(&interim_x, "bounded", self.nca_cfg.bound_threshold)?
+                }
+            }
+            "none" => interim_x,
+            other => Self::apply_state_norm_with_threshold(&interim_x, other, self.nca_cfg.bound_threshold)?,
         };
 
         // 7. Navier-Stokes physical viscous dissipation: \nu * \Delta x * \alpha
         // Scales consistently with time step alpha and employs adaptive substepping
-        let new_x = if self.nca_cfg.viscosity > 0.0 {
+        let mut new_x = if self.nca_cfg.viscosity > 0.0 {
             let effective_diff = self.nca_cfg.viscosity.max(0.0) * self.nca_cfg.step_size;
             self.dissipate(&interim_x, effective_diff)?
         } else {
             interim_x
         };
+
+        // 7b. Carry register quantization / drift mitigation
+        if self.nca_cfg.carry_channels > 0 && self.nca_cfg.carry_quantization != "none" {
+            let (_, _, c_total) = new_x.dims3()?;
+            let c_carry = self.nca_cfg.carry_channels.min(c_total);
+            let c_hidden = c_total - c_carry;
+            let h = new_x.narrow(2, 0, c_hidden)?;
+            let c = new_x.narrow(2, c_hidden, c_carry)?;
+            let c_quantized = Self::quantize_carry(&c, &self.nca_cfg.carry_quantization)?;
+            new_x = Tensor::cat(&[&h, &c_quantized], 2)?;
+        }
 
         // 8. Macro hierarchy or recursive feedback loop:
         let new_slow_state = if self.nca_cfg.is_hierarchy() {
@@ -623,6 +800,7 @@ impl NeuralCellularAutomaton {
                 x: new_x,
                 config: self.field_cfg.clone(),
                 slow_state: new_slow_state,
+                seed: field.seed.clone(),
                 tick: field.tick + 1,
             },
             update_norm,
@@ -642,12 +820,269 @@ impl NeuralCellularAutomaton {
 
     /// Unrolls development autonomously for T steps
     pub fn develop(&self, initial: &MorphogenicField, steps: usize, device: &Device) -> Result<MorphogenicField> {
+        self.develop_with_intervention(initial, steps, None, device)
+    }
+
+    /// Unrolls development autonomously for T steps with optional controlled lesions/interventions
+    pub fn develop_with_intervention(
+        &self,
+        initial: &MorphogenicField,
+        steps: usize,
+        intervention: Option<&crate::intervention::InterventionConfig>,
+        device: &Device,
+    ) -> Result<MorphogenicField> {
         let mut current = initial.clone();
-        for _ in 0..steps {
+        for s in 0..steps {
+            if let Some(interv) = intervention {
+                if interv.is_active() {
+                    current.x = interv.apply_to_state(s, &current.x, device)?;
+                }
+            }
             current = self.step_field(&current, device)?;
+        }
+        if let Some(interv) = intervention {
+            if interv.is_active() {
+                current.x = interv.apply_to_state(steps, &current.x, device)?;
+            }
         }
         Ok(current)
     }
+
+    /// Zero-heap double-buffered development for ARM64 inference and benchmarking.
+    /// Bit-for-bit mathematically equivalent to `develop`.
+    #[allow(dead_code)]
+    pub fn develop_ping_pong(
+        &self,
+        pp: &mut PingPongField,
+        steps: usize,
+        device: &Device,
+    ) -> Result<()> {
+        let b = pp.batch_size;
+        let l = pp.seq_len;
+        let c = pp.channels;
+        anyhow::ensure!(c == self.field_cfg.channels, "ping-pong channels mismatch");
+
+        // Fast path for standard causal stencil without macro hierarchy / feedback / viscosity / spatial norm
+        let can_use_fast_fused = self.nca_cfg.causal_stencil
+            && !self.nca_cfg.is_hierarchy()
+            && !self.nca_cfg.has_feedback()
+            && !self.nca_cfg.coord_channel
+            && !self.nca_cfg.persistent_input
+            && self.nca_cfg.state_norm == "none"
+            && self.nca_cfg.viscosity <= 0.0
+            && self.nca_cfg.update_rate >= 0.999;
+
+        if can_use_fast_fused {
+            let alpha = (self.nca_cfg.step_size * self.nca_cfg.damping_alpha) as f32;
+            let leaky_lambda = self.nca_cfg.leaky_lambda.clamp(0.0, 0.99) as f32;
+            let decay = 1.0 - leaky_lambda;
+            let c_carry = self.nca_cfg.carry_channels.min(c);
+            let c_hidden = c - c_carry;
+            let mut perc_vec = vec![0.0f32; b * l * 3 * c];
+
+            for _ in 0..steps {
+                let (active, dst) = pp.split_mut();
+
+                // 1. Perception stencil gathering: [x_i, x_{i-1}, x_i - x_{i-1}]
+                for bi in 0..b {
+                    let b_offset = bi * l * c;
+                    let p_b_offset = bi * l * 3 * c;
+                    for i in 0..l {
+                        let cell_offset = b_offset + i * c;
+                        let p_cell_offset = p_b_offset + i * 3 * c;
+
+                        for ch in 0..c {
+                            let curr = active[cell_offset + ch];
+                            let left = if i > 0 {
+                                active[b_offset + (i - 1) * c + ch]
+                            } else {
+                                0.0
+                            };
+                            let diff = curr - left;
+
+                            perc_vec[p_cell_offset + ch] = curr;
+                            perc_vec[p_cell_offset + c + ch] = left;
+                            perc_vec[p_cell_offset + 2 * c + ch] = diff;
+                        }
+                    }
+                }
+
+                // 2. Linear MLP projections
+                let perc_tensor = Tensor::from_slice(&perc_vec, (b, l, 3 * c), device)?;
+                let h1 = self.dense1.forward(&perc_tensor)?;
+                let h1_act = match self.nca_cfg.activation.as_str() {
+                    "tanh" => h1.tanh()?,
+                    _ => candle_nn::Activation::Gelu.forward(&h1)?,
+                };
+                let delta = self.dense_delta.forward(&h1_act)?.tanh()?;
+                let gate = candle_nn::ops::sigmoid(&self.dense_gate.forward(&h1_act)?)?;
+                let gated_delta = delta.mul(&gate)?;
+                let delta_vec = gated_delta.flatten_all()?.to_vec1::<f32>()?;
+
+                // 3. Fused carry advection + integration + quantization into inactive buffer
+
+                for bi in 0..b {
+                    let b_offset = bi * l * c;
+                    for i in 0..l {
+                        let cell_offset = b_offset + i * c;
+
+                        // Stationary hidden channels: h_i * (1 - lambda)
+                        for ch in 0..c_hidden {
+                            let idx = cell_offset + ch;
+                            let base_val = if leaky_lambda > 0.0 {
+                                active[idx] * decay
+                            } else {
+                                active[idx]
+                            };
+                            dst[idx] = base_val + alpha * delta_vec[idx];
+                        }
+
+                        // Carry channels: hyperbolic advection shift
+                        if c_carry > 0 {
+                            let half = if self.nca_cfg.carry_bidirectional {
+                                c_carry / 2
+                            } else {
+                                c_carry
+                            };
+
+                            for c_idx in 0..c_carry {
+                                let ch = c_hidden + c_idx;
+                                let idx = cell_offset + ch;
+
+                                let base_val = if self.nca_cfg.carry_bidirectional {
+                                    if c_idx < half {
+                                        // Forward carry
+                                        if self.nca_cfg.carry_skip_stride > 1 {
+                                            let half_fwd = half / 2;
+                                            if c_idx < half - half_fwd {
+                                                if i >= 1 { active[b_offset + (i - 1) * c + ch] } else { 0.0 }
+                                            } else {
+                                                let k = self.nca_cfg.carry_skip_stride;
+                                                if i >= k { active[b_offset + (i - k) * c + ch] } else { 0.0 }
+                                            }
+                                        } else {
+                                            if i >= 1 { active[b_offset + (i - 1) * c + ch] } else { 0.0 }
+                                        }
+                                    } else {
+                                        // Backward carry
+                                        let bwd_len = c_carry - half;
+                                        let bwd_idx = c_idx - half;
+                                        if self.nca_cfg.carry_skip_stride > 1 {
+                                            let half_bwd = bwd_len / 2;
+                                            if bwd_idx < bwd_len - half_bwd {
+                                                if i + 1 < l { active[b_offset + (i + 1) * c + ch] } else { 0.0 }
+                                            } else {
+                                                let k = self.nca_cfg.carry_skip_stride;
+                                                if i + k < l { active[b_offset + (i + k) * c + ch] } else { 0.0 }
+                                            }
+                                        } else {
+                                            if i + 1 < l { active[b_offset + (i + 1) * c + ch] } else { 0.0 }
+                                        }
+                                    }
+                                } else if self.nca_cfg.carry_skip_stride > 1 {
+                                    let half_fwd = c_carry / 2;
+                                    if c_idx < c_carry - half_fwd {
+                                        if i >= 1 { active[b_offset + (i - 1) * c + ch] } else { 0.0 }
+                                    } else {
+                                        let k = self.nca_cfg.carry_skip_stride;
+                                        if i >= k { active[b_offset + (i - k) * c + ch] } else { 0.0 }
+                                    }
+                                } else {
+                                    if i >= 1 { active[b_offset + (i - 1) * c + ch] } else { 0.0 }
+                                };
+
+                                let mut updated = base_val + alpha * delta_vec[idx];
+                                match self.nca_cfg.carry_quantization.as_str() {
+                                    "ste_sign" | "sign" => {
+                                        updated = if updated > 0.0 { 1.0 } else if updated < 0.0 { -1.0 } else { 0.0 };
+                                    }
+                                    "ste_round" | "round" => {
+                                        updated = updated.round();
+                                    }
+                                    "bistable" => {
+                                        updated = updated + 0.1 * updated * (1.0 - updated * updated);
+                                    }
+                                    _ => {}
+                                }
+                                dst[idx] = updated;
+                            }
+                        }
+                    }
+                }
+
+                pp.toggle();
+            }
+        } else {
+            // General fallback for non-causal / hierarchical configurations
+            for _ in 0..steps {
+                let morph = pp.to_morphogenic_field(device)?;
+                let next_morph = self.step_field(&morph, device)?;
+                let flat = next_morph.x.flatten_all()?.to_vec1::<f32>()?;
+                pp.inactive_mut_slice().copy_from_slice(&flat);
+                pp.toggle();
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Single step returning (new_field, delta_global, delta_local)
+    /// where delta_global is the scale-invariant RMS displacement,
+    /// and delta_local is the maximum normalized displacement of any individual cell.
+    #[allow(dead_code)]
+    pub fn step_with_observables(
+        &self,
+        field: &MorphogenicField,
+        device: &Device,
+    ) -> Result<(MorphogenicField, f32, f32)> {
+        let (next_field, delta_global) = self.step_with_forcing(field, None, device)?;
+        let total_displacement = (&next_field.x - &field.x)?;
+        let cell_sq = total_displacement.sqr()?.mean(candle_core::D::Minus1)?; // [B, L]
+        let delta_local = cell_sq.flatten_all()?.max(0)?.to_scalar::<f32>()?.sqrt();
+        Ok((next_field, delta_global, delta_local))
+    }
+
+    /// Autonomous recurrent unroll with Dual-Metric Intrinsic Halting (Theorem 6).
+    /// Halts when both delta_global < eps_global AND delta_local < eps_local
+    /// for persistence_w consecutive steps, once step >= min_steps.
+    /// Returns (final_field, total_steps_executed, converged).
+    #[allow(dead_code)]
+    pub fn develop_adaptive_dual(
+        &self,
+        initial: &MorphogenicField,
+        min_steps: usize,
+        max_steps: usize,
+        persistence_w: usize,
+        eps_global: f32,
+        eps_local: f32,
+        device: &Device,
+    ) -> Result<(MorphogenicField, usize, bool)> {
+        let mut current = initial.clone();
+        let mut consecutive_converged = 0usize;
+        let mut executed_steps = max_steps;
+        let mut did_converge = false;
+
+        for s in 1..=max_steps {
+            let (next_field, delta_global, delta_local) = self.step_with_observables(&current, device)?;
+            current = next_field;
+
+            if s >= min_steps {
+                if delta_global < eps_global && delta_local < eps_local {
+                    consecutive_converged += 1;
+                    if consecutive_converged >= persistence_w {
+                        executed_steps = s;
+                        did_converge = true;
+                        break;
+                    }
+                } else {
+                    consecutive_converged = 0;
+                }
+            }
+        }
+
+        Ok((current, executed_steps, did_converge))
+    }
+
 
     /// Unrolls development with a sequence of external forcing tensors
     #[allow(dead_code)]
@@ -1138,16 +1573,14 @@ mod tests {
         for c in 0..channels {
             x_pert_vals[0][8][c] += 1.0;
         }
-        let f2 = MorphogenicField {
-            x: Tensor::from_vec(
+        let f2 = MorphogenicField::from_tensor(
+            Tensor::from_vec(
                 x_pert_vals.into_iter().flatten().flatten().collect(),
                 (1, seq_len, channels),
                 &dev,
             )?,
-            config: field_cfg.clone(),
-            slow_state: None,
-            tick: 0,
-        };
+            &field_cfg,
+        );
 
         // Step both fields forward by multiple developmental ticks
         let mut curr1 = f1;
@@ -1189,4 +1622,137 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_quantize_carry_ops() -> Result<()> {
+        let dev = Device::Cpu;
+        let t = Tensor::from_slice(&[-1.4f32, -0.6, 0.0, 0.2, 0.7, 1.4], (1, 6, 1), &dev)?;
+
+        // 1. None
+        let q_none = NeuralCellularAutomaton::quantize_carry(&t, "none")?;
+        assert_eq!(q_none.to_vec3::<f32>()?, t.to_vec3::<f32>()?);
+
+        // 2. STE Round
+        let q_round = NeuralCellularAutomaton::quantize_carry(&t, "ste_round")?;
+        let round_vals = q_round.to_vec3::<f32>()?;
+        assert_eq!(round_vals, vec![vec![vec![-1.0], vec![-1.0], vec![0.0], vec![0.0], vec![1.0], vec![1.0]]]);
+
+        // 3. STE Sign
+        let q_sign = NeuralCellularAutomaton::quantize_carry(&t, "ste_sign")?;
+        let sign_vals = q_sign.to_vec3::<f32>()?;
+        assert_eq!(sign_vals, vec![vec![vec![-1.0], vec![-1.0], vec![0.0], vec![1.0], vec![1.0], vec![1.0]]]);
+
+        // 4. Bistable
+        let q_bistable = NeuralCellularAutomaton::quantize_carry(&t, "bistable")?;
+        let bistable_vals = q_bistable.to_vec3::<f32>()?;
+        // For 0.7: 0.7 + 0.1 * 0.7 * (1 - 0.49) = 0.7 + 0.0357 = 0.7357 (driven closer to 1.0)
+        assert!((bistable_vals[0][4][0] - 0.7357).abs() < 1e-3);
+        // For 1.4: 1.4 + 0.1 * 1.4 * (1 - 1.96) = 1.4 - 0.1344 = 1.2656 (restored toward 1.0)
+        assert!((bistable_vals[0][5][0] - 1.2656).abs() < 1e-3);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_develop_adaptive_dual_halting() -> Result<()> {
+        let dev = Device::Cpu;
+        let varmap = VarMap::new();
+        let vs = candle_nn::VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+
+        let nca_cfg = NcaConfig {
+            hidden_dim: 32,
+            step_size: 0.5,
+            update_rate: 1.0,
+            activation: "gelu".to_string(),
+            viscosity: 0.05,
+            leaky_lambda: 0.1, // Strong contraction ensures settling
+            causal_stencil: true,
+            carry_channels: 16,
+            carry_skip_stride: 4,
+            carry_bidirectional: true,
+            carry_quantization: "none".to_string(),
+            ..NcaConfig::default()
+        };
+        let field_cfg = FieldConfig {
+            seq_len: 16,
+            channels: 32,
+            periodic_boundary: false,
+        };
+
+        let nca = NeuralCellularAutomaton::new(vs, &nca_cfg, &field_cfg)?;
+        let initial = MorphogenicField::zeros(1, &field_cfg, &dev)?;
+
+        // Run adaptive halting with W=3, eps_global=0.05, eps_local=0.1
+        let (_field, steps, did_converge) = nca.develop_adaptive_dual(
+            &initial,
+            4,   // min_steps
+            24,  // max_steps
+            3,   // persistence_w
+            0.05, // eps_global
+            0.10, // eps_local
+            &dev,
+        )?;
+
+        assert!(steps >= 4, "Must observe min_steps warmup");
+        assert!(steps <= 24, "Cannot exceed max_steps");
+        assert!(did_converge, "Field should converge under leaky contraction");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_ping_pong_exact_numerical_equivalence() -> Result<()> {
+        let dev = Device::Cpu;
+        let varmap = VarMap::new();
+        let vs = candle_nn::VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+
+        let nca_cfg = NcaConfig {
+            hidden_dim: 96,
+            step_size: 0.5,
+            update_rate: 1.0,
+            activation: "gelu".to_string(),
+            viscosity: 0.0,
+            leaky_lambda: 0.0,
+            causal_stencil: true,
+            carry_channels: 32,
+            carry_skip_stride: 4,
+            carry_bidirectional: true,
+            carry_quantization: "ste_sign".to_string(),
+            ..NcaConfig::default()
+        };
+        let field_cfg = FieldConfig {
+            seq_len: 16,
+            channels: 64,
+            periodic_boundary: false,
+        };
+
+        let nca = NeuralCellularAutomaton::new(vs, &nca_cfg, &field_cfg)?;
+
+        // Create initial random field [1, 16, 64]
+        let initial_data = Tensor::randn(0.0f32, 1.0f32, (1, 16, 64), &dev)?;
+        let initial_field = MorphogenicField::from_tensor(initial_data, &field_cfg);
+
+        // Run naive develop for 8 steps
+        let naive_out = nca.develop(&initial_field, 8, &dev)?;
+
+        // Run ping-pong develop for 8 steps
+        let mut pp = PingPongField::from_morphogenic_field(&initial_field)?;
+        nca.develop_ping_pong(&mut pp, 8, &dev)?;
+        let pp_out = pp.to_morphogenic_field(&dev)?;
+
+        // Assert exact numerical equivalence
+        let diff = (&naive_out.x - &pp_out.x)?.abs()?;
+        let max_diff = diff.flatten_all()?.max(0)?.to_scalar::<f32>()?;
+
+        assert!(
+            max_diff < 1e-5,
+            "PingPongField developed output diverged from naive develop: max_diff = {}",
+            max_diff
+        );
+
+        Ok(())
+    }
 }
+
+
+

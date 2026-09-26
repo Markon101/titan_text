@@ -1,6 +1,8 @@
 //! Bounded CPU audit of the September 15 blackboard experiment.
 //! Run: cargo run --release --locked --offline --example blackboard_audit -- OUTPUT.json
 #![allow(dead_code)]
+#[path = "../src/ascii_corpus.rs"]
+pub mod ascii_corpus;
 #[path = "../src/baselines.rs"]
 mod baselines;
 #[path = "../src/dataset.rs"]

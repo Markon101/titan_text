@@ -208,6 +208,7 @@ impl<'a> LatentExecutor<'a> {
                     x: modified_x,
                     config: field.config.clone(),
                     slow_state: field.slow_state.clone(),
+                    seed: field.seed.clone(),
                     tick: field.tick,
                 },
                 metrics,
@@ -370,6 +371,7 @@ impl<'a> LatentExecutor<'a> {
             x: new_x,
             config: field.config.clone(),
             slow_state: field.slow_state.clone(),
+            seed: field.seed.clone(),
             tick: field.tick + 1,
         };
 

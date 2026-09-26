@@ -35,6 +35,8 @@ pub struct MorphogenicField {
     pub config: FieldConfig,
     /// Macroscopic slow feedback state: [batch, 1, channels] or [batch, L_M, channels_M]
     pub slow_state: Option<Tensor>,
+    /// Persistent initial seed input embedding: [batch, seq_len, channels]
+    pub seed: Option<Tensor>,
     /// Developmental tick counter
     pub tick: usize,
 }
@@ -47,18 +49,28 @@ impl MorphogenicField {
             x,
             config: config.clone(),
             slow_state: None,
+            seed: None,
             tick: 0,
         })
     }
 
     /// Creates a field from an existing tensor
     pub fn from_tensor(x: Tensor, config: &FieldConfig) -> Self {
+        let seed = x.clone();
         Self {
             x,
             config: config.clone(),
             slow_state: None,
+            seed: Some(seed),
             tick: 0,
         }
+    }
+
+    /// Attach a persistent seed tensor
+    #[allow(dead_code)]
+    pub fn with_seed(mut self, seed: Tensor) -> Self {
+        self.seed = Some(seed);
+        self
     }
 
     /// Attach a macroscopic slow feedback state
@@ -154,6 +166,7 @@ impl MorphogenicField {
             x: perturbed_x,
             config: self.config.clone(),
             slow_state: self.slow_state.clone(),
+            seed: self.seed.clone(),
             tick: self.tick,
         })
     }
@@ -178,6 +191,7 @@ impl MorphogenicField {
             x: new_x,
             config: self.config.clone(),
             slow_state: self.slow_state.clone(),
+            seed: self.seed.clone(),
             tick: self.tick,
         })
     }
@@ -350,6 +364,92 @@ impl MorphogenicField {
     }
 }
 
+/// Double-buffered, zero-allocation recurrent state engine for inference and benchmarks.
+#[allow(dead_code)]
+#[derive(Clone, Debug)]
+pub struct PingPongField {
+    /// Pre-allocated contiguous flat state buffer A: [B * L * C]
+    pub buffer_a: Vec<f32>,
+    /// Pre-allocated contiguous flat state buffer B: [B * L * C]
+    pub buffer_b: Vec<f32>,
+    /// Batch size B
+    pub batch_size: usize,
+    /// Sequence length L
+    pub seq_len: usize,
+    /// Channel count C
+    pub channels: usize,
+    /// Parity toggle: true = active is A, false = active is B
+    pub ping: bool,
+    /// Configuration
+    pub config: FieldConfig,
+    /// Recurrent tick counter
+    pub tick: usize,
+}
+
+#[allow(dead_code)]
+impl PingPongField {
+    /// Initializes PingPongField from an existing MorphogenicField
+    pub fn from_morphogenic_field(field: &MorphogenicField) -> Result<Self> {
+        let (b, l, c) = field.x.dims3()?;
+        let flat_data = field.x.flatten_all()?.to_vec1::<f32>()?;
+        let buffer_a = flat_data.clone();
+        let buffer_b = vec![0.0f32; b * l * c];
+
+        Ok(Self {
+            buffer_a,
+            buffer_b,
+            batch_size: b,
+            seq_len: l,
+            channels: c,
+            ping: true,
+            config: field.config.clone(),
+            tick: field.tick,
+        })
+    }
+
+    /// Converts active buffer back to an immutable MorphogenicField Tensor
+    pub fn to_morphogenic_field(&self, device: &Device) -> Result<MorphogenicField> {
+        let active_buf = if self.ping { &self.buffer_a } else { &self.buffer_b };
+        let x = Tensor::from_vec(
+            active_buf.clone(),
+            (self.batch_size, self.seq_len, self.channels),
+            device,
+        )?;
+        Ok(MorphogenicField {
+            x,
+            config: self.config.clone(),
+            slow_state: None,
+            seed: None,
+            tick: self.tick,
+        })
+    }
+
+    /// Returns a slice to the active state buffer
+    pub fn active_slice(&self) -> &[f32] {
+        if self.ping { &self.buffer_a } else { &self.buffer_b }
+    }
+
+    /// Returns a mutable slice to the inactive destination buffer
+    pub fn inactive_mut_slice(&mut self) -> &mut [f32] {
+        if self.ping { &mut self.buffer_b } else { &mut self.buffer_a }
+    }
+
+    /// Returns disjoint (active_slice, inactive_mut_slice) pair for zero-copy in-place updates.
+    pub fn split_mut(&mut self) -> (&[f32], &mut [f32]) {
+        if self.ping {
+            (&self.buffer_a[..], &mut self.buffer_b[..])
+        } else {
+            (&self.buffer_b[..], &mut self.buffer_a[..])
+        }
+    }
+
+    /// Toggles active/inactive buffer roles and increments tick
+    pub fn toggle(&mut self) {
+        self.ping = !self.ping;
+        self.tick += 1;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -450,6 +550,36 @@ mod tests {
         let decomp = field.spatial_frequency_decomposition()?;
         assert!((energy - decomp.total_energy).abs() < 1e-4, "Energy {} != Decomp total {}", energy, decomp.total_energy);
         assert!(((decomp.pct_low + decomp.pct_mid + decomp.pct_high) - 100.0).abs() < 1e-3);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_ping_pong_field_roundtrip_and_toggle() -> Result<()> {
+        let dev = Device::Cpu;
+        let cfg = FieldConfig { seq_len: 16, channels: 4, periodic_boundary: false };
+        let data = vec![vec![vec![1.5f32; 4]; 16]; 2];
+        let t = Tensor::new(data, &dev)?;
+        let morph = MorphogenicField::from_tensor(t, &cfg);
+
+        let mut pp = PingPongField::from_morphogenic_field(&morph)?;
+        assert_eq!(pp.batch_size, 2);
+        assert_eq!(pp.seq_len, 16);
+        assert_eq!(pp.channels, 4);
+        assert!(pp.ping);
+        assert_eq!(pp.active_slice()[0], 1.5);
+
+        // Modify inactive buffer and toggle
+        pp.inactive_mut_slice()[0] = 3.5;
+        pp.toggle();
+        assert!(!pp.ping);
+        assert_eq!(pp.active_slice()[0], 3.5);
+        assert_eq!(pp.tick, 1);
+
+        // Convert back to MorphogenicField
+        let restored = pp.to_morphogenic_field(&dev)?;
+        let first_val = restored.x.flatten_all()?.to_vec1::<f32>()?[0];
+        assert_eq!(first_val, 3.5);
 
         Ok(())
     }

@@ -22,6 +22,8 @@ pub enum TaskKind {
     IteratedParityDense,
     IteratedParityCarrier,
     IteratedSumDense,
+    DyckPushdown,
+    Ascii,
 }
 
 impl TaskKind {
@@ -29,6 +31,7 @@ impl TaskKind {
         match s.to_lowercase().as_str() {
             "text" => Some(Self::Text),
             "dyck" => Some(Self::Dyck),
+            "ascii" | "ascii-art" | "ascii_art" => Some(Self::Ascii),
             "delayed-recall" | "delayed_recall" => Some(Self::DelayedRecall),
             "bracket-depth" | "bracket_depth" | "bracket" => Some(Self::BracketDepth),
             "parity" => Some(Self::Parity),
@@ -41,6 +44,7 @@ impl TaskKind {
             "iterated-parity-dense" | "ippr-dense" | "dense-parity" => Some(Self::IteratedParityDense),
             "iterated-parity-carrier" | "ippr-carrier" | "carrier-parity" => Some(Self::IteratedParityCarrier),
             "iterated-sum-dense" | "chunked-sum" | "sum-dense" | "iterated-sum" => Some(Self::IteratedSumDense),
+            "dyck-pushdown" | "dyck_pushdown" | "dyck-formal" | "dyck_formal" | "pushdown" => Some(Self::DyckPushdown),
             _ => None,
         }
     }
@@ -49,6 +53,7 @@ impl TaskKind {
         match self {
             Self::Text => "text",
             Self::Dyck => "dyck",
+            Self::Ascii => "ascii",
             Self::DelayedRecall => "delayed-recall",
             Self::BracketDepth => "bracket-depth",
             Self::Parity => "parity",
@@ -61,6 +66,7 @@ impl TaskKind {
             Self::IteratedParityDense => "iterated-parity-dense",
             Self::IteratedParityCarrier => "iterated-parity-carrier",
             Self::IteratedSumDense => "iterated-sum-dense",
+            Self::DyckPushdown => "dyck-pushdown",
         }
     }
 
@@ -174,7 +180,7 @@ impl TaskEngine {
             batch_size.checked_mul(seq_len).is_some(),
             "task dimensions overflow"
         );
-        if matches!(kind, TaskKind::Text | TaskKind::Dyck) {
+        if matches!(kind, TaskKind::Text | TaskKind::Dyck | TaskKind::Ascii) {
             // Historical next-token objectives remain explicitly legacy controls.
             let ds = crate::dataset::SequenceDataset::new(kind.name());
             let (inputs, targets) = if is_val {
@@ -420,6 +426,248 @@ impl TaskEngine {
         })
     }
 
+    /// Generates a structured, stratified batch of formal Dyck-k pushdown examples
+    /// with known stack depths D, alphabet size k_alph, and optional adversarial scrambling.
+    pub fn generate_stratified_dyck_batch(
+        &self,
+        batch_size: usize,
+        seq_len: usize,
+        depth: usize,
+        k_alph: usize,
+        scramble: bool,
+        seed: usize,
+        device: &Device,
+    ) -> Result<TaskBatch> {
+        ensure!(batch_size > 0, "batch_size must be positive");
+        ensure!(seq_len >= 16, "DyckPushdown requires seq_len >= 16");
+        ensure!(depth >= 1 && depth * 2 + 2 <= seq_len, "depth {} incompatible with seq_len {}", depth, seq_len);
+        let k_alph = k_alph.clamp(1, 4);
+
+        let pairs_all = [('(', ')'), ('[', ']'), ('{', '}'), ('<', '>')];
+        let pairs = &pairs_all[..k_alph];
+
+        let mut rng = StdRng::seed_from_u64(seed as u64 ^ 0xd4c83f912a7e5b01);
+        let mut inputs = Vec::with_capacity(batch_size * seq_len);
+        let mut targets = Vec::with_capacity(batch_size * seq_len);
+        let mut masks = Vec::with_capacity(batch_size * seq_len);
+        let mut depths = Vec::with_capacity(batch_size);
+
+        let mut prompt_text = String::new();
+        let mut target_text = String::new();
+
+        for b in 0..batch_size {
+            let mut in_chars = vec!['.'; seq_len];
+            let mut tgt_chars = vec!['.'; seq_len];
+            let mut m_vec = vec![0.0f32; seq_len];
+
+            // Sample D open brackets
+            let mut open_brackets: Vec<char> = (0..depth)
+                .map(|_| pairs[rng.gen_range(0..pairs.len())].0)
+                .collect();
+
+            // Build prompt
+            let mut pos = 0;
+            for &ob in &open_brackets {
+                if pos < seq_len {
+                    in_chars[pos] = ob;
+                    pos += 1;
+                }
+                // Occasionally insert small balanced subtree if room permits
+                if pos + depth + 4 < seq_len && rng.gen_bool(0.2) {
+                    let p = pairs[rng.gen_range(0..pairs.len())];
+                    in_chars[pos] = p.0;
+                    in_chars[pos + 1] = p.1;
+                    pos += 2;
+                }
+            }
+
+            // Query delimiter '?'
+            if pos < seq_len {
+                in_chars[pos] = '?';
+                pos += 1;
+            }
+
+            // If scramble requested (adversarial null control for FC-3):
+            // permute open brackets so LIFO property is destroyed
+            if scramble {
+                open_brackets.shuffle(&mut rng);
+            }
+
+            // LIFO targets
+            for &ob in open_brackets.iter().rev() {
+                if pos < seq_len {
+                    let cl = match ob {
+                        '(' => ')',
+                        '[' => ']',
+                        '{' => '}',
+                        '<' => '>',
+                        _ => unreachable!(),
+                    };
+                    in_chars[pos] = '?';
+                    tgt_chars[pos] = cl;
+                    m_vec[pos] = 1.0;
+                    pos += 1;
+                }
+            }
+
+            if b == 0 {
+                prompt_text = in_chars.iter().collect();
+                target_text = tgt_chars.iter().collect();
+            }
+
+            inputs.extend(
+                self.vocab
+                    .encode(&in_chars.iter().collect::<String>())
+                    .into_iter()
+                    .map(|v| v as u32),
+            );
+            targets.extend(
+                self.vocab
+                    .encode(&tgt_chars.iter().collect::<String>())
+                    .into_iter()
+                    .map(|v| v as u32),
+            );
+            masks.extend(m_vec);
+            depths.push(depth);
+        }
+
+        Ok(TaskBatch {
+            inputs: Tensor::from_vec(inputs, (batch_size, seq_len), device)?,
+            targets: Tensor::from_vec(targets, (batch_size, seq_len), device)?,
+            loss_mask: Tensor::from_vec(masks, (batch_size, seq_len), device)?,
+            prompt_text,
+            target_text,
+            carry_depths: Some(depths),
+        })
+    }
+
+    /// Generates an adversarial balanced Dyck-k pushdown benchmark batch:
+    /// - Uniform non-repeating transitions between open brackets (eliminates local bigram bias)
+    /// - No random subtree insertions (depth is strictly D, distances are strictly deterministic)
+    /// - Explicit distracter / transport gap G between prompt and queries
+    /// - True derangement for scramble control (guaranteed 0 fixed points, destroying LIFO order)
+    pub fn generate_adversarial_balanced_dyck_batch(
+        &self,
+        batch_size: usize,
+        seq_len: usize,
+        depth: usize,
+        k_alph: usize,
+        gap: usize,
+        scramble: bool,
+        seed: usize,
+        device: &Device,
+    ) -> Result<TaskBatch> {
+        ensure!(batch_size > 0, "batch_size must be positive");
+        ensure!(seq_len >= 16, "DyckPushdown requires seq_len >= 16");
+        ensure!(
+            depth >= 1 && depth * 2 + gap + 2 <= seq_len,
+            "depth {} with gap {} incompatible with seq_len {}",
+            depth,
+            gap,
+            seq_len
+        );
+        let k_alph = k_alph.clamp(1, 4);
+
+        let pairs_all = [('(', ')'), ('[', ']'), ('{', '}'), ('<', '>')];
+        let pairs = &pairs_all[..k_alph];
+
+        let mut rng = StdRng::seed_from_u64(seed as u64 ^ 0xd4c83f912a7e5b01);
+        let mut inputs = Vec::with_capacity(batch_size * seq_len);
+        let mut targets = Vec::with_capacity(batch_size * seq_len);
+        let mut masks = Vec::with_capacity(batch_size * seq_len);
+        let mut depths = Vec::with_capacity(batch_size);
+
+        let mut prompt_text = String::new();
+        let mut target_text = String::new();
+
+        for b in 0..batch_size {
+            let mut in_chars = vec!['.'; seq_len];
+            let mut tgt_chars = vec!['.'; seq_len];
+            let mut m_vec = vec![0.0f32; seq_len];
+
+            // Sample open brackets:
+            // Ensure no two consecutive brackets are identical (eliminates repetition shortcut)
+            // and transitions between all pairs are uniformly distributed.
+            let mut open_brackets = Vec::with_capacity(depth);
+            let mut last_idx = rng.gen_range(0..pairs.len());
+            open_brackets.push(pairs[last_idx].0);
+            for _ in 1..depth {
+                if pairs.len() > 1 {
+                    let offset = rng.gen_range(1..pairs.len());
+                    let idx = (last_idx + offset) % pairs.len();
+                    open_brackets.push(pairs[idx].0);
+                    last_idx = idx;
+                } else {
+                    open_brackets.push(pairs[0].0);
+                }
+            }
+
+            // Layout in prompt:
+            // 0..depth: open brackets
+            for (i, &ob) in open_brackets.iter().enumerate() {
+                in_chars[i] = ob;
+            }
+
+            // Query delimiter '?' at position depth + gap
+            let q_delim_pos = depth + gap;
+            in_chars[q_delim_pos] = '?';
+
+            // Query brackets:
+            let mut query_brackets = open_brackets.clone();
+            if scramble {
+                // Strict derangement: rotate by shift in 1..len so no element remains in place
+                if query_brackets.len() > 1 {
+                    let shift = rng.gen_range(1..query_brackets.len());
+                    query_brackets.rotate_left(shift);
+                }
+            }
+
+            // LIFO closing targets at positions q_delim_pos + 1 + j
+            for (j, &ob) in query_brackets.iter().rev().enumerate() {
+                let q_pos = q_delim_pos + 1 + j;
+                let cl = match ob {
+                    '(' => ')',
+                    '[' => ']',
+                    '{' => '}',
+                    '<' => '>',
+                    _ => unreachable!(),
+                };
+                in_chars[q_pos] = '?';
+                tgt_chars[q_pos] = cl;
+                m_vec[q_pos] = 1.0;
+            }
+
+            if b == 0 {
+                prompt_text = in_chars.iter().collect();
+                target_text = tgt_chars.iter().collect();
+            }
+
+            inputs.extend(
+                self.vocab
+                    .encode(&in_chars.iter().collect::<String>())
+                    .into_iter()
+                    .map(|v| v as u32),
+            );
+            targets.extend(
+                self.vocab
+                    .encode(&tgt_chars.iter().collect::<String>())
+                    .into_iter()
+                    .map(|v| v as u32),
+            );
+            masks.extend(m_vec);
+            depths.push(depth);
+        }
+
+        Ok(TaskBatch {
+            inputs: Tensor::from_vec(inputs, (batch_size, seq_len), device)?,
+            targets: Tensor::from_vec(targets, (batch_size, seq_len), device)?,
+            loss_mask: Tensor::from_vec(masks, (batch_size, seq_len), device)?,
+            prompt_text,
+            target_text,
+            carry_depths: Some(depths),
+        })
+    }
+
     fn generate_row(
         kind: TaskKind,
         l: usize,
@@ -632,7 +880,62 @@ impl TaskEngine {
                     mask[q_pos] = 1.0;
                 }
             }
-            TaskKind::Text | TaskKind::Dyck => unreachable!(),
+            TaskKind::DyckPushdown => {
+                // Formal LIFO Pushdown Bracket Task (Dyck-4)
+                let pairs = [('(', ')'), ('[', ']'), ('{', '}'), ('<', '>')];
+                let max_depth = ((l - 4) / 3).max(2).min(8);
+                let depth = rng.gen_range(2..=max_depth);
+
+                let mut open_brackets = Vec::with_capacity(depth);
+                for _ in 0..depth {
+                    let (op, _) = pairs[rng.gen_range(0..pairs.len())];
+                    open_brackets.push(op);
+                }
+
+                input.fill('.');
+                target.fill('.');
+
+                let mut pos = 0;
+                for &ob in &open_brackets {
+                    if pos < l {
+                        input[pos] = ob;
+                        pos += 1;
+                    }
+                    if pos + depth + 4 < l && rng.gen_bool(0.25) {
+                        let (sub_o, sub_c) = pairs[rng.gen_range(0..pairs.len())];
+                        input[pos] = sub_o;
+                        input[pos + 1] = sub_c;
+                        pos += 2;
+                    }
+                }
+
+                if pos < l {
+                    input[pos] = '?';
+                    pos += 1;
+                }
+
+                let mut closings = Vec::with_capacity(depth);
+                for &ob in open_brackets.iter().rev() {
+                    let cl = match ob {
+                        '(' => ')',
+                        '[' => ']',
+                        '{' => '}',
+                        '<' => '>',
+                        _ => unreachable!(),
+                    };
+                    closings.push(cl);
+                }
+
+                for cl in closings {
+                    if pos < l {
+                        input[pos] = '?';
+                        target[pos] = cl;
+                        mask[pos] = 1.0;
+                        pos += 1;
+                    }
+                }
+            }
+            TaskKind::Text | TaskKind::Dyck | TaskKind::Ascii => unreachable!(),
         }
         (input, target, mask)
     }
@@ -1229,4 +1532,54 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_dyck_pushdown_oracle_and_scramble() -> Result<()> {
+        let dev = Device::Cpu;
+        let e = TaskEngine::new();
+
+        // 1. Test stratified Dyck-4 batch with depth D=4 at L=32
+        let batch = e.generate_stratified_dyck_batch(8, 32, 4, 4, false, 42, &dev)?;
+        assert_eq!(batch.carry_depths.as_ref().unwrap().len(), 8);
+        assert_eq!(batch.carry_depths.as_ref().unwrap()[0], 4);
+
+        let in_vec = batch.inputs.to_vec2::<u32>()?;
+        let tgt_vec = batch.targets.to_vec2::<u32>()?;
+        let mask_vec = batch.loss_mask.to_vec2::<f32>()?;
+
+        for b in 0..8 {
+            let in_str: String = in_vec[b].iter().map(|&id| e.vocab.decode(&[id as usize])).collect();
+            let tgt_str: String = tgt_vec[b].iter().map(|&id| e.vocab.decode(&[id as usize])).collect();
+
+            // Find delimiter '?'
+            let delim_idx = in_str.find('?').expect("Must contain query delimiter '?'");
+            assert!(delim_idx >= 4, "Prompt must contain at least D=4 open brackets");
+
+            // Emission slots: delim_idx + 1 .. delim_idx + 1 + D
+            let emission_indices: Vec<usize> = (delim_idx + 1..delim_idx + 5).collect();
+            for &idx in &emission_indices {
+                assert_eq!(in_str.chars().nth(idx).unwrap(), '?');
+                assert_eq!(mask_vec[b][idx], 1.0);
+                let cl = tgt_str.chars().nth(idx).unwrap();
+                assert!(cl == ')' || cl == ']' || cl == '}' || cl == '>');
+            }
+            // Other mask positions should be 0.0
+            for i in 0..32 {
+                if !emission_indices.contains(&i) {
+                    assert_eq!(mask_vec[b][i], 0.0, "Non-emission position {} had non-zero mask", i);
+                }
+            }
+        }
+
+        // 2. Test generic TaskKind::DyckPushdown generation
+        let gen_batch = e.generate_batch_seeded(TaskKind::DyckPushdown, 4, 24, false, 99, &dev)?;
+        let gen_mask = gen_batch.loss_mask.to_vec2::<f32>()?;
+        for row in &gen_mask {
+            let active_queries = row.iter().filter(|&&v| v == 1.0).count();
+            assert!(active_queries >= 2 && active_queries <= 8, "Expected 2..8 active query slots");
+        }
+
+        Ok(())
+    }
 }
+

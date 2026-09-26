@@ -10,6 +10,7 @@ pub struct SequenceDataset {
     val_phrases: Vec<String>,
     task_engine: TaskEngine,
     algorithmic_kind: Option<TaskKind>,
+    pub ascii_corpus: Option<crate::ascii_corpus::AsciiCorpus>,
 }
 
 impl SequenceDataset {
@@ -35,6 +36,7 @@ impl SequenceDataset {
                         val_phrases,
                         task_engine: TaskEngine::new(),
                         algorithmic_kind: None,
+                        ascii_corpus: None,
                     }
                 }
                 TaskKind::Dyck => {
@@ -46,6 +48,20 @@ impl SequenceDataset {
                         val_phrases: vec![],
                         task_engine: TaskEngine::new(),
                         algorithmic_kind: None,
+                        ascii_corpus: None,
+                    }
+                }
+                TaskKind::Ascii => {
+                    let vocab = Vocab::new_ascii_art();
+                    let corpus = crate::ascii_corpus::AsciiCorpus::new_balanced(50, 42);
+                    Self {
+                        vocab,
+                        task_name: "ascii".to_string(),
+                        train_phrases: vec![],
+                        val_phrases: vec![],
+                        task_engine: TaskEngine::new(),
+                        algorithmic_kind: None,
+                        ascii_corpus: Some(corpus),
                     }
                 }
                 other => {
@@ -57,6 +73,7 @@ impl SequenceDataset {
                         val_phrases: vec![],
                         task_engine: TaskEngine::new(),
                         algorithmic_kind: Some(other),
+                        ascii_corpus: None,
                     }
                 }
             }
@@ -80,6 +97,7 @@ impl SequenceDataset {
                 val_phrases,
                 task_engine: TaskEngine::new(),
                 algorithmic_kind: None,
+                ascii_corpus: None,
             }
         }
     }
@@ -167,6 +185,46 @@ impl SequenceDataset {
                 .task_engine
                 .generate_batch_seeded(kind, batch_size, seq_len, is_val, seed, device)?;
             return Ok((batch.inputs, batch.targets, Some(batch.loss_mask)));
+        }
+
+        if self.task_name == "ascii" {
+            let corpus = self.ascii_corpus.as_ref().expect("ascii corpus must exist");
+            let records = if is_val {
+                corpus.get_split(crate::ascii_corpus::Split::Validation)
+            } else {
+                corpus.get_split(crate::ascii_corpus::Split::Train)
+            };
+            let mut inputs = Vec::with_capacity(batch_size * seq_len);
+            let mut targets = Vec::with_capacity(batch_size * seq_len);
+            let mut mask = Vec::with_capacity(batch_size * seq_len);
+
+            for b in 0..batch_size {
+                let rec = &records[(b + seed) % records.len()];
+                let encoded = self.vocab.encode(&rec.full_text);
+                for i in 0..seq_len {
+                    if i < encoded.len() {
+                        inputs.push(encoded[i] as u32);
+                        if i + 1 < encoded.len() {
+                            targets.push(encoded[i + 1] as u32);
+                            mask.push(1.0f32);
+                        } else if i + 1 == encoded.len() {
+                            targets.push(self.vocab.eos_id as u32);
+                            mask.push(1.0f32);
+                        } else {
+                            targets.push(self.vocab.pad_id as u32);
+                            mask.push(0.0f32);
+                        }
+                    } else {
+                        inputs.push(self.vocab.pad_id as u32);
+                        targets.push(self.vocab.pad_id as u32);
+                        mask.push(0.0f32);
+                    }
+                }
+            }
+            let input_tensor = Tensor::from_slice(&inputs, (batch_size, seq_len), device)?;
+            let target_tensor = Tensor::from_slice(&targets, (batch_size, seq_len), device)?;
+            let mask_tensor = Tensor::from_slice(&mask, (batch_size, seq_len), device)?;
+            return Ok((input_tensor, target_tensor, Some(mask_tensor)));
         }
 
         let mut inputs = Vec::with_capacity(batch_size * seq_len);
