@@ -219,20 +219,25 @@ def load_api_key() -> str:
     """Read OpenRouter API key from env or standard config locations."""
     key = os.environ.get("OPENROUTER_API_KEY", "").strip()
     if not key:
+        titan_secrets_file = Path.home() / ".config" / "titan" / "secrets.env"
+        if titan_secrets_file.is_file():
+            try:
+                for line in titan_secrets_file.read_text().splitlines():
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        if k.strip() == "OPENROUTER_API_KEY":
+                            key = v.strip().strip('"').strip("'")
+                            break
+            except Exception:
+                pass
+    if not key:
         config_key_file = Path.home() / ".config" / "openrouter" / "api_key"
         if config_key_file.is_file():
             try:
                 key = config_key_file.read_text().strip()
             except Exception:
                 key = ""
-    if not key:
-        # Fallback to key in subagent.py if available
-        try:
-            from subagent import PERMANENT_OPENROUTER_KEY, STALE_OPENROUTER_KEY
-            if key != STALE_OPENROUTER_KEY:
-                key = PERMANENT_OPENROUTER_KEY
-        except Exception:
-            pass
     return key
 
 

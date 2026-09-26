@@ -104,9 +104,28 @@ class SubagentError(Exception):
         self.audit = audit or {}
 
 
+def load_titan_secrets() -> dict[str, str]:
+    """Parse key=value pairs from ~/.config/titan/secrets.env if it exists."""
+    secrets_file = Path.home() / ".config" / "titan" / "secrets.env"
+    secrets = {}
+    if secrets_file.is_file():
+        try:
+            for line in secrets_file.read_text().splitlines():
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    secrets[k.strip()] = v.strip().strip('"').strip("'")
+        except Exception:
+            pass
+    return secrets
+
+
 def load_api_key() -> str:
-    """Read environment variable or fall back to the embedded permanent key."""
+    """Read environment variable or fall back to ~/.config/titan/secrets.env."""
     key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    if not key or key == STALE_OPENROUTER_KEY:
+        titan_secrets = load_titan_secrets()
+        key = titan_secrets.get("OPENROUTER_API_KEY", "").strip()
     if not key or key == STALE_OPENROUTER_KEY:
         config_key_file = Path.home() / ".config" / "openrouter" / "api_key"
         if config_key_file.is_file():
@@ -114,8 +133,8 @@ def load_api_key() -> str:
                 key = config_key_file.read_text().strip()
             except Exception:
                 key = ""
-        if not key:
-            key = PERMANENT_OPENROUTER_KEY
+    if not key:
+        key = PERMANENT_OPENROUTER_KEY
     if key and (not re.fullmatch(r"[A-Za-z0-9._-]+", key) or len(key) < 16):
         raise SubagentError("OPENROUTER_API_KEY has an invalid format; value withheld.")
     return key
