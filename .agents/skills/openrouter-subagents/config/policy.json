@@ -1,0 +1,56 @@
+{
+  "policy_version": "1.0.0",
+  "models": {
+    "jev": "typesafe/jev-1.13",
+    "jev_fallback": "~typesafe/jev-latest",
+    "deepseek": "deepseek/deepseek-v4.1-flash",
+    "codex": "gpt-6-astra"
+  },
+  "governor": {
+    "enabled": true,
+    "max_consecutive_reasoning_passes": 2,
+    "require_evidence_before_rethinking": true,
+    "escalation_probability_threshold": 0.60,
+    "minimal_budget_confidence_threshold": 0.70
+  },
+  "utility": {
+    "lambda_tokens": 0.00005,
+    "lambda_latency": 0.05,
+    "lambda_cost": 1.0,
+    "lambda_rework": 0.50,
+    "lambda_disc": 0.40,
+    "v_info": 1.0
+  },
+  "marginal_gain": {
+    "patience": 2,
+    "min_required_gain": 0.05
+  },
+  "frontier": {
+    "max_beam_width": 4,
+    "dedup_jaccard_threshold": 0.75,
+    "preserve_diversity": true
+  },
+  "subagents": {
+    "max_deepseek_parallel": 3,
+    "max_recursive_questioning_depth": 2,
+    "codex_default_sandbox": "read-only"
+  },
+  "routing_rules": {
+    "implementation_uncertainty": "codex_or_tests",
+    "cheap_critique": "deepseek_critic",
+    "broad_research": "deepseek_parallel_plus_gemini_synthesis",
+    "deep_conceptual_fault": "escalate_astra",
+    "simple_high_confidence": "gemini_direct"
+  },
+  "role_routing": {
+    "coding": ["code-reviewer", "task-auditor"],
+    "research": ["independent-investigator", "skeptical-reviewer", "counter-hypothesis-generator"],
+    "experiment": ["experiment-critic", "skeptical-reviewer"],
+    "adversarial_audit": ["task-auditor", "adversarial-reviewer", "architectural-minimalist"]
+  },
+  "telemetry": {
+    "enabled": true,
+    "log_path": ".agents/telemetry/events.jsonl",
+    "record_sensitive_content": false
+  }
+}

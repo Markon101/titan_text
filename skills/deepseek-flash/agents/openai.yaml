@@ -1,4 +1,4 @@
 interface:
-  display_name: "DeepSeek Flash Collaborator"
-  short_description: "Bounded independent review through OpenRouter"
-  default_prompt: "Use $deepseek-flash to challenge this claim with a narrowly scoped review and a discriminating experiment."
+  display_name: "DeepSeek Research Collaborator"
+  short_description: "Independent research reviews and discriminating tests"
+  default_prompt: "Use $deepseek-flash to independently reconstruct the evidence, challenge competing explanations, and design a discriminating experiment."

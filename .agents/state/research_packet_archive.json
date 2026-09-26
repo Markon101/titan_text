@@ -1,0 +1,369 @@
+{
+  "topic": "Titan Recurrence vs Feedforward Emergence",
+  "archived_batches": [
+    {
+      "timestamp_utc": "2026-09-20T04:15:22.525402+00:00",
+      "archived_questions": [
+        {
+          "id": "Q1",
+          "question": "Initial inquiry: Evaluate whether causal stencil in Track 1 isolates state derivatives or relies on static lookahead",
+          "priority": "high",
+          "status": "resolved",
+          "resolution": "Resolved via test"
+        }
+      ],
+      "archived_rejected_hypotheses": [],
+      "archived_experiments": []
+    },
+    {
+      "timestamp_utc": "2026-09-20T04:46:28.911820+00:00",
+      "archived_questions": [],
+      "archived_rejected_hypotheses": [
+        {
+          "id": "H2",
+          "statement": "Dead hypothesis 1",
+          "confidence": 0.5,
+          "status": "rejected",
+          "created_at_utc": "2026-09-20T04:15:22.407274+00:00",
+          "falsified_by": "Falsified by control",
+          "rejected_at_utc": "2026-09-20T04:15:22.407395+00:00"
+        },
+        {
+          "id": "H3",
+          "statement": "Baseline linear attention model",
+          "confidence": 0.7,
+          "status": "rejected",
+          "created_at_utc": "2026-09-20T04:45:55.341015+00:00",
+          "falsified_by": "Gradient collapse test",
+          "rejected_at_utc": "2026-09-20T04:45:55.341389+00:00"
+        },
+        {
+          "id": "H4",
+          "statement": "Baseline linear attention model",
+          "confidence": 0.7,
+          "status": "rejected",
+          "created_at_utc": "2026-09-20T04:46:13.543193+00:00",
+          "falsified_by": "Gradient collapse test",
+          "rejected_at_utc": "2026-09-20T04:46:13.543447+00:00"
+        },
+        {
+          "id": "H5",
+          "statement": "Baseline linear attention model",
+          "confidence": 0.7,
+          "status": "rejected",
+          "created_at_utc": "2026-09-20T04:46:18.553558+00:00",
+          "falsified_by": "test",
+          "rejected_at_utc": "2026-09-20T04:46:18.553848+00:00"
+        },
+        {
+          "id": "H6",
+          "statement": "Baseline linear attention model",
+          "confidence": 0.7,
+          "status": "rejected",
+          "created_at_utc": "2026-09-20T04:46:28.911031+00:00",
+          "falsified_by": "Gradient collapse test",
+          "rejected_at_utc": "2026-09-20T04:46:28.911556+00:00"
+        }
+      ],
+      "archived_experiments": []
+    },
+    {
+      "timestamp_utc": "2026-09-20T04:47:44.534164+00:00",
+      "archived_questions": [],
+      "archived_rejected_hypotheses": [
+        {
+          "id": "H2",
+          "statement": "Baseline linear attention model",
+          "confidence": 0.7,
+          "status": "rejected",
+          "created_at_utc": "2026-09-20T04:47:44.533650+00:00",
+          "falsified_by": "Gradient collapse test",
+          "rejected_at_utc": "2026-09-20T04:47:44.533800+00:00"
+        }
+      ],
+      "archived_experiments": []
+    },
+    {
+      "timestamp_utc": "2026-09-20T04:48:18.256688+00:00",
+      "archived_questions": [],
+      "archived_rejected_hypotheses": [
+        {
+          "id": "H2",
+          "statement": "Baseline linear attention model",
+          "confidence": 0.7,
+          "status": "rejected",
+          "created_at_utc": "2026-09-20T04:48:18.255595+00:00",
+          "falsified_by": "Gradient collapse test",
+          "rejected_at_utc": "2026-09-20T04:48:18.256076+00:00"
+        }
+      ],
+      "archived_experiments": []
+    },
+    {
+      "timestamp_utc": "2026-09-20T04:49:39.893627+00:00",
+      "archived_questions": [
+        {
+          "id": "Q4",
+          "question": "Temporary test question",
+          "priority": "normal",
+          "status": "open"
+        }
+      ],
+      "archived_rejected_hypotheses": [],
+      "archived_experiments": []
+    },
+    {
+      "timestamp_utc": "2026-09-20T04:53:20.366768+00:00",
+      "archived_questions": [],
+      "archived_rejected_hypotheses": [
+        {
+          "id": "H2",
+          "statement": "Baseline linear attention model",
+          "confidence": 0.7,
+          "status": "rejected",
+          "created_at_utc": "2026-09-20T04:53:20.364640+00:00",
+          "falsified_by": "Gradient collapse test",
+          "rejected_at_utc": "2026-09-20T04:53:20.365878+00:00"
+        }
+      ],
+      "archived_experiments": []
+    },
+    {
+      "timestamp_utc": "2026-09-20T04:53:50.234396+00:00",
+      "archived_questions": [],
+      "archived_rejected_hypotheses": [
+        {
+          "id": "H2",
+          "statement": "Baseline linear attention model",
+          "confidence": 0.7,
+          "status": "rejected",
+          "created_at_utc": "2026-09-20T04:53:50.232693+00:00",
+          "falsified_by": "Gradient collapse test",
+          "rejected_at_utc": "2026-09-20T04:53:50.233505+00:00"
+        }
+      ],
+      "archived_experiments": []
+    },
+    {
+      "timestamp_utc": "2026-09-21T04:04:41.271401+00:00",
+      "archived_questions": [],
+      "archived_rejected_hypotheses": [
+        {
+          "id": "H1",
+          "statement": "Baseline linear attention model",
+          "confidence": 0.7,
+          "status": "rejected",
+          "created_at_utc": "2026-09-21T04:04:41.270714+00:00",
+          "falsified_by": "Gradient collapse test",
+          "rejected_at_utc": "2026-09-21T04:04:41.271026+00:00"
+        }
+      ],
+      "archived_experiments": []
+    },
+    {
+      "timestamp_utc": "2026-09-22T02:22:11.668400+00:00",
+      "archived_questions": [],
+      "archived_rejected_hypotheses": [
+        {
+          "id": "H1",
+          "statement": "Baseline linear attention model",
+          "confidence": 0.7,
+          "status": "rejected",
+          "created_at_utc": "2026-09-22T02:22:11.666645+00:00",
+          "falsified_by": "Gradient collapse test",
+          "rejected_at_utc": "2026-09-22T02:22:11.667792+00:00"
+        }
+      ],
+      "archived_experiments": []
+    },
+    {
+      "timestamp_utc": "2026-09-22T02:24:12.521099+00:00",
+      "archived_questions": [],
+      "archived_rejected_hypotheses": [
+        {
+          "id": "FAL_1",
+          "statement": "Canonical sequence models (Transformer, GRU, Simple RNN) collapse to 0.0% on Dyck-4.",
+          "falsified_by": "Forensic audit proved benchmark evaluated randomly initialized checkpoints; properly initialized models reach 52-68% at L=16 and 46-52% at L=64.",
+          "status": "artifact_debunked",
+          "is_artifact": true,
+          "rejected_at_utc": "2026-09-22T02:24:12.519559+00:00"
+        }
+      ],
+      "archived_experiments": []
+    },
+    {
+      "timestamp_utc": "2026-09-22T02:24:20.599656+00:00",
+      "archived_questions": [],
+      "archived_rejected_hypotheses": [
+        {
+          "id": "FAL_2",
+          "statement": "FC-4 Carry Lesion shows no causal delta on Dyck-4.",
+          "falsified_by": "Initial evaluation computed aggregate accuracy across shallow brackets (D=1); depth-stratified benchmark revealed +12.5% causal carry delta at D=4.",
+          "status": "artifact_debunked",
+          "is_artifact": true,
+          "rejected_at_utc": "2026-09-22T02:24:12.519859+00:00"
+        }
+      ],
+      "archived_experiments": []
+    },
+    {
+      "timestamp_utc": "2026-09-22T02:24:42.055672+00:00",
+      "archived_questions": [],
+      "archived_rejected_hypotheses": [
+        {
+          "id": "FAL_1",
+          "statement": "H1: Settling latency explains L=16 parity interior stagnation.",
+          "falsified_by": "Causal horizon sweep with tau=48 across 5 seeds yielded flat 46.9% accuracy; failure was spatial correlation length xi <= 6, not settling time.",
+          "status": "falsified",
+          "is_artifact": false,
+          "rejected_at_utc": "2026-09-22T02:24:12.520156+00:00"
+        }
+      ],
+      "archived_experiments": []
+    },
+    {
+      "timestamp_utc": "2026-09-22T02:24:42.056287+00:00",
+      "archived_questions": [],
+      "archived_rejected_hypotheses": [
+        {
+          "id": "FAL_2",
+          "statement": "H2: 1D Continuous NCA cannot learn sequential parity.",
+          "falsified_by": "Disproved on L=8, tau=8 where G_identity = +18.8% +- 4.4% (d=1.90); continuous NCAs can compute instance-specific parity on compact chains.",
+          "status": "falsified",
+          "is_artifact": false,
+          "rejected_at_utc": "2026-09-22T02:24:12.520457+00:00"
+        },
+        {
+          "id": "FAL_3",
+          "statement": "Theorem 12: CD-DV-NCA is formally equivalent to a Chomsky Type-2 DPDA.",
+          "falsified_by": "Formal methods audit proved finite lattice with finite channels is strictly a Chomsky Type-3 Finite State Automaton; claim narrowed to Bounded DPDA Emulation.",
+          "status": "falsified",
+          "is_artifact": false,
+          "rejected_at_utc": "2026-09-22T02:24:12.520768+00:00"
+        },
+        {
+          "id": "FAL_4",
+          "statement": "Canonical sequence models (Transformer, GRU, Simple RNN) collapse to 0.0% on Dyck-4.",
+          "falsified_by": "Forensic audit in src/main.rs proved cmd_benchmark evaluated randomly initialized checkpoints; properly initialized models reach 52-68% at L=16 and 46-52% at L=64.",
+          "status": "artifact_debunked",
+          "is_artifact": true,
+          "rejected_at_utc": "2026-09-22T02:24:20.598385+00:00"
+        },
+        {
+          "id": "H8",
+          "statement": "Baseline linear attention model",
+          "confidence": 0.7,
+          "status": "rejected",
+          "created_at_utc": "2026-09-22T02:24:42.054263+00:00",
+          "falsified_by": "Gradient collapse test",
+          "rejected_at_utc": "2026-09-22T02:24:42.055062+00:00"
+        }
+      ],
+      "archived_experiments": []
+    },
+    {
+      "timestamp_utc": "2026-09-22T02:24:47.817837+00:00",
+      "archived_questions": [],
+      "archived_rejected_hypotheses": [
+        {
+          "id": "H4",
+          "statement": "Baseline linear attention model",
+          "confidence": 0.7,
+          "status": "rejected",
+          "created_at_utc": "2026-09-22T02:24:47.816256+00:00",
+          "falsified_by": "Gradient collapse test",
+          "rejected_at_utc": "2026-09-22T02:24:47.816997+00:00"
+        }
+      ],
+      "archived_experiments": []
+    },
+    {
+      "timestamp_utc": "2026-09-22T02:26:47.388212+00:00",
+      "archived_questions": [],
+      "archived_rejected_hypotheses": [
+        {
+          "id": "H4",
+          "statement": "Baseline linear attention model",
+          "confidence": 0.7,
+          "status": "rejected",
+          "created_at_utc": "2026-09-22T02:26:47.386720+00:00",
+          "falsified_by": "Gradient collapse test",
+          "rejected_at_utc": "2026-09-22T02:26:47.387725+00:00"
+        }
+      ],
+      "archived_experiments": []
+    },
+    {
+      "timestamp_utc": "2026-09-22T02:26:56.364278+00:00",
+      "archived_questions": [],
+      "archived_rejected_hypotheses": [
+        {
+          "id": "H4",
+          "statement": "Baseline linear attention model",
+          "confidence": 0.7,
+          "status": "rejected",
+          "created_at_utc": "2026-09-22T02:26:56.362540+00:00",
+          "falsified_by": "Gradient collapse test",
+          "rejected_at_utc": "2026-09-22T02:26:56.363382+00:00"
+        }
+      ],
+      "archived_experiments": []
+    },
+    {
+      "timestamp_utc": "2026-09-22T02:27:21.790224+00:00",
+      "archived_questions": [],
+      "archived_rejected_hypotheses": [
+        {
+          "id": "H4",
+          "statement": "Baseline linear attention model",
+          "confidence": 0.7,
+          "status": "rejected",
+          "created_at_utc": "2026-09-22T02:27:21.788537+00:00",
+          "falsified_by": "Gradient collapse test",
+          "rejected_at_utc": "2026-09-22T02:27:21.789366+00:00"
+        }
+      ],
+      "archived_experiments": []
+    },
+    {
+      "timestamp_utc": "2026-09-22T03:51:33.620424+00:00",
+      "archived_questions": [],
+      "archived_rejected_hypotheses": [
+        {
+          "id": "FAL_1",
+          "statement": "Hypothesis: Dyck-4 Pushdown Accuracy is Explained by Shallow Bigram / Local Convolutional Diffusion",
+          "falsified_by": "Falsified by Adversarial Balanced-N-Gram Benchmark (reports/adversarial_balanced_dyck_benchmark_results.json): Under uniform bigrams and transport gap G in {4,8} where all queries are at distance d in [6..24] cells (exceeding continuous correlation length xi <= 6), continuous channels collapse to flat uniform chance (24.7%), while discrete carry channels sustain retrieval at 36.2%-37.0% with +11.5% to +12.3% causal delta, peaking at 50.0% at d=20 cells.",
+          "status": "falsified",
+          "is_artifact": false,
+          "rejected_at_utc": "2026-09-22T03:51:06.381314+00:00"
+        },
+        {
+          "id": "H5",
+          "statement": "Baseline linear attention model",
+          "confidence": 0.7,
+          "status": "rejected",
+          "created_at_utc": "2026-09-22T03:51:33.618293+00:00",
+          "falsified_by": "Gradient collapse test",
+          "rejected_at_utc": "2026-09-22T03:51:33.619531+00:00"
+        }
+      ],
+      "archived_experiments": []
+    },
+    {
+      "timestamp_utc": "2026-09-22T04:30:59.973548+00:00",
+      "archived_questions": [],
+      "archived_rejected_hypotheses": [
+        {
+          "id": "H4",
+          "statement": "Baseline linear attention model",
+          "confidence": 0.7,
+          "status": "rejected",
+          "created_at_utc": "2026-09-22T04:30:59.971388+00:00",
+          "falsified_by": "Gradient collapse test",
+          "rejected_at_utc": "2026-09-22T04:30:59.972631+00:00"
+        }
+      ],
+      "archived_experiments": []
+    }
+  ]
+}

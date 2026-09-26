@@ -1,0 +1,391 @@
+{
+  "topic": "Titan Text: Causal Cellular Automata & Sequential Carry Dynamics",
+  "created_at_utc": "2026-09-20T05:11:29.031177+00:00",
+  "updated_at_utc": "2026-09-22T04:30:59.985993+00:00",
+  "current_hypotheses": [
+    {
+      "id": "H1",
+      "statement": "Continuous NCA parameterized with orthogonal or skew-symmetric recurrence weights can achieve dissipation-free ballistic transport without discrete STE sign quantization.",
+      "confidence": 0.45,
+      "status": "active",
+      "created_at_utc": "2026-09-22T02:24:12.518517+00:00"
+    },
+    {
+      "id": "H2",
+      "statement": "CD-DV-NCA implements Bounded DPDA Emulation with effective stack capacity C_stack = min(L, C_c * B) on Dyck-4.",
+      "confidence": 0.85,
+      "status": "active",
+      "created_at_utc": "2026-09-22T02:24:12.518855+00:00"
+    },
+    {
+      "id": "H3",
+      "statement": "Adaptive step damping factor gamma_t = gamma_0 / (1 + alpha * t) halts loss drift over deep horizons (T >= 64) without degrading bracket accuracy.",
+      "confidence": 0.75,
+      "status": "active",
+      "created_at_utc": "2026-09-22T02:24:12.519193+00:00"
+    }
+  ],
+  "confirmed_facts": [
+    {
+      "id": "F1",
+      "statement": "Recurrent updates are causally required for task execution; zero-tick and state lesions collapse accuracy to 0.0% and loss increases by +3.35 nats (d=15.56).",
+      "source_measurement": "eval_n5_lesion_state.json",
+      "timestamp": "2026-09-20T05:12:15.965804+00:00"
+    },
+    {
+      "id": "F2",
+      "statement": "1D NCA learns instance-specific sequential parity on L=8, tau=8 with G_identity=+18.8% across both slots (Slot 0: 68.8%, Slot 1: 68.8%).",
+      "source_measurement": "campaign_arm2_curriculum.json",
+      "timestamp": "2026-09-20T05:12:16.098290+00:00"
+    },
+    {
+      "id": "F3",
+      "statement": "On L=16, tau=16, Slot 0 is solved (71-86%), but interior slots 1 and 2 remain pinned at chance (44-50%) across 1000 epochs, curriculum, coordinate channels, and dense supervision.",
+      "source_measurement": "escalation_b_final_report.md",
+      "timestamp": "2026-09-20T05:12:16.226096+00:00"
+    },
+    {
+      "id": "F4",
+      "statement": "Multi-scale coarsening (s=2) yields null result (d=+0.07 vs s=1) on L=16 parity; linear mean pooling annihilates antipodal Z_2 character.",
+      "source_measurement": "reports/hierarchy_campaign_final_report.md",
+      "timestamp": "2026-09-20T05:12:16.361038+00:00"
+    },
+    {
+      "id": "F5",
+      "statement": "Causal stencil DAG boosts Slot 0 to 85.6%, but interior slots remain at 50% chance; single-slot supervision at Slot 3 yields 56.1% chance, falsifying multi-slot gradient masking.",
+      "source_measurement": "reports/campaign_exp5_cca_parity.json, reports/campaign_exp6_slot3_only.json",
+      "timestamp": "2026-09-20T05:12:16.497634+00:00"
+    },
+    {
+      "id": "F6",
+      "statement": "Causal Recurrence Horizon Campaign (tau=48, N=5 seeds) decisively falsified the settling-latency hypothesis (H1): intact accuracy remained at 46.9%, G_identity=-2.5%, and Linear/MLP probes on Slots 2 and 3 showed 50.8% chance.",
+      "source_measurement": "reports/campaign_horizon_48.json",
+      "timestamp": "2026-09-20T05:33:18.343465+00:00"
+    },
+    {
+      "id": "F7",
+      "statement": "Continuous 1D NCA has an empirical correlation length strictly bounded at 4-6 cells: carry information spans 1 chunk (4 cells to Slot 1, 91.4% MLP acc) but collapses to 50.8% chance across 2 chunks (8 cells to Slot 2), invariant to unroll depth tau in [16..48].",
+      "source_measurement": "reports/campaign_horizon_48.json",
+      "timestamp": "2026-09-20T05:33:18.411807+00:00"
+    },
+    {
+      "id": "F8",
+      "statement": "Titan NCA with ECR (T=16, Cc=16, causal DAG) achieved 100.0% train accuracy and 76.6% val accuracy on iterated-parity (L=16), outperforming Transformer (55.5%), GRU (55.5%), and baseline NCA without ECR (71.9%).",
+      "source_measurement": "task-667 benchmark run",
+      "timestamp": "2026-09-20T06:12:54.741951+00:00"
+    },
+    {
+      "id": "F9",
+      "statement": "On iterated-sum-dense (L=16), Titan NCA with ECR (T=16, Cc=16, Causal DAG) lifted validation accuracy from 18.8% (T=8) / 27.3% (T=16 baseline) to 70.3% (Train: 100.0%, Val loss: 0.8027), matching Simple RNN (70.3%) and outperforming Transformer (43.8%) and Untied FF (15.6%).",
+      "source_measurement": "task-684 benchmark run",
+      "timestamp": "2026-09-20T06:15:14.676439+00:00"
+    },
+    {
+      "id": "F10",
+      "statement": "Persistent input channel (--persistent-input) with ECR on iterated-sum-dense caused static input memorization/overfitting: train loss collapsed to 0.0232 (100% train acc) while validation accuracy dropped to 49.2% (val loss 1.9306) compared to 70.3% without persistent input, proving static input forcing confounds intermediate recurrent accumulation.",
+      "source_measurement": "task-716 benchmark run",
+      "timestamp": "2026-09-20T06:19:45.823711+00:00"
+    },
+    {
+      "id": "F11",
+      "statement": "Across 3 seeds (42, 100, 2026) on iterated-sum-dense (L=16), Titan NCA with ECR achieved mean Val Acc of 57.8% \u00b1 11.8% (peak 70.3%) with 100% train convergence, outperforming Untied FF (16.7% \u00b1 1.8%) and Transformer (48.4% \u00b1 26.8%), and approaching Simple RNN (62.5% \u00b1 12.2%) and GRU (71.6% \u00b1 7.9%).",
+      "source_measurement": "3-seed benchmark runs task-684, task-730, task-736",
+      "timestamp": "2026-09-20T06:22:28.453102+00:00"
+    },
+    {
+      "id": "F12",
+      "statement": "Zero-shot OOD length generalization of L=16 trained ECR NCA across 5 seeds: On iterated-parity, accuracy is 66.2% \u00b1 3.1% at L=16, 57.1% \u00b1 4.3% at L=32 (2x OOD), and 51.7% \u00b1 1.6% at L=64. On iterated-sum-dense, accuracy is 53.9% \u00b1 4.5% at L=16, 30.5% \u00b1 3.6% at L=32 (2x OOD, chance 10.0%), and 12.8% \u00b1 2.5% at L=64.",
+      "source_measurement": "OOD length sweep task-858, task-862, task-866, task-870, task-874, task-878",
+      "timestamp": "2026-09-20T06:37:38.762759+00:00"
+    },
+    {
+      "id": "F13",
+      "statement": "On column-arithmetic (L=16), bidirectional ECR with skip stride k=2 lifted Titan NCA validation accuracy from 49.4% (standard NCA baseline, barely above 45.0% dummy baseline) to 58.7% with 100.0% training convergence (loss 0.0219), demonstrating that bidirectional carry channels resolve the reverse carry-ripple bottleneck in multi-digit addition.",
+      "source_measurement": "task-976 benchmark run",
+      "timestamp": "2026-09-20T06:48:52.126326+00:00"
+    },
+    {
+      "id": "F14",
+      "statement": "Discrete STE carry quantization (ste_sign) mitigates continuous floating-point drift over deep horizons (L=64): on iterated-parity, ste_sign achieves higher in-distribution accuracy at L=16 (58.0% \u00b1 1.4% vs 56.1% \u00b1 2.3% for continuous baseline none) and eliminates sub-random drift at L=64, holding rock-solid stability at 50.5% \u00b1 0.1% where continuous baseline decays to 49.1% \u00b1 2.8% and bistable potential destabilizes to 45.8% \u00b1 7.3%.",
+      "source_measurement": "reports/drift_mitigation_campaign.json",
+      "timestamp": "2026-09-20T08:29:11.291848+00:00"
+    },
+    {
+      "id": "F15",
+      "statement": "On column-arithmetic (L=16), scaling carry capacity to Cc=32, skip stride to k=4, and recurrence horizon to T=24 with bidirectional routing lifts Titan NCA validation accuracy to 60.0% \u00b1 0.3% (peak 60.3%, 100% train convergence), surpassing Simple RNN (58.6%) by +1.4% and closing 71% of the gap between standard NCA (49.4%) and the Transformer ceiling (64.4%), with inter-seed variance collapsing from \u00b17.6% to \u00b10.3%.",
+      "source_measurement": "reports/column_arithmetic_campaign.json",
+      "timestamp": "2026-09-20T08:29:11.291872+00:00"
+    },
+    {
+      "id": "F16",
+      "statement": "Extreme OOD (L=128) Causal Reach sweep shows CD-DV-NCA maintains 45.0% (T=16) to 36.7% (T=64) accuracy beating Baseline Causal NCA (39.2% to 31.4%), but unregularized continuous loss explodes monotonically (2.28 -> 16.73) over deep unrolls.",
+      "source_measurement": "reports/ood_128_causal_reach_sweep_results.json",
+      "timestamp": "2026-09-22T00:30:03.707765+00:00"
+    },
+    {
+      "id": "F17",
+      "statement": "Rate-invariance under transport conjugation benchmark proves spatial roll preserves continuous field norm ||H|| bit-level invariant (delta <= 0.0023 < 0.02) across all 6 conditions (t* in {8, 12, 16}, D in {4, 8}), while channel permutations perturb ||H|| with perturbation decaying from delta=0.35 at t*=8 to delta<=0.05 at t*=16.",
+      "source_measurement": "reports/transport_conjugation_benchmark_results.json",
+      "timestamp": "2026-09-22T00:30:08.386123+00:00"
+    },
+    {
+      "id": "F18",
+      "statement": "Adversarial 4-arm subspace normalization shows Arm B (bounded_h_only) cuts loss by 47% at L=64 (5.13 -> 2.70) and 71% at L=128 (12.45 -> 3.59) while maintaining 30.9% acc, whereas Arm C (full 64 norm) collapses to chance (25.8%), proving discrete carry unattenuation is necessary for pushdown survival while bounding continuous loss drift.",
+      "source_measurement": "reports/subspace_normalization_ocpd_results.json",
+      "timestamp": "2026-09-22T00:30:10.736093+00:00"
+    },
+    {
+      "id": "F19",
+      "statement": "Double-Dissociated Distance-Resolved Non-Local Pushdown Computation Established on Adversarial Balanced-N-Gram Dyck-4: Under uniform bigram balancing and transport gaps G in {0,4,8}, CD-DV-NCA maintains 36.2%-58.3% bracket retrieval (D in {2,4,8}). At local distance d <= 4 cells, continuous channels alone achieve 85-94% accuracy (carry delta +4.1%). At non-local distance d in [6..24] cells, continuous channels collapse to flat chance (24.7%), while discrete carry channels sustain retrieval with causal gains of +14.6% to +25.0% (peaking at 50.0% at d=20). Untied feedforward collapses to 22.4%-25.8% chance across all non-local distances.",
+      "source_measurement": "reports/adversarial_balanced_dyck_benchmark_results.json",
+      "timestamp": "2026-09-22T03:51:00.573072+00:00"
+    }
+  ],
+  "rejected_hypotheses": [],
+  "unresolved_questions": [
+    {
+      "id": "Q1",
+      "question": "Initial inquiry: Determine whether causal NCA sequential carry failure on L=16 is due to short correlation length of 1D continuous CA, lack of dedicated carry register, or gradient starvation across long chains",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "id": "Q2",
+      "question": "Initial inquiry: Implement and evaluate Explicit Carry Register (ECR) decoupling local spatial cell perception from carry propagation to break the 4-cell correlation length limit on L=16",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "id": "Q3",
+      "question": "Initial inquiry: Task with override",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "id": "Q4",
+      "question": "Initial inquiry: Investigate recurrent mechanism",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "id": "Q5",
+      "question": "Initial inquiry: Design an infinite-horizon contractive fixed-point mechanism that prevents continuous Lyapunov divergence in H when unrolled to T=64 and beyond, while preserving discrete ballistic pushdown transport of ECR",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "id": "Q6",
+      "question": "Initial inquiry: Task with override",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "id": "Q7",
+      "question": "Initial inquiry: Investigate recurrent mechanism",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "id": "Q8",
+      "question": "Initial inquiry: Task with override",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "id": "Q9",
+      "question": "Initial inquiry: Investigate recurrent mechanism",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "id": "Q10",
+      "question": "Initial inquiry: Task with override",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "id": "Q11",
+      "question": "Initial inquiry: Investigate recurrent mechanism",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "id": "Q12",
+      "question": "Initial inquiry: Task with override",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "id": "Q13",
+      "question": "Initial inquiry: Investigate recurrent mechanism",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "id": "Q14",
+      "question": "Initial inquiry: Task with override",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "id": "Q15",
+      "question": "Initial inquiry: Investigate recurrent mechanism",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "id": "Q16",
+      "question": "Initial inquiry: Task with override",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "id": "Q17",
+      "question": "Initial inquiry: Investigate recurrent mechanism",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "id": "Q18",
+      "question": "Initial inquiry: Task with override",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "id": "Q19",
+      "question": "Initial inquiry: Investigate recurrent mechanism",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "id": "Q20",
+      "question": "Initial inquiry: Task with override",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "id": "Q21",
+      "question": "Initial inquiry: Investigate recurrent mechanism",
+      "priority": "high",
+      "status": "open"
+    }
+  ],
+  "important_experimental_results": [],
+  "next_candidate_experiments": [
+    {
+      "id": "DISC_1",
+      "name": "Adversarial Balanced-N-Gram Dyck-4 Test",
+      "target_hypotheses": [
+        "H-BOUNDED-DPDA"
+      ],
+      "protocol": "Sample Dyck-4 sequences under an adversarial filter where all local bigrams are uniform (p=0.25). Measure bracket accuracy for D in [4, 12].",
+      "timestamp": "2026-09-22T02:24:12.523082+00:00"
+    },
+    {
+      "id": "DISC_2",
+      "name": "Continuous Unitary vs Discrete STE Sign Comparison",
+      "target_hypotheses": [
+        "H-UNITARY"
+      ],
+      "protocol": "Implement skew-symmetric continuous recurrence Delta H = (W - W^T) H and measure correlation length xi and deep bracket accuracy vs discrete STE.",
+      "timestamp": "2026-09-22T02:24:12.523413+00:00"
+    }
+  ],
+  "agent_disagreements": [],
+  "uncertainty_structure": {},
+  "state_insufficiency_events": [
+    {
+      "timestamp_utc": "2026-09-21T04:04:41.271992+00:00",
+      "item_id": "H1",
+      "found": true,
+      "source": "archive"
+    },
+    {
+      "timestamp_utc": "2026-09-22T02:22:11.669405+00:00",
+      "item_id": "H1",
+      "found": true,
+      "source": "archive"
+    },
+    {
+      "timestamp_utc": "2026-09-22T02:24:42.057083+00:00",
+      "item_id": "H8",
+      "found": true,
+      "source": "archive"
+    },
+    {
+      "timestamp_utc": "2026-09-22T02:24:47.818873+00:00",
+      "item_id": "H4",
+      "found": true,
+      "source": "archive"
+    },
+    {
+      "timestamp_utc": "2026-09-22T02:26:47.391057+00:00",
+      "item_id": "H4",
+      "found": true,
+      "source": "archive"
+    },
+    {
+      "timestamp_utc": "2026-09-22T02:26:56.365411+00:00",
+      "item_id": "H4",
+      "found": true,
+      "source": "archive"
+    },
+    {
+      "timestamp_utc": "2026-09-22T02:27:21.791446+00:00",
+      "item_id": "H4",
+      "found": true,
+      "source": "archive"
+    },
+    {
+      "timestamp_utc": "2026-09-22T03:51:33.622399+00:00",
+      "item_id": "H5",
+      "found": true,
+      "source": "archive"
+    },
+    {
+      "timestamp_utc": "2026-09-22T04:30:59.974703+00:00",
+      "item_id": "H4",
+      "found": true,
+      "source": "archive"
+    }
+  ],
+  "archived_summary": {
+    "archive_file": ".agents/state/research_packet_archive.json",
+    "last_archived_utc": "2026-09-22T04:30:59.973844+00:00",
+    "total_items_archived": 27
+  },
+  "supported_interpretations": [
+    {
+      "id": "SUP_1",
+      "statement": "Arm B (bounded_h_only) bounds loss growth via a spectral-damping capacity tradeoff rather than an asymptotic fixed point.",
+      "competing_alternatives": "A strictly contractive fixed-point projector with negative real eigenvalues could halt loss growth without expressivity loss.",
+      "timestamp": "2026-09-22T02:24:12.517088+00:00"
+    },
+    {
+      "id": "SUP_2",
+      "statement": "Continuous state H acts as local syntactic carrier wave and clock trigger, while discrete C_c acts as non-local LIFO payload.",
+      "competing_alternatives": "Nonlinear dense layers entangle H and C_c during early ticks (t* <= 8), coupling pushdown dynamics.",
+      "timestamp": "2026-09-22T02:24:12.518069+00:00"
+    }
+  ],
+  "known_confounds": [
+    {
+      "id": "CONF_1",
+      "confound": "Shallow Bracket Density: 50% of brackets in standard Dyck-4 have nesting depth D <= 2, allowing local n-grams to reach ~40% accuracy.",
+      "mitigation_or_weakness": "Evaluate performance strictly on depth-stratified subsets D in [4, 16] and adversarial balanced n-grams.",
+      "timestamp": "2026-09-22T02:24:12.522125+00:00"
+    },
+    {
+      "id": "CONF_2",
+      "confound": "Unconstrained Continuous Drift: Models trained at fixed unroll T=20 develop Lyapunov drift at T >= 32.",
+      "mitigation_or_weakness": "Apply subspace normalization (Arm B bounded_h_only) or step damping to bound continuous field norms.",
+      "timestamp": "2026-09-22T02:24:12.522463+00:00"
+    },
+    {
+      "id": "CONF_3",
+      "confound": "Static Input Memorization: Persistent input channels cause input memorization and drop validation accuracy from 70.3% to 49.2%.",
+      "mitigation_or_weakness": "Do not provide persistent input channels during intermediate recurrent accumulation.",
+      "timestamp": "2026-09-22T02:24:12.522791+00:00"
+    }
+  ]
+}

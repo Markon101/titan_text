@@ -1,0 +1,126 @@
+{
+  "schema_version": "1.0.0",
+  "last_updated": "2026-09-22T00:30:00Z",
+  "items": {
+    "RD-001": {
+      "id": "RD-001",
+      "title": "Deconstruct Continuous Hidden State Residual Floor (32.33%)",
+      "hedging_statement": "The residual floor of 32.33% reflects shallow bracket resolution by continuous channels.",
+      "importance": 0.95,
+      "uncertainty": 0.05,
+      "estimated_compute_cost_sec": 300,
+      "downstream_claims": ["C-DYCK-001", "C-CARRY-002"],
+      "priority_score": 0.05,
+      "status": "RESOLVED",
+      "candidate_experiment": "Stratified depth sweep D in [1, 2, 4, 8, 12, 16] in reports/stratified_depth_benchmark_results.json"
+    },
+    "RD-002": {
+      "id": "RD-002",
+      "title": "Resolve Automated Benchmark Audit Failure on FC-4 (FALSIFIED)",
+      "hedging_statement": "Carry channels appear to mediate stack dynamics despite FC-4 failing.",
+      "importance": 0.90,
+      "uncertainty": 0.05,
+      "estimated_compute_cost_sec": 300,
+      "downstream_claims": ["C-CARRY-002"],
+      "priority_score": 0.05,
+      "status": "RESOLVED",
+      "candidate_experiment": "Resolved via stratified depth decomposition: causal delta peaks at +12.5% at D=4."
+    },
+    "RD-003": {
+      "id": "RD-003",
+      "title": "Hostile Baseline Re-Engineering & Fair Competition on Dyck-4",
+      "hedging_statement": "Baselines collapsed on Dyck-4 (0.0% to 0.7%), but cmd_benchmark evaluated untrained weights.",
+      "importance": 1.00,
+      "uncertainty": 0.05,
+      "estimated_compute_cost_sec": 900,
+      "downstream_claims": ["C-BASELINE-007", "C-DYCK-001"],
+      "priority_score": 0.05,
+      "status": "RESOLVED",
+      "candidate_experiment": "Trained Pre-LN Transformer (60.6%), GRU (52.8%), Simple RNN (68.4%) in reports/hostile_baselines_benchmark_results.json"
+    },
+    "RD-004": {
+      "id": "RD-004",
+      "title": "Full Grid Empirical Causal Lightcone Phase Boundary (L x T x k)",
+      "hedging_statement": "The causal reach law T* >= 2 ceil(L/k) suggests a phase boundary.",
+      "importance": 0.85,
+      "uncertainty": 0.05,
+      "estimated_compute_cost_sec": 600,
+      "downstream_claims": ["C-LIGHTCONE-003"],
+      "priority_score": 0.07,
+      "status": "RESOLVED",
+      "candidate_experiment": "Evaluated across T in {16, 24, 32, 40, 48} in reports/horizon_phase_boundary_sweep_results.json"
+    },
+    "RD-005": {
+      "id": "RD-005",
+      "title": "Latent Stack Probing & Counterfactual Carry Transplantation",
+      "hedging_statement": "Carry channels causally dictate LIFO bracket prediction rather than prompt tokens.",
+      "importance": 0.85,
+      "uncertainty": 0.05,
+      "estimated_compute_cost_sec": 450,
+      "downstream_claims": ["C-CARRY-002", "C-DPDA-004"],
+      "priority_score": 0.09,
+      "status": "RESOLVED",
+      "candidate_experiment": "Double dissociation counterfactual transplantation in reports/causal_carry_transplant_results.json"
+    },
+    "RD-006": {
+      "id": "RD-006",
+      "title": "Formal Bounded DPDA Theorem Narrowing",
+      "hedging_statement": "Theorem 12 proves DPDA equivalence, but finite models are formally finite automata.",
+      "importance": 0.75,
+      "uncertainty": 0.05,
+      "estimated_compute_cost_sec": 60,
+      "downstream_claims": ["C-DPDA-004"],
+      "priority_score": 0.06,
+      "status": "RESOLVED",
+      "candidate_experiment": "Narrowed to Bounded DPDA_M with M = min(L, C_c * bits)."
+    },
+    "RD-007": {
+      "id": "RD-007",
+      "title": "Non-Linear Cross-Coupling in Direct-Sum Decomposition (Theorem 15)",
+      "hedging_statement": "Readout z decomposes into regular base and pushdown carry, but intermediate updates are nonlinearly coupled.",
+      "importance": 0.70,
+      "uncertainty": 0.05,
+      "estimated_compute_cost_sec": 180,
+      "downstream_claims": ["C-CARRY-002"],
+      "priority_score": 0.19,
+      "status": "RESOLVED",
+      "candidate_experiment": "Theorem 17 Carrier-Modulation coupling proven and confirmed."
+    },
+    "RD-008": {
+      "id": "RD-008",
+      "title": "Jev Governor Infrastructure Ablation Study (J0 to J6)",
+      "hedging_statement": "Jev appears to improve research rigor, but its objective epistemic yield has not been ablated.",
+      "importance": 0.85,
+      "uncertainty": 0.05,
+      "estimated_compute_cost_sec": 240,
+      "downstream_claims": [],
+      "priority_score": 0.18,
+      "status": "RESOLVED",
+      "candidate_experiment": "Jev ablation benchmark in reports/jev_ablation_results.json"
+    },
+    "RD-009": {
+      "id": "RD-009",
+      "title": "Rate-Invariance Under Transport Conjugation",
+      "hedging_statement": "Does continuous field contraction rate rho_H remain invariant under carry channel conjugations?",
+      "importance": 0.85,
+      "uncertainty": 0.05,
+      "estimated_compute_cost_sec": 120,
+      "downstream_claims": ["C-CONJUGATION-009", "C-CARRY-002"],
+      "priority_score": 0.35,
+      "status": "RESOLVED",
+      "candidate_experiment": "Transport conjugation benchmark across 8 modes in reports/transport_conjugation_benchmark_results.json"
+    },
+    "RD-010": {
+      "id": "RD-010",
+      "title": "Infinite-Horizon Stability & Subspace Normalization Tradeoff",
+      "hedging_statement": "Does OCPD subspace normalization resolve the deep-horizon loss explosion (2.28 -> 16.73) without collapsing pushdown accuracy?",
+      "importance": 0.95,
+      "uncertainty": 0.05,
+      "estimated_compute_cost_sec": 300,
+      "downstream_claims": ["C-OCPD-010", "C-OOD128-008"],
+      "priority_score": 0.16,
+      "status": "RESOLVED",
+      "candidate_experiment": "4-arm campaign in reports/subspace_normalization_ocpd_results.json"
+    }
+  }
+}

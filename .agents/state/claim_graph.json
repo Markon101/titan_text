@@ -1,0 +1,298 @@
+{
+  "schema_version": "1.0.0",
+  "last_updated": "2026-09-21T03:30:30Z",
+  "claims": {
+    "C-DYCK-001": {
+      "id": "C-DYCK-001",
+      "version": "1.1",
+      "statement": "CD-DV-NCA achieves 43.90% ± 1.61% exact bracket prediction on Dyck-4 at L=64, surpassing the theoretical Markov-4 ceiling (0.098%) by 448x.",
+      "state": "SUPPORTED",
+      "confidence": 0.90,
+      "supporting_artifacts": [
+        "reports/dyck_pushdown_benchmark_results.json",
+        "checkpoints/dyck4_pushdown/cd_dv_nca_seed_42/manifest.json",
+        "checkpoints/dyck4_pushdown/cd_dv_nca_seed_43/manifest.json",
+        "checkpoints/dyck4_pushdown/cd_dv_nca_seed_44/manifest.json"
+      ],
+      "contradicting_artifacts": [],
+      "assumptions": [
+        "Test sequences are sampled uniformly from stratified Dyck-4 grammar.",
+        "Evaluation uses causal masking over bracket closure positions."
+      ],
+      "dependencies": [],
+      "relevant_code_commits": ["HEAD"],
+      "relevant_seeds": [42, 43, 44],
+      "experiments_tested": ["scripts/run_dyck_pushdown_benchmark.py"],
+      "unresolved_confounds": [
+        "Shallow bracket closures (D <= 2) can be resolved by local bigrams without deep stack memory.",
+        "Stratified distribution might over-represent local closures."
+      ],
+      "competing_explanations": [
+        "H2: Finite-state bigram/trigram compression sufficient for sequence length L=64.",
+        "H5: Local NCA computation + readout frequency exploitation."
+      ],
+      "falsification_condition": "Accuracy on D >= 6 subsets drops to Markov-4 ceiling (<= 0.098%) or chance floor (25%).",
+      "strengthening_evidence": "Demonstrate sustained >40% accuracy on strictly adversarial sequences with D in [6, 12] where all local n-grams are balanced.",
+      "last_reviewed": "2026-09-21T03:30:00Z"
+    },
+    "C-CARRY-002": {
+      "id": "C-CARRY-002",
+      "version": "2.0",
+      "statement": "Discrete carry channels (C_c=32) mediate non-local pushdown bracket matching in Dyck-4; stratified depth evaluation proves a peak +12.50% causal gain at D=4 and prevents collapse to chance at D=8, while continuous channels alone collapse to chance (26.9%) at D >= 12.",
+      "state": "EMPIRICALLY_QUALIFIED",
+      "confidence": 0.85,
+      "supporting_artifacts": [
+        "reports/dyck_pushdown_benchmark_results.json",
+        "reports/stratified_depth_benchmark_results.json",
+        "reports/dyck_double_dissociation_results.json"
+      ],
+      "contradicting_artifacts": [],
+      "assumptions": [
+        "Continuous channels provide syntactic carrier wave for local bigrams (D=1); carry channels provide hyperbolic non-local transport."
+      ],
+      "dependencies": ["C-DYCK-001"],
+      "relevant_code_commits": ["HEAD"],
+      "relevant_seeds": [42, 43, 44],
+      "experiments_tested": [
+        "scripts/train_and_benchmark_dyck_pushdown.py",
+        "scripts/run_stratified_depth_benchmark.py",
+        "scripts/run_dyck_double_dissociation.py"
+      ],
+      "unresolved_confounds": [
+        "At extreme depth (D=16), both channels collapse to chance floor (25%) due to finite lattice reach at T=24."
+      ],
+      "competing_explanations": [
+        "Theorem 17 Carrier-Modulation coupling: H acts as syntactic carrier and clock trigger, C_c acts as LIFO payload."
+      ],
+      "falsification_condition": "Carry lesion at D=4 drops causal delta to <= 0, or scramble does not collapse to chance.",
+      "strengthening_evidence": "Empirically validated: Lesion delta peaks at +12.5% at D=4; scramble collapses to 26.0% (chance floor).",
+      "last_reviewed": "2026-09-21T03:52:00Z"
+    },
+    "C-LIGHTCONE-003": {
+      "id": "C-LIGHTCONE-003",
+      "version": "2.0",
+      "statement": "The kinematic lightcone defines the necessary spatial support boundary, but increasing recurrence depth zero-shot (T > 24 on L=64) does not unlock higher bracket accuracy (stays flat at 42.4% - 43.8%) and causes monotonic loss explosion (2.21 -> 8.88) due to unconstrained continuous drift; furthermore, k=1 achieves 41.7% at T=16 on L=64 due to shallow local brackets.",
+      "state": "PARTIALLY_REFUTED_AND_NARROWED",
+      "confidence": 0.45,
+      "supporting_artifacts": [
+        "reports/horizon_phase_boundary_sweep_results.json"
+      ],
+      "contradicting_artifacts": [
+        "Pre-registered Phase Boundary Jump prediction failed: T=32 achieved 42.40% vs predicted 61.50% (FC-PhaseBoundary triggered); k=1 achieved 41.70% > 35.0% at T=16 (FC-Superluminal triggered)."
+      ],
+      "assumptions": [
+        "Lightcone defines spatial aperture, but dynamical stability over deep horizons requires explicit tail equilibrium or step damping."
+      ],
+      "dependencies": ["C-DYCK-001"],
+      "relevant_code_commits": ["HEAD"],
+      "relevant_seeds": [42, 43, 44],
+      "experiments_tested": ["scripts/run_horizon_phase_boundary_sweep.py"],
+      "unresolved_confounds": [
+        "Models trained strictly at T=20 develop numerical Lyapunov drift when unrolled to T >= 32 without multi-step curriculum."
+      ],
+      "competing_explanations": [
+        "Shallow bracket density dominates Dyck-4 sequences, allowing k=1 to achieve ~41% without deep non-local transport."
+      ],
+      "falsification_condition": "Confirmed: The naive phase boundary jump to 61% is definitively FALSIFIED.",
+      "strengthening_evidence": "Demonstrate that training with multi-horizon curriculum stabilizes T=32 and unlocks deep bracket pairs.",
+      "last_reviewed": "2026-09-21T03:41:00Z"
+    },
+    "C-DPDA-004": {
+      "id": "C-DPDA-004",
+      "version": "1.0",
+      "statement": "CD-DV-NCA is formally equivalent to a Deterministic Pushdown Automaton (DPDA) recognizing Context-Free Dyck-4 languages.",
+      "state": "PARTIALLY REFUTED",
+      "confidence": 0.20,
+      "supporting_artifacts": [],
+      "contradicting_artifacts": [
+        "Formal Methods Audit: Any machine on a finite 1D lattice with finite channels and finite precision is formally a Finite State Automaton (Chomsky Type-3), bounded by capacity 2^(C_c * B)."
+      ],
+      "assumptions": [
+        "Unbounded sequence length L and unbounded stack depth D."
+      ],
+      "dependencies": ["C-CARRY-002"],
+      "relevant_code_commits": ["HEAD"],
+      "relevant_seeds": [42, 43, 44],
+      "experiments_tested": ["scripts/train_and_benchmark_dyck_pushdown.py"],
+      "unresolved_confounds": [
+        "The model is physically bounded by grid length L and channel capacity. It cannot recognize Dyck-4 for arbitrary unbounded length."
+      ],
+      "competing_explanations": [
+        "Bounded DPDA Emulation: The system simulates a DPDA up to finite capacity D_max <= min(L, C_c * bits)."
+      ],
+      "falsification_condition": "Theorem 12 is refutable if stated for unbounded Dyck-4. It must be narrowed to Bounded DPDA Emulation.",
+      "strengthening_evidence": "Prove formal simulation lemma for Bounded DPDA up to depth D_max = 16.",
+      "last_reviewed": "2026-09-21T03:30:00Z"
+    },
+    "C-DISCRETE-SEPARATION-005": {
+      "id": "C-DISCRETE-SEPARATION-005",
+      "version": "1.0",
+      "statement": "Continuous recurrence exhibits exponential dissipation (correlation length xi_cont ~ 4.53 cells), whereas discrete carry with STE provides dissipation-free ballistic transport (xi_discrete = infinity).",
+      "state": "CONTESTED",
+      "confidence": 0.70,
+      "supporting_artifacts": [
+        "reports/cd_dv_nca_ste_equilibrium_results.json"
+      ],
+      "contradicting_artifacts": [],
+      "assumptions": [
+        "Continuous NCA updates are non-unitary and contractive without gating."
+      ],
+      "dependencies": ["C-CARRY-002"],
+      "relevant_code_commits": ["HEAD"],
+      "relevant_seeds": [42, 43, 44],
+      "experiments_tested": ["scripts/run_ste_equilibrium_sweep.py"],
+      "unresolved_confounds": [
+        "Continuous recurrent models with unitary or gated dynamics (e.g. unitary RNNs, LSTMs) can maintain correlations over longer distances; the limitation applies specifically to diffusive continuous NCAs."
+      ],
+      "competing_explanations": [
+        "Gated continuous dynamics could match discrete transport if eigenvalues lie exactly on the unit circle."
+      ],
+      "falsification_condition": "A continuous NCA with carefully tuned gating achieves equivalent dissipation-free transport without quantization.",
+      "strengthening_evidence": "Direct spectral analysis of the linear operator showing spectral radius < 1 for H and = 1 for discrete C_c.",
+      "last_reviewed": "2026-09-21T03:30:00Z"
+    },
+    "C-TOPOLOGY-006": {
+      "id": "C-TOPOLOGY-006",
+      "version": "1.0",
+      "statement": "Batch shuffling of carry states induces destructive topological shear (spatial gradient blowup ||grad x||_inf), collapsing predictions below chance (18.10% < 25.0%).",
+      "state": "CONTESTED",
+      "confidence": 0.60,
+      "supporting_artifacts": [
+        "reports/dyck_pushdown_benchmark_results.json"
+      ],
+      "contradicting_artifacts": [],
+      "assumptions": [
+        "Shuffling carry across batch creates incompatible spatial phase boundaries that actively suppress correct logits."
+      ],
+      "dependencies": ["C-CARRY-002"],
+      "relevant_code_commits": ["HEAD"],
+      "relevant_seeds": [42, 43, 44],
+      "experiments_tested": ["scripts/train_and_benchmark_dyck_pushdown.py"],
+      "unresolved_confounds": [
+        "Could be an out-of-distribution logit temperature artifact causing overconfident incorrect predictions rather than topological shear."
+      ],
+      "competing_explanations": [
+        "High norm inputs to readout projection saturate softmax onto donor class tokens."
+      ],
+      "falsification_condition": "Injecting random Gaussian noise of matched variance produces the exact same sub-chance collapse as cross-batch shuffling.",
+      "strengthening_evidence": "Measure cross-entropy distribution: structured donor transfer vs uniform high-entropy noise.",
+      "last_reviewed": "2026-09-21T03:30:00Z"
+    },
+    "C-BASELINE-007": {
+      "id": "C-BASELINE-007",
+      "version": "2.0",
+      "statement": "Canonical sequence models (Transformer, GRU, Simple RNN) learn Dyck-4 in-distribution (Simple RNN: 68.4%, Transformer: 60.6%, GRU: 52.8% at L=16), but degrade under length extrapolation (Simple RNN drops to 52.2%, GRU to 47.8%, Transformer to 46.2% at L=64); Untied FF collapses to chance (24.2% < 25%).",
+      "state": "REPLICATED_AND_SUPERSEDED",
+      "confidence": 0.98,
+      "supporting_artifacts": [
+        "reports/hostile_baselines_benchmark_results.json",
+        "checkpoints/dyck-pushdown_transformer/model.safetensors",
+        "checkpoints/dyck-pushdown_gru/model.safetensors",
+        "checkpoints/dyck-pushdown_rnn/model.safetensors"
+      ],
+      "contradicting_artifacts": [
+        "Prior claim of 0.0% collapse in titan_text_definitive_ecr_scientific_report.md (proved to be an untrained random weight artifact)."
+      ],
+      "assumptions": [
+        "Transformer uses Pre-LayerNorm and sinusoidal positional encodings.",
+        "GRU uses update gate retention bias initialization (b_z = -1.0).",
+        "Models trained strictly at L=16 for 100 epochs."
+      ],
+      "dependencies": [],
+      "relevant_code_commits": ["HEAD"],
+      "relevant_seeds": [42, 43, 44],
+      "experiments_tested": ["scripts/train_and_benchmark_hostile_baselines.py"],
+      "unresolved_confounds": [
+        "Multi-layer Transformers or LSTMs may achieve higher extrapolation accuracy if positional encodings generalize (e.g. RoPE or ALiBi)."
+      ],
+      "competing_explanations": [
+        "Recurrent state in Simple RNN acts as an analog counter sufficient for L <= 64."
+      ],
+      "falsification_condition": "A baseline trained at L=16 achieves > 70% accuracy at L=64 without KV-cache expansion.",
+      "strengthening_evidence": "Demonstrate that under extreme extrapolation (L=128), sequential models degrade further while discrete NCA remains stable.",
+      "last_reviewed": "2026-09-21T03:36:00Z"
+    },
+    "C-OOD128-008": {
+      "id": "C-OOD128-008",
+      "version": "1.0",
+      "statement": "On extreme extrapolation length L=128 (8x train length L=16), CD-DV-NCA maintains bracket accuracy above chance across all recurrence steps (45.0% at T=16 down to 36.7% at T=64), outperforming Baseline Causal NCA (39.2% at T=16 down to 31.4% at T=64). However, unregularized continuous recurrence updates suffer monotonic loss explosion (2.28 -> 16.73 in NCA, 3.51 -> 19.60 in Baseline).",
+      "state": "SUPPORTED_AND_BOUNDED",
+      "confidence": 0.92,
+      "supporting_artifacts": [
+        "reports/ood_128_causal_reach_sweep_results.json"
+      ],
+      "contradicting_artifacts": [],
+      "assumptions": [
+        "Models trained strictly at L=16 for 35 epochs.",
+        "Evaluation across T in [16..80] ticks."
+      ],
+      "dependencies": ["C-DYCK-001", "C-LIGHTCONE-003"],
+      "relevant_code_commits": ["HEAD"],
+      "relevant_seeds": [42, 43, 44],
+      "experiments_tested": ["scripts/run_ood_128_causal_reach_sweep.py"],
+      "unresolved_confounds": [
+        "Continuous field drift corrupts readout logit calibration as T scales to 80."
+      ],
+      "competing_explanations": [
+        "Capacity/spectral radius trade prevents asymptotic loss plateau in unregularized field."
+      ],
+      "falsification_condition": "NCA collapses below chance (25%) at T=64 on L=128.",
+      "strengthening_evidence": "Demonstrate that subspace-normalized model bounds loss at L=128 without collapsing accuracy.",
+      "last_reviewed": "2026-09-22T00:30:00Z"
+    },
+    "C-CONJUGATION-009": {
+      "id": "C-CONJUGATION-009",
+      "version": "1.0",
+      "statement": "Under transport conjugation of carry channels, continuous field energy ||H|| exhibits bit-level spatial translation invariance (delta ||H|| <= 0.0023 < 0.02, p < 1e-6 across all t* in {8, 12, 16} and depths D in {4, 8} under roll_spatial_4). Channel permutations perturb ||H|| (delta = 0.35 -> 0.05 at t*=16) due to linear weight coordinate specialization in dense1, with perturbation decaying as recurrence approaches the fixed-point basin.",
+      "state": "SUPPORTED",
+      "confidence": 0.90,
+      "supporting_artifacts": [
+        "reports/transport_conjugation_benchmark_results.json"
+      ],
+      "contradicting_artifacts": [],
+      "assumptions": [
+        "Translation equivariance of 1D convolutional stencil guarantees spatial roll invariance."
+      ],
+      "dependencies": ["C-CARRY-002"],
+      "relevant_code_commits": ["HEAD"],
+      "relevant_seeds": [42, 43, 44],
+      "experiments_tested": ["scripts/run_conjugation_invariance_benchmark.py"],
+      "unresolved_confounds": [
+        "Dense layer weights couple continuous and discrete channels at the linear perception stage."
+      ],
+      "competing_explanations": [
+        "Decoupled state update preserves energy even when coordinate representation is scrambled."
+      ],
+      "falsification_condition": "Spatial roll produces delta ||H|| > 0.05 across seeds.",
+      "strengthening_evidence": "TOST equivalence test passes with delta = 0.02 threshold across all 6 experimental conditions.",
+      "last_reviewed": "2026-09-22T00:30:00Z"
+    },
+    "C-OCPD-010": {
+      "id": "C-OCPD-010",
+      "version": "1.0",
+      "statement": "Restricting bounded state normalization to the continuous subspace H (bounded_h_only, channels 0..32) bounds continuous field drift, reducing cross-entropy loss by 47.3% at L=64 (5.13 -> 2.70) and by 71.1% at L=128 (12.45 -> 3.59) while sustaining 30.9% accuracy. Uniform full-channel normalization (Arm C) squashes carry amplitudes and collapses accuracy to the uniform chance floor (25.8% ≈ 25.0%). However, OCPD is a spectral-damping capacity trade rather than a zero-drift fixed point, as loss still creeps slowly (2.20 -> 3.59).",
+      "state": "EMPIRICALLY_QUALIFIED",
+      "confidence": 0.85,
+      "supporting_artifacts": [
+        "reports/subspace_normalization_ocpd_results.json"
+      ],
+      "contradicting_artifacts": [],
+      "assumptions": [
+        "Continuous channels require norm bounding while discrete channels require unattenuated STE sign."
+      ],
+      "dependencies": ["C-CARRY-002", "C-CONJUGATION-009"],
+      "relevant_code_commits": ["HEAD"],
+      "relevant_seeds": [42, 43, 44],
+      "experiments_tested": ["scripts/train_and_benchmark_subspace_norm.py"],
+      "unresolved_confounds": [
+        "Arm B accuracy is slightly lower than Arm A (39.8% vs 42.4% at L=64; 30.9% vs 36.7% at L=128), reflecting capacity loss from damping."
+      ],
+      "competing_explanations": [
+        "Spectral radius control bounds loss growth at the expense of marginal expressive capacity."
+      ],
+      "falsification_condition": "Arm B collapses to chance (25%) at L=128, or Arm C does not collapse to chance.",
+      "strengthening_evidence": "Arm B beats Arm C by +5.1% at L=128 where Arm C drops to 25.8% (uniform chance).",
+      "last_reviewed": "2026-09-22T00:30:00Z"
+    }
+  }
+}

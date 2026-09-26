@@ -95,12 +95,6 @@ ROLE_PROMPTS: dict[str, str] = {
         "feedforward depth specialization, label imbalance, marginal preference, token leakage, "
         "or initialization artifacts."
     ),
-    "rust-audit-agent": (
-        "You are an expert Rust systems and deep learning kernel auditor. "
-        "Audit Rust implementations in src/ for precision, state mutation bugs, gradient detachment, "
-        "causal stencil masking, memory layout, SIMD alignment, and verify that interventions actually "
-        "destroy/alter the intended physical channels without unintended side effects."
-    ),
 }
 
 

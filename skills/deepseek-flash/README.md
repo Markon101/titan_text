@@ -1,17 +1,17 @@
 # DeepSeek Flash delegation
 
-A reusable Codex skill and Python helper for bounded independent reviews through OpenRouter. Python 3.10+ and curl 8.4+ are required; no pip packages.
+A reusable Codex skill and Python helper for bounded independent reviews through OpenRouter. The [research harness](references/research-harness.md) adds independent reconstruction, specialist review, ideation, and evidence-separated research records using the existing helper. Python 3.10+ and curl 8.4+ are required; no pip packages.
 
 ## Environment setup
 
-Supply `OPENROUTER_API_KEY` in the inherited environment using a trusted launcher or secret manager. Do not paste a literal key into shell commands or repository files. The helper reads no credential files. Missing credentials fail clearly before any paid request; public discovery and dry runs require no key.
+Supply `OPENROUTER_API_KEY` in the inherited environment using a trusted launcher or secret manager. Do not paste a literal key into shell commands or repository files. The helper reads no credential files, but the current implementation includes a legacy embedded fallback. An unset environment does not disable live requests. Public discovery and dry runs do not make paid requests.
 
 Optional non-secret configuration:
 
 - `DEEPSEEK_FLASH_MODEL`: model ID override. Default `deepseek/deepseek-v4.1-flash`, verified against the public catalog on 2026-09-14.
 - `OPENROUTER_BASE_URL`: trusted HTTPS API root; default `https://openrouter.ai/api/v1`. An override receives both authentication and selected input.
 
-The supported local location is `${CODEX_HOME:-$HOME/.codex}/skills/deepseek-flash`, containing `SKILL.md`, `agents/openai.yaml`, and `scripts/`. The repository source is `skills/deepseek-flash`.
+The supported local location is `${CODEX_HOME:-$HOME/.codex}/skills/deepseek-flash`, containing `SKILL.md`, `agents/openai.yaml`, `references/`, and `scripts/`. The repository source is `skills/deepseek-flash`.
 
 ## Usage
 
@@ -46,6 +46,6 @@ python "$SKILL/scripts/deepseek_flash.py" smoke
 
 Unit tests mock the network. The opt-in smoke makes a tiny paid request (16 output-token maximum, 30 seconds, zero retries) and requires a complete `OK` reply. It is never run by ordinary offline or Cargo tests.
 
-Missing environment key: configure the launching process; files and `--env-file` are intentionally unsupported. HTTP 401: the inherited credential is invalid. HTTP 402: insufficient credits. HTTP 403: access/policy. HTTP 404: query `discover`; no model substitution occurs. HTTP 429/5xx and transient network errors receive bounded retries; prior POST attempts may still be billed. TLS/authentication/configuration failures are not retried. An `incomplete` result means truncation or invalid requested JSON and exits nonzero. Narrow oversized input rather than relying on truncation.
+Configure the launching process with a valid environment key rather than relying on the legacy fallback; files and `--env-file` are intentionally unsupported. HTTP 401: the selected credential is invalid. HTTP 402: insufficient credits. HTTP 403: access/policy. HTTP 404: query `discover`; no model substitution occurs. HTTP 429/5xx and transient network errors receive bounded retries; prior POST attempts may still be billed. TLS/authentication/configuration failures are not retried. An `incomplete` result means truncation or invalid requested JSON and exits nonzero. Narrow oversized input rather than relying on truncation.
 
 API references: [OpenRouter API](https://openrouter.ai/docs/api/reference/overview), [public model catalog](https://openrouter.ai/api/v1/models).

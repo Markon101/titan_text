@@ -12,6 +12,9 @@
 .env.openrouter
 .env.openrouter.*
 __pycache__/
+*.pyc
 /scratch/
 patterns.txt
 titantext*.txt
+/runs/
+.agents.backup_baseline/

@@ -1,0 +1,19 @@
+{"timestamp_utc": "2026-09-20T04:44:45.013506+00:00", "decision_type": "EVIDENCE_STATUS", "task_category": "research", "predicted_distribution": {"partially_supported": 0.23, "insufficient": 0.65, "contradicted": 0, "supported": 0.12}, "observed_outcome": "insufficient"}
+{"timestamp_utc": "2026-09-20T04:45:22.809580+00:00", "decision_type": "EVIDENCE_STATUS", "task_category": "research", "predicted_distribution": {"supported": 1.0}, "observed_outcome": "supported"}
+{"timestamp_utc": "2026-09-20T04:45:55.349064+00:00", "decision_type": "EVIDENCE_STATUS", "task_category": "research", "predicted_distribution": {"supported": 1.0}, "observed_outcome": "supported"}
+{"timestamp_utc": "2026-09-20T04:46:13.552842+00:00", "decision_type": "EVIDENCE_STATUS", "task_category": "research", "predicted_distribution": {"supported": 1.0}, "observed_outcome": "supported"}
+{"timestamp_utc": "2026-09-20T04:46:28.917224+00:00", "decision_type": "EVIDENCE_STATUS", "task_category": "research", "predicted_distribution": {"supported": 1.0}, "observed_outcome": "supported"}
+{"timestamp_utc": "2026-09-20T04:47:44.541010+00:00", "decision_type": "EVIDENCE_STATUS", "task_category": "research", "predicted_distribution": {"supported": 1.0}, "observed_outcome": "supported"}
+{"timestamp_utc": "2026-09-20T04:48:18.263752+00:00", "decision_type": "EVIDENCE_STATUS", "task_category": "research", "predicted_distribution": {"supported": 1.0}, "observed_outcome": "supported"}
+{"timestamp_utc": "2026-09-20T04:53:20.377240+00:00", "decision_type": "EVIDENCE_STATUS", "task_category": "research", "predicted_distribution": {"supported": 1.0}, "observed_outcome": "supported"}
+{"timestamp_utc": "2026-09-20T04:53:50.245335+00:00", "decision_type": "EVIDENCE_STATUS", "task_category": "research", "predicted_distribution": {"supported": 1.0}, "observed_outcome": "supported"}
+{"timestamp_utc": "2026-09-20T05:33:14.657808+00:00", "decision_type": "EVIDENCE_STATUS", "task_category": "research", "predicted_distribution": {"contradicted": 0.6, "partially_supported": 0.3, "supported": 0.01, "insufficient": 0.09}, "observed_outcome": "contradicted"}
+{"timestamp_utc": "2026-09-21T04:04:41.276854+00:00", "decision_type": "EVIDENCE_STATUS", "task_category": "research", "predicted_distribution": {"supported": 1.0}, "observed_outcome": "supported"}
+{"timestamp_utc": "2026-09-22T02:22:11.685276+00:00", "decision_type": "EVIDENCE_STATUS", "task_category": "research", "predicted_distribution": {"supported": 1.0}, "observed_outcome": "supported"}
+{"timestamp_utc": "2026-09-22T02:24:42.068028+00:00", "decision_type": "EVIDENCE_STATUS", "task_category": "research", "predicted_distribution": {"supported": 1.0}, "observed_outcome": "supported"}
+{"timestamp_utc": "2026-09-22T02:24:47.829010+00:00", "decision_type": "EVIDENCE_STATUS", "task_category": "research", "predicted_distribution": {"supported": 1.0}, "observed_outcome": "supported"}
+{"timestamp_utc": "2026-09-22T02:26:47.398311+00:00", "decision_type": "EVIDENCE_STATUS", "task_category": "research", "predicted_distribution": {"supported": 1.0}, "observed_outcome": "supported"}
+{"timestamp_utc": "2026-09-22T02:26:56.375532+00:00", "decision_type": "EVIDENCE_STATUS", "task_category": "research", "predicted_distribution": {"supported": 1.0}, "observed_outcome": "supported"}
+{"timestamp_utc": "2026-09-22T02:27:21.802244+00:00", "decision_type": "EVIDENCE_STATUS", "task_category": "research", "predicted_distribution": {"supported": 1.0}, "observed_outcome": "supported"}
+{"timestamp_utc": "2026-09-22T03:51:33.639689+00:00", "decision_type": "EVIDENCE_STATUS", "task_category": "research", "predicted_distribution": {"supported": 1.0}, "observed_outcome": "supported"}
+{"timestamp_utc": "2026-09-22T04:30:59.988617+00:00", "decision_type": "EVIDENCE_STATUS", "task_category": "research", "predicted_distribution": {"supported": 1.0}, "observed_outcome": "supported"}
