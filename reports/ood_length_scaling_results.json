@@ -1,0 +1,497 @@
+{
+  "results": [
+    {
+      "id": "baseline_causal",
+      "name": "Baseline Causal NCA (k=1, Cc=0)",
+      "task": "column-arithmetic",
+      "stride_k": 1,
+      "regimes": {
+        "fixed_t16": [
+          {
+            "L": 16,
+            "T": 16,
+            "acc": 35.4,
+            "loss": 4.0158,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 24,
+            "T": 16,
+            "acc": 46.6,
+            "loss": 2.3968,
+            "causal_status": "Blackout (Reach=16<L=24)"
+          },
+          {
+            "L": 32,
+            "T": 16,
+            "acc": 22.0,
+            "loss": 3.1072,
+            "causal_status": "Blackout (Reach=16<L=32)"
+          },
+          {
+            "L": 48,
+            "T": 16,
+            "acc": 20.0,
+            "loss": 2.9804,
+            "causal_status": "Blackout (Reach=16<L=48)"
+          },
+          {
+            "L": 64,
+            "T": 16,
+            "acc": 20.1,
+            "loss": 2.3213,
+            "causal_status": "Blackout (Reach=16<L=64)"
+          }
+        ],
+        "dynamic_t": [
+          {
+            "L": 16,
+            "T": 20,
+            "acc": 29.4,
+            "loss": 5.6655,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 24,
+            "T": 28,
+            "acc": 44.3,
+            "loss": 5.7012,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 32,
+            "T": 36,
+            "acc": 24.1,
+            "loss": 12.732,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 48,
+            "T": 52,
+            "acc": 17.8,
+            "loss": 21.5773,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 64,
+            "T": 68,
+            "acc": 15.7,
+            "loss": 30.0812,
+            "causal_status": "Complete"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ecr16_k1",
+      "name": "ECR-16 Bi (k=1, Cc=16)",
+      "task": "column-arithmetic",
+      "stride_k": 1,
+      "regimes": {
+        "fixed_t16": [
+          {
+            "L": 16,
+            "T": 16,
+            "acc": 46.0,
+            "loss": 2.6598,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 24,
+            "T": 16,
+            "acc": 61.7,
+            "loss": 1.7509,
+            "causal_status": "Blackout (Reach=16<L=24)"
+          },
+          {
+            "L": 32,
+            "T": 16,
+            "acc": 48.3,
+            "loss": 2.4704,
+            "causal_status": "Blackout (Reach=16<L=32)"
+          },
+          {
+            "L": 48,
+            "T": 16,
+            "acc": 34.0,
+            "loss": 3.2817,
+            "causal_status": "Blackout (Reach=16<L=48)"
+          },
+          {
+            "L": 64,
+            "T": 16,
+            "acc": 27.9,
+            "loss": 3.7039,
+            "causal_status": "Blackout (Reach=16<L=64)"
+          }
+        ],
+        "dynamic_t": [
+          {
+            "L": 16,
+            "T": 20,
+            "acc": 35.4,
+            "loss": 3.8155,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 24,
+            "T": 28,
+            "acc": 45.4,
+            "loss": 3.3722,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 32,
+            "T": 36,
+            "acc": 37.1,
+            "loss": 6.08,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 48,
+            "T": 52,
+            "acc": 27.1,
+            "loss": 9.6759,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 64,
+            "T": 68,
+            "acc": 34.7,
+            "loss": 8.7512,
+            "causal_status": "Complete"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ecr16_k2",
+      "name": "ECR-16 Bi Skip-2 (k=2, Cc=16)",
+      "task": "column-arithmetic",
+      "stride_k": 2,
+      "regimes": {
+        "fixed_t16": [
+          {
+            "L": 16,
+            "T": 16,
+            "acc": 53.4,
+            "loss": 2.8643,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 24,
+            "T": 16,
+            "acc": 61.1,
+            "loss": 1.8066,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 32,
+            "T": 16,
+            "acc": 23.6,
+            "loss": 3.1931,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 48,
+            "T": 16,
+            "acc": 24.2,
+            "loss": 3.2511,
+            "causal_status": "Blackout (Reach=32<L=48)"
+          },
+          {
+            "L": 64,
+            "T": 16,
+            "acc": 23.2,
+            "loss": 2.8061,
+            "causal_status": "Blackout (Reach=32<L=64)"
+          }
+        ],
+        "dynamic_t": [
+          {
+            "L": 16,
+            "T": 12,
+            "acc": 54.2,
+            "loss": 1.9224,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 24,
+            "T": 16,
+            "acc": 61.1,
+            "loss": 1.8066,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 32,
+            "T": 20,
+            "acc": 16.8,
+            "loss": 4.4016,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 48,
+            "T": 28,
+            "acc": 17.8,
+            "loss": 7.6239,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 64,
+            "T": 36,
+            "acc": 17.4,
+            "loss": 9.0162,
+            "causal_status": "Complete"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ecr32_k4_deep",
+      "name": "ECR-32 Bi Skip-4 Deep (k=4, Cc=32)",
+      "task": "column-arithmetic",
+      "stride_k": 4,
+      "regimes": {
+        "fixed_t16": [
+          {
+            "L": 16,
+            "T": 16,
+            "acc": 60.0,
+            "loss": 1.6736,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 24,
+            "T": 16,
+            "acc": 63.4,
+            "loss": 1.5327,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 32,
+            "T": 16,
+            "acc": 38.1,
+            "loss": 2.1951,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 48,
+            "T": 16,
+            "acc": 39.0,
+            "loss": 2.5602,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 64,
+            "T": 16,
+            "acc": 28.3,
+            "loss": 2.4917,
+            "causal_status": "Complete"
+          }
+        ],
+        "dynamic_t": [
+          {
+            "L": 16,
+            "T": 8,
+            "acc": 42.5,
+            "loss": 2.3638,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 24,
+            "T": 10,
+            "acc": 57.2,
+            "loss": 1.8789,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 32,
+            "T": 12,
+            "acc": 40.0,
+            "loss": 2.1617,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 48,
+            "T": 16,
+            "acc": 39.0,
+            "loss": 2.5602,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 64,
+            "T": 20,
+            "acc": 53.0,
+            "loss": 2.2814,
+            "causal_status": "Complete"
+          }
+        ]
+      }
+    },
+    {
+      "id": "parity_continuous",
+      "name": "ECR-16 Parity Continuous (k=1)",
+      "task": "iterated-parity",
+      "stride_k": 1,
+      "regimes": {
+        "fixed_t16": [
+          {
+            "L": 16,
+            "T": 16,
+            "acc": 57.8,
+            "loss": 1.0074,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 24,
+            "T": 16,
+            "acc": 57.1,
+            "loss": 1.1874,
+            "causal_status": "Blackout (Reach=16<L=24)"
+          },
+          {
+            "L": 32,
+            "T": 16,
+            "acc": 55.1,
+            "loss": 1.3432,
+            "causal_status": "Blackout (Reach=16<L=32)"
+          },
+          {
+            "L": 48,
+            "T": 16,
+            "acc": 52.9,
+            "loss": 1.4418,
+            "causal_status": "Blackout (Reach=16<L=48)"
+          },
+          {
+            "L": 64,
+            "T": 16,
+            "acc": 51.9,
+            "loss": 1.527,
+            "causal_status": "Blackout (Reach=16<L=64)"
+          }
+        ],
+        "dynamic_t": [
+          {
+            "L": 16,
+            "T": 20,
+            "acc": 57.3,
+            "loss": 1.1805,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 24,
+            "T": 28,
+            "acc": 56.9,
+            "loss": 1.2374,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 32,
+            "T": 36,
+            "acc": 52.1,
+            "loss": 1.7906,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 48,
+            "T": 52,
+            "acc": 50.2,
+            "loss": 2.4307,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 64,
+            "T": 68,
+            "acc": 47.3,
+            "loss": 3.5755,
+            "causal_status": "Complete"
+          }
+        ]
+      }
+    },
+    {
+      "id": "parity_ste_sign",
+      "name": "ECR-16 Parity STE-Sign (k=1)",
+      "task": "iterated-parity",
+      "stride_k": 1,
+      "regimes": {
+        "fixed_t16": [
+          {
+            "L": 16,
+            "T": 16,
+            "acc": 56.4,
+            "loss": 0.8419,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 24,
+            "T": 16,
+            "acc": 54.4,
+            "loss": 0.8824,
+            "causal_status": "Blackout (Reach=16<L=24)"
+          },
+          {
+            "L": 32,
+            "T": 16,
+            "acc": 53.8,
+            "loss": 0.8875,
+            "causal_status": "Blackout (Reach=16<L=32)"
+          },
+          {
+            "L": 48,
+            "T": 16,
+            "acc": 51.3,
+            "loss": 0.8963,
+            "causal_status": "Blackout (Reach=16<L=48)"
+          },
+          {
+            "L": 64,
+            "T": 16,
+            "acc": 52.6,
+            "loss": 0.8722,
+            "causal_status": "Blackout (Reach=16<L=64)"
+          }
+        ],
+        "dynamic_t": [
+          {
+            "L": 16,
+            "T": 20,
+            "acc": 55.3,
+            "loss": 0.9435,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 24,
+            "T": 28,
+            "acc": 55.6,
+            "loss": 1.5138,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 32,
+            "T": 36,
+            "acc": 50.2,
+            "loss": 2.2808,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 48,
+            "T": 52,
+            "acc": 49.4,
+            "loss": 3.8318,
+            "causal_status": "Complete"
+          },
+          {
+            "L": 64,
+            "T": 68,
+            "acc": 50.7,
+            "loss": 5.666,
+            "causal_status": "Complete"
+          }
+        ]
+      }
+    }
+  ],
+  "total_time": 1405.0705506801605
+}

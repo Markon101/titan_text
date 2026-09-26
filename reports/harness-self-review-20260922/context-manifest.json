@@ -1,0 +1,69 @@
+{
+  "selections": [
+    {
+      "path": ".agents/skills/research-team/scripts/research_meeting.py",
+      "start": 55,
+      "end": 325,
+      "selected_sha256": "75724038b4ff887244bd82a710a24c5b46bb5cb2f7fe66322df7e718b6225b7c",
+      "source_sha256": "d6913942a539d0da31d99afb90db7c7d2620be41d9e30271f7eb501fc0046a67"
+    },
+    {
+      "path": ".agents/skills/research-team/scripts/research_coordinator.py",
+      "start": 89,
+      "end": 284,
+      "selected_sha256": "bb6e842de54bcbaaf0285b4c6c2a94aeb0ff6e1bad993714e3c6b230248b3ab6",
+      "source_sha256": "76ec5aa0d4659027940ce7376de9c3423e8578d7eb8e54f8c06e13615e98bb99"
+    },
+    {
+      "path": ".agents/skills/openrouter-subagents/scripts/subagent.py",
+      "start": 130,
+      "end": 328,
+      "selected_sha256": "4ae8a530bb77cebb6cc47f7dccf85f94d5f8fd8580d6afaa171cb508fafa3d25",
+      "source_sha256": "08fada82ecc9afaad938eeef3e254c4d89870416e0a8f4345435cde4de1c1f34"
+    },
+    {
+      "path": ".agents/skills/openrouter-subagents/scripts/jev_decide.py",
+      "start": 296,
+      "end": 500,
+      "selected_sha256": "2fc3d0664f3dd70bd8b14205f8bee0fe8e2c2bb4361179f6de82f5509aad1671",
+      "source_sha256": "6efc3f10827bdcf730e363a1c8532ca09862672a1b56b19c183a803556274783"
+    },
+    {
+      "path": ".agents/skills/openrouter-subagents/scripts/cognitive_governor.py",
+      "start": 110,
+      "end": 365,
+      "selected_sha256": "cdc30a897eed2065ac4d36f384c17f11d738a2d655f3b7d817fc35f72574be31",
+      "source_sha256": "ac1bd3e03e6b53e9181f54f99a2309e0c37b3488a5e163fb43466a3061a5ffac"
+    },
+    {
+      "path": ".agents/skills/openrouter-subagents/scripts/calibration_tracker.py",
+      "start": 25,
+      "end": 220,
+      "selected_sha256": "01652bd0e7473708ad08bb40eb2ea5de895378e001c9a13700d1f10a9226666c",
+      "source_sha256": "7ee07ad187e2f56cdd27a002fec4e66547313adf29c6354e5d58a98fd191135b"
+    },
+    {
+      "path": ".agents/skills/research-team/scripts/ideation_engine.py",
+      "start": 163,
+      "end": 303,
+      "selected_sha256": "5bdff3c10025da1bc8c17241d86d2e2a6c8f034b19676a19503b8532559e5f93",
+      "source_sha256": "e92377dcc45b00b09fa424e7a934ad42d0dba237389abfa68c5cd18fffc317f3"
+    },
+    {
+      "path": ".agents/skills/research-team/scripts/research_state.py",
+      "start": 65,
+      "end": 150,
+      "selected_sha256": "b2842edb3f2fb6ac104ea48db448851e066af1875ebb7dbfb485ccd49b545113",
+      "source_sha256": "2eeff040d5d82e9351fee67c0d8c70cb37cd6a29011ce2fd374fd22bac805dc7"
+    },
+    {
+      "path": ".agents/skills/openrouter-subagents/scripts/benchmark_suite.py",
+      "start": 165,
+      "end": 350,
+      "selected_sha256": "3ddf6041a89a516bf73728a472850f49740bebc4f1e03fda3ae5bf9f9778dd2c",
+      "source_sha256": "0ced6c22f78ce0549b098c14d16944dfdfdc0e3a5b23dbdcf8a185a1aa2857e8"
+    }
+  ],
+  "bytes": 82876,
+  "sha256": "106e5ef11af4076861dca155f1dca97d95cc99a6daf79472d5711e45a04e194a"
+}

@@ -1,0 +1,110 @@
+{
+  "benchmark": "horizon_phase_boundary_dyck4",
+  "date": "2026-09-21T03:36:07Z",
+  "seq_len": 64,
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "cddv_sweep": {
+    "16": {
+      "reach_ratio": 0.5,
+      "acc_mean": 42.7,
+      "acc_std": 4.2,
+      "loss_mean": 2.2148
+    },
+    "24": {
+      "reach_ratio": 0.75,
+      "acc_mean": 43.8,
+      "acc_std": 5.1,
+      "loss_mean": 3.5485
+    },
+    "32": {
+      "reach_ratio": 1.0,
+      "acc_mean": 42.4,
+      "acc_std": 3.2,
+      "loss_mean": 5.1291
+    },
+    "40": {
+      "reach_ratio": 1.0,
+      "acc_mean": 42.1,
+      "acc_std": 2.4,
+      "loss_mean": 6.9706
+    },
+    "48": {
+      "reach_ratio": 1.0,
+      "acc_mean": 43.0,
+      "acc_std": 1.7,
+      "loss_mean": 8.8819
+    }
+  },
+  "baseline_sweep": {
+    "16": {
+      "reach_ratio": 0.125,
+      "acc_mean": 41.7,
+      "acc_std": 5.8,
+      "loss_mean": 3.5518
+    },
+    "24": {
+      "reach_ratio": 0.188,
+      "acc_mean": 39.7,
+      "acc_std": 8.6,
+      "loss_mean": 6.042
+    },
+    "32": {
+      "reach_ratio": 0.25,
+      "acc_mean": 36.6,
+      "acc_std": 5.8,
+      "loss_mean": 8.6082
+    },
+    "48": {
+      "reach_ratio": 0.375,
+      "acc_mean": 36.0,
+      "acc_std": 3.5,
+      "loss_mean": 14.182
+    }
+  },
+  "sealed_predictions": {
+    "cddv_k4": {
+      "16": {
+        "reach_ratio": 0.5,
+        "acc_pred": 40.25
+      },
+      "24": {
+        "reach_ratio": 0.75,
+        "acc_pred": 50.88
+      },
+      "32": {
+        "reach_ratio": 1.0,
+        "acc_pred": 61.5
+      },
+      "40": {
+        "reach_ratio": 1.0,
+        "acc_pred": 60.3
+      },
+      "48": {
+        "reach_ratio": 1.0,
+        "acc_pred": 59.1
+      }
+    },
+    "baseline_k1": {
+      "16": {
+        "reach_ratio": 0.125,
+        "acc_pred": 24.31
+      },
+      "24": {
+        "reach_ratio": 0.188,
+        "acc_pred": 26.97
+      },
+      "32": {
+        "reach_ratio": 0.25,
+        "acc_pred": 29.62
+      },
+      "48": {
+        "reach_ratio": 0.375,
+        "acc_pred": 34.94
+      }
+    }
+  }
+}

@@ -1,0 +1,201 @@
+{
+  "hypotheses": {
+    "H1_hyperbolic_advection": {
+      "title": "Hyperbolic Advection Transport",
+      "statement": "The ECR provides unitary, non-dissipative spatial transport c_i^{t+1} = c_{i-k}^t with velocity v = k. It overcomes the continuous NCA correlation length bound (xi \u2248 4.53 cells) by propagating discrete symbols ballistically rather than diffusively."
+    },
+    "H2_receptive_field_dilation": {
+      "title": "Receptive Field Dilation Shortcut",
+      "statement": "Stride k > 1 skip transport simply widens the effective receptive field per tick (like dilated convolution), bypassing intermediate cells without genuine continuous cellular dynamics."
+    },
+    "H3_representation_decoupling": {
+      "title": "Capacity / Representation Decoupling",
+      "statement": "The ECR advantage is primarily due to isolating persistent memory registers (C_carry) from transient non-linear token processing (C_hidden), preventing accumulated carries from being overwritten by local cell updates."
+    },
+    "H4_gradient_highway": {
+      "title": "Optimization Gradient Highway",
+      "statement": "Carry skip connections act as linear identity residual pathways that facilitate backpropagation through time over deep development horizons (T >= 16), eliminating vanishing/exploding gradients during training."
+    }
+  },
+  "evidence": [
+    {
+      "id": "E1_parameter_invariance",
+      "name": "Parameter Invariance Audit",
+      "data": "Trainable parameters are strictly invariant at 43,715 across Cc in {0, 16, 32}. Carry channels do not add weights; they repartition total channels C=64. At Cc=32, local hidden capacity is halved (32 channels), yet accuracy improves from 90.2% to 100.0%. Advection shift is non-parametric (0 FLOPs, pure tensor slicing)."
+    },
+    {
+      "id": "E2_carry_probing_separation",
+      "name": "Carry vs Hidden Decodability Separation",
+      "data": "Under zero-leakage balanced ripple chains (a_i + b_i = 9, untraind baseline = 50.0% chance): At d=0: Full State = 100%, Carry = 100%, Hidden = 100%. At d=4: Full State = 88.9%, Carry Register = 94.4%, Hidden State = 61.1% (+33.3% gap!). At d=8: Full State = 72.2%, Carry Register = 61.1%, Hidden State = 44.4% (hidden drops below chance). Spatial decodability decay of hidden state matches analytical continuous contraction length xi = 4.53."
+    },
+    {
+      "id": "E3_ood_length_lyapunov_divergence",
+      "name": "OOD Length Generalization & Lyapunov Stability",
+      "data": "Trained at L=16, evaluated zero-shot up to L=64. Baseline Causal NCA dynamically scaled to T=68 suffers exponential Lyapunov divergence (Loss = 30.08, Acc = 15.7%). ECR-16 Bi dynamically scaled to T=68 remains strictly bounded (Loss = 8.75, Acc = 34.7%, 2.2x accuracy of baseline). Fixed T=16 exhibits exact lightcone reach cutoff: k=1 reaches d=16, k=2 reaches d=32 (retaining 61.1% at L=24)."
+    }
+  ],
+  "compatibility_matrix": {
+    "H1_hyperbolic_advection": {
+      "E1_parameter_invariance": {
+        "decision": "strongly_supports",
+        "confidence": 0.37,
+        "probabilities": {
+          "strongly_supports": 0.5,
+          "contradicts": 0.01,
+          "partially_consistent": 0.46,
+          "in_tension": 0.01,
+          "neutral": 0.02
+        }
+      },
+      "E2_carry_probing_separation": {
+        "decision": "contradicts",
+        "confidence": 0.44,
+        "probabilities": {
+          "contradicts": 0.55,
+          "strongly_supports": 0.05,
+          "in_tension": 0.28,
+          "partially_consistent": 0.11,
+          "neutral": 0.01
+        }
+      },
+      "E3_ood_length_lyapunov_divergence": {
+        "decision": "strongly_supports",
+        "confidence": 0.48,
+        "probabilities": {
+          "strongly_supports": 0.57,
+          "neutral": 0.01,
+          "in_tension": 0.04,
+          "partially_consistent": 0.34,
+          "contradicts": 0.04
+        }
+      }
+    },
+    "H2_receptive_field_dilation": {
+      "E1_parameter_invariance": {
+        "decision": "partially_consistent",
+        "confidence": 0.59,
+        "probabilities": {
+          "partially_consistent": 0.68,
+          "neutral": 0.02,
+          "in_tension": 0.09,
+          "contradicts": 0.05,
+          "strongly_supports": 0.16
+        }
+      },
+      "E2_carry_probing_separation": {
+        "decision": "contradicts",
+        "confidence": 0.24,
+        "probabilities": {
+          "in_tension": 0.39,
+          "strongly_supports": 0.02,
+          "neutral": 0.03,
+          "partially_consistent": 0.17,
+          "contradicts": 0.39
+        }
+      },
+      "E3_ood_length_lyapunov_divergence": {
+        "decision": "partially_consistent",
+        "confidence": 0.5,
+        "probabilities": {
+          "strongly_supports": 0.14,
+          "partially_consistent": 0.61,
+          "neutral": 0,
+          "contradicts": 0.11,
+          "in_tension": 0.14
+        }
+      }
+    },
+    "H3_representation_decoupling": {
+      "E1_parameter_invariance": {
+        "decision": "strongly_supports",
+        "confidence": 0.64,
+        "probabilities": {
+          "neutral": 0,
+          "partially_consistent": 0.27,
+          "strongly_supports": 0.71,
+          "in_tension": 0.01,
+          "contradicts": 0.01
+        }
+      },
+      "E2_carry_probing_separation": {
+        "decision": "strongly_supports",
+        "confidence": 0.81,
+        "probabilities": {
+          "neutral": 0,
+          "partially_consistent": 0.15,
+          "in_tension": 0,
+          "strongly_supports": 0.85,
+          "contradicts": 0
+        }
+      },
+      "E3_ood_length_lyapunov_divergence": {
+        "decision": "partially_consistent",
+        "confidence": 0.63,
+        "probabilities": {
+          "strongly_supports": 0.26,
+          "in_tension": 0.02,
+          "contradicts": 0.01,
+          "partially_consistent": 0.7,
+          "neutral": 0.01
+        }
+      }
+    },
+    "H4_gradient_highway": {
+      "E1_parameter_invariance": {
+        "decision": "partially_consistent",
+        "confidence": 0.81,
+        "probabilities": {
+          "neutral": 0.02,
+          "in_tension": 0.04,
+          "partially_consistent": 0.84,
+          "strongly_supports": 0.08,
+          "contradicts": 0.02
+        }
+      },
+      "E2_carry_probing_separation": {
+        "decision": "partially_consistent",
+        "confidence": 0.3,
+        "probabilities": {
+          "partially_consistent": 0.44,
+          "neutral": 0.01,
+          "contradicts": 0.24,
+          "in_tension": 0.15,
+          "strongly_supports": 0.16
+        }
+      },
+      "E3_ood_length_lyapunov_divergence": {
+        "decision": "partially_consistent",
+        "confidence": 0.79,
+        "probabilities": {
+          "neutral": 0.01,
+          "strongly_supports": 0.05,
+          "in_tension": 0.07,
+          "contradicts": 0.03,
+          "partially_consistent": 0.84
+        }
+      }
+    }
+  },
+  "arbitration": {
+    "status": "ok",
+    "decision_type": "titan_nca_primary_mechanism",
+    "decision": "H3_representation_decoupling",
+    "confidence": 0.86,
+    "probabilities": {
+      "H4_gradient_highway": 0,
+      "H3_representation_decoupling": 0.89,
+      "H1_hyperbolic_advection": 0.11,
+      "H2_receptive_field_dilation": 0
+    },
+    "entropy": 0.25,
+    "model": "typesafe/jev-1.13-20260917",
+    "cost_usd": 0.000104496,
+    "usage": {
+      "input_tokens": 2488,
+      "output_tokens": 89,
+      "cost": 0.000104496
+    },
+    "elapsed_seconds": 0.394067,
+    "fallback_applied": false
+  }
+}

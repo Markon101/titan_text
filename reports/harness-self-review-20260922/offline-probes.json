@@ -1,0 +1,42 @@
+{
+  "all_reviewers_failed": {
+    "reported_status": "ok",
+    "round1": {
+      "code-reviewer": ""
+    },
+    "round2": {
+      "code-reviewer": ""
+    }
+  },
+  "empty": {
+    "reported_status": "ok",
+    "finish_reason": "stop",
+    "answer_length": 0
+  },
+  "truncated": {
+    "reported_status": "ok",
+    "finish_reason": "length",
+    "answer_length": 14
+  },
+  "evidence_id_whitespace": [
+    {
+      "id": "run:abc",
+      "new_ids": [
+        "run:abc"
+      ],
+      "evidence_count": 1
+    },
+    {
+      "id": " run:abc ",
+      "new_ids": [
+        " run:abc "
+      ],
+      "evidence_count": 2
+    },
+    {
+      "id": "run:abc",
+      "new_ids": [],
+      "evidence_count": 2
+    }
+  ]
+}

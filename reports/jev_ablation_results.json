@@ -1,0 +1,84 @@
+{
+  "benchmark": "jev_cognitive_governor_ablation",
+  "date": "2026-09-21T03:31:42Z",
+  "total_test_cases": 10,
+  "conditions": {
+    "J0": {
+      "level": 0,
+      "blocked_pre_execution": 0,
+      "blocked_post_execution": 0,
+      "total_errors_intercepted": 0,
+      "invalid_escaped_into_reports": 8,
+      "valid_experiments_passed": 2,
+      "error_interception_rate_pct": 0.0,
+      "wasted_compute_sec": 376.0,
+      "compute_saved_sec": 72.0
+    },
+    "J1": {
+      "level": 1,
+      "blocked_pre_execution": 0,
+      "blocked_post_execution": 1,
+      "total_errors_intercepted": 1,
+      "invalid_escaped_into_reports": 7,
+      "valid_experiments_passed": 2,
+      "error_interception_rate_pct": 12.5,
+      "wasted_compute_sec": 376.0,
+      "compute_saved_sec": 72.0
+    },
+    "J2": {
+      "level": 2,
+      "blocked_pre_execution": 0,
+      "blocked_post_execution": 1,
+      "total_errors_intercepted": 1,
+      "invalid_escaped_into_reports": 7,
+      "valid_experiments_passed": 2,
+      "error_interception_rate_pct": 12.5,
+      "wasted_compute_sec": 376.0,
+      "compute_saved_sec": 72.0
+    },
+    "J3": {
+      "level": 3,
+      "blocked_pre_execution": 3,
+      "blocked_post_execution": 1,
+      "total_errors_intercepted": 4,
+      "invalid_escaped_into_reports": 4,
+      "valid_experiments_passed": 2,
+      "error_interception_rate_pct": 50.0,
+      "wasted_compute_sec": 92.0,
+      "compute_saved_sec": 356.0
+    },
+    "J4": {
+      "level": 4,
+      "blocked_pre_execution": 4,
+      "blocked_post_execution": 1,
+      "total_errors_intercepted": 5,
+      "invalid_escaped_into_reports": 3,
+      "valid_experiments_passed": 2,
+      "error_interception_rate_pct": 62.5,
+      "wasted_compute_sec": 91.0,
+      "compute_saved_sec": 357.0
+    },
+    "J5": {
+      "level": 5,
+      "blocked_pre_execution": 7,
+      "blocked_post_execution": 1,
+      "total_errors_intercepted": 8,
+      "invalid_escaped_into_reports": 0,
+      "valid_experiments_passed": 2,
+      "error_interception_rate_pct": 100.0,
+      "wasted_compute_sec": 30.0,
+      "compute_saved_sec": 418.0
+    },
+    "J6": {
+      "level": 6,
+      "blocked_pre_execution": 7,
+      "blocked_post_execution": 1,
+      "total_errors_intercepted": 8,
+      "invalid_escaped_into_reports": 0,
+      "valid_experiments_passed": 2,
+      "error_interception_rate_pct": 100.0,
+      "wasted_compute_sec": 30.0,
+      "compute_saved_sec": 418.0
+    }
+  }
+}

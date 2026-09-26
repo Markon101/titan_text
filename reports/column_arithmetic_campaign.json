@@ -1,0 +1,330 @@
+{
+  "results": [
+    {
+      "config": {
+        "name": "ECR-16 Bi (k=1, T=16)",
+        "carry_channels": 16,
+        "skip_stride": 1,
+        "bidirectional": true,
+        "dev_steps": 16,
+        "epochs": 100
+      },
+      "seed_results": [
+        {
+          "seed": 42,
+          "train_time": 69.71078848838806,
+          "train_metrics": {
+            "train_acc": 100.0,
+            "train_loss": 0.0086,
+            "val_acc": 49.4,
+            "val_loss": 2.5647
+          },
+          "eval_metrics": {
+            "val_loss_mean": 2.6598,
+            "val_loss_std": 0.0809,
+            "val_acc_mean": 46.0,
+            "val_acc_std": 4.1
+          },
+          "val_acc": 46.0
+        },
+        {
+          "seed": 101,
+          "train_time": 68.73082542419434,
+          "train_metrics": {
+            "train_acc": 100.0,
+            "train_loss": 0.0123,
+            "val_acc": 58.7,
+            "val_loss": 2.199
+          },
+          "eval_metrics": {
+            "val_loss_mean": 2.4442,
+            "val_loss_std": 0.0796,
+            "val_acc_mean": 52.4,
+            "val_acc_std": 2.2
+          },
+          "val_acc": 52.4
+        },
+        {
+          "seed": 202,
+          "train_time": 113.15646839141846,
+          "train_metrics": {
+            "train_acc": 100.0,
+            "train_loss": 0.0204,
+            "val_acc": 62.5,
+            "val_loss": 2.3601
+          },
+          "eval_metrics": {
+            "val_loss_mean": 2.5228,
+            "val_loss_std": 0.16,
+            "val_acc_mean": 54.5,
+            "val_acc_std": 3.1
+          },
+          "val_acc": 54.5
+        }
+      ],
+      "mean_val_acc": 50.96666666666667,
+      "std_val_acc": 4.427565169857281
+    },
+    {
+      "config": {
+        "name": "ECR-16 Bi Skip-2 (k=2, T=16)",
+        "carry_channels": 16,
+        "skip_stride": 2,
+        "bidirectional": true,
+        "dev_steps": 16,
+        "epochs": 100
+      },
+      "seed_results": [
+        {
+          "seed": 42,
+          "train_time": 106.45615673065186,
+          "train_metrics": {
+            "train_acc": 100.0,
+            "train_loss": 0.0059,
+            "val_acc": 63.1,
+            "val_loss": 2.6074
+          },
+          "eval_metrics": {
+            "val_loss_mean": 2.8643,
+            "val_loss_std": 0.1231,
+            "val_acc_mean": 53.4,
+            "val_acc_std": 1.7
+          },
+          "val_acc": 53.4
+        },
+        {
+          "seed": 101,
+          "train_time": 95.49514555931091,
+          "train_metrics": {
+            "train_acc": 100.0,
+            "train_loss": 0.0092,
+            "val_acc": 60.6,
+            "val_loss": 2.1501
+          },
+          "eval_metrics": {
+            "val_loss_mean": 2.4763,
+            "val_loss_std": 0.1455,
+            "val_acc_mean": 54.2,
+            "val_acc_std": 2.0
+          },
+          "val_acc": 54.2
+        },
+        {
+          "seed": 202,
+          "train_time": 105.39877390861511,
+          "train_metrics": {
+            "train_acc": 100.0,
+            "train_loss": 0.0088,
+            "val_acc": 42.5,
+            "val_loss": 2.7728
+          },
+          "eval_metrics": {
+            "val_loss_mean": 3.0202,
+            "val_loss_std": 0.0801,
+            "val_acc_mean": 40.7,
+            "val_acc_std": 2.2
+          },
+          "val_acc": 40.7
+        }
+      ],
+      "mean_val_acc": 49.43333333333334,
+      "std_val_acc": 7.573858549863029
+    },
+    {
+      "config": {
+        "name": "ECR-32 Bi Skip-2 (k=2, T=16)",
+        "carry_channels": 32,
+        "skip_stride": 2,
+        "bidirectional": true,
+        "dev_steps": 16,
+        "epochs": 100
+      },
+      "seed_results": [
+        {
+          "seed": 42,
+          "train_time": 112.8557813167572,
+          "train_metrics": {
+            "train_acc": 100.0,
+            "train_loss": 0.0051,
+            "val_acc": 64.4,
+            "val_loss": 1.9787
+          },
+          "eval_metrics": {
+            "val_loss_mean": 2.3289,
+            "val_loss_std": 0.1123,
+            "val_acc_mean": 56.6,
+            "val_acc_std": 2.5
+          },
+          "val_acc": 56.6
+        },
+        {
+          "seed": 101,
+          "train_time": 93.56557822227478,
+          "train_metrics": {
+            "train_acc": 100.0,
+            "train_loss": 0.0047,
+            "val_acc": 66.9,
+            "val_loss": 1.968
+          },
+          "eval_metrics": {
+            "val_loss_mean": 2.2072,
+            "val_loss_std": 0.1034,
+            "val_acc_mean": 60.1,
+            "val_acc_std": 2.5
+          },
+          "val_acc": 60.1
+        },
+        {
+          "seed": 202,
+          "train_time": 98.42611026763916,
+          "train_metrics": {
+            "train_acc": 100.0,
+            "train_loss": 0.0062,
+            "val_acc": 68.1,
+            "val_loss": 1.9542
+          },
+          "eval_metrics": {
+            "val_loss_mean": 2.1993,
+            "val_loss_std": 0.2185,
+            "val_acc_mean": 61.4,
+            "val_acc_std": 2.4
+          },
+          "val_acc": 61.4
+        }
+      ],
+      "mean_val_acc": 59.36666666666667,
+      "std_val_acc": 2.4826061575153897
+    },
+    {
+      "config": {
+        "name": "ECR-32 Bi Skip-2 Deep (k=2, T=24)",
+        "carry_channels": 32,
+        "skip_stride": 2,
+        "bidirectional": true,
+        "dev_steps": 24,
+        "epochs": 100
+      },
+      "seed_results": [
+        {
+          "seed": 42,
+          "train_time": 121.62643098831177,
+          "train_metrics": {
+            "train_acc": 100.0,
+            "train_loss": 0.0074,
+            "val_acc": 67.5,
+            "val_loss": 1.6782
+          },
+          "eval_metrics": {
+            "val_loss_mean": 2.1033,
+            "val_loss_std": 0.1331,
+            "val_acc_mean": 60.2,
+            "val_acc_std": 2.0
+          },
+          "val_acc": 60.2
+        },
+        {
+          "seed": 101,
+          "train_time": 158.9046347141266,
+          "train_metrics": {
+            "train_acc": 100.0,
+            "train_loss": 0.0098,
+            "val_acc": 54.4,
+            "val_loss": 2.3819
+          },
+          "eval_metrics": {
+            "val_loss_mean": 2.559,
+            "val_loss_std": 0.0995,
+            "val_acc_mean": 51.5,
+            "val_acc_std": 2.7
+          },
+          "val_acc": 51.5
+        },
+        {
+          "seed": 202,
+          "train_time": 140.0198314189911,
+          "train_metrics": {
+            "train_acc": 100.0,
+            "train_loss": 0.0072,
+            "val_acc": 66.2,
+            "val_loss": 2.3058
+          },
+          "eval_metrics": {
+            "val_loss_mean": 2.6007,
+            "val_loss_std": 0.0799,
+            "val_acc_mean": 58.9,
+            "val_acc_std": 1.6
+          },
+          "val_acc": 58.9
+        }
+      ],
+      "mean_val_acc": 56.86666666666667,
+      "std_val_acc": 4.692902442341343
+    },
+    {
+      "config": {
+        "name": "ECR-32 Bi Skip-4 Deep (k=4, T=24)",
+        "carry_channels": 32,
+        "skip_stride": 4,
+        "bidirectional": true,
+        "dev_steps": 24,
+        "epochs": 100
+      },
+      "seed_results": [
+        {
+          "seed": 42,
+          "train_time": 146.81468176841736,
+          "train_metrics": {
+            "train_acc": 100.0,
+            "train_loss": 0.0037,
+            "val_acc": 67.5,
+            "val_loss": 2.121
+          },
+          "eval_metrics": {
+            "val_loss_mean": 2.5864,
+            "val_loss_std": 0.1172,
+            "val_acc_mean": 59.8,
+            "val_acc_std": 0.9
+          },
+          "val_acc": 59.8
+        },
+        {
+          "seed": 101,
+          "train_time": 157.63822317123413,
+          "train_metrics": {
+            "train_acc": 100.0,
+            "train_loss": 0.0052,
+            "val_acc": 68.1,
+            "val_loss": 1.8983
+          },
+          "eval_metrics": {
+            "val_loss_mean": 2.4249,
+            "val_loss_std": 0.1964,
+            "val_acc_mean": 59.8,
+            "val_acc_std": 1.8
+          },
+          "val_acc": 59.8
+        },
+        {
+          "seed": 202,
+          "train_time": 160.5496370792389,
+          "train_metrics": {
+            "train_acc": 100.0,
+            "train_loss": 0.005,
+            "val_acc": 68.1,
+            "val_loss": 2.6472
+          },
+          "eval_metrics": {
+            "val_loss_mean": 2.9271,
+            "val_loss_std": 0.1612,
+            "val_acc_mean": 60.3,
+            "val_acc_std": 3.0
+          },
+          "val_acc": 60.3
+        }
+      ],
+      "mean_val_acc": 59.96666666666666,
+      "std_val_acc": 0.28867513459481287
+    }
+  ],
+  "total_time": 1917.9129066467285
+}

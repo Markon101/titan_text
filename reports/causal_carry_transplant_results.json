@@ -1,0 +1,270 @@
+{
+  "benchmark": "causal_carry_transplantation_rd005",
+  "date": "2026-09-21T03:56:09Z",
+  "checkpoint": "checkpoints/dyck4_pushdown/cd_dv_nca_seed_42",
+  "seq_len": 64,
+  "dev_steps": 24,
+  "n_pairs": 32,
+  "experiments": {
+    "phase1_temporal_sweep": {
+      "4": {
+        "carry_transplant": {
+          "cei": 16.41,
+          "far": 49.22,
+          "omr": 34.38,
+          "per_position_cei": [
+            0.0,
+            12.5,
+            21.88,
+            31.25
+          ]
+        },
+        "hidden_transplant": {
+          "cei": 56.25,
+          "far": 14.84,
+          "omr": 28.91,
+          "per_position_cei": [
+            93.75,
+            50.0,
+            28.12,
+            53.12
+          ]
+        },
+        "full_transplant": {
+          "cei": 56.25,
+          "far": 10.16,
+          "omr": 33.59,
+          "per_position_cei": [
+            93.75,
+            50.0,
+            34.38,
+            46.88
+          ]
+        }
+      },
+      "8": {
+        "carry_transplant": {
+          "cei": 18.75,
+          "far": 47.66,
+          "omr": 33.59,
+          "per_position_cei": [
+            0.0,
+            21.88,
+            18.75,
+            34.38
+          ]
+        },
+        "hidden_transplant": {
+          "cei": 43.75,
+          "far": 24.22,
+          "omr": 32.03,
+          "per_position_cei": [
+            100.0,
+            12.5,
+            28.12,
+            34.38
+          ]
+        },
+        "full_transplant": {
+          "cei": 49.22,
+          "far": 19.53,
+          "omr": 31.25,
+          "per_position_cei": [
+            100.0,
+            18.75,
+            34.38,
+            43.75
+          ]
+        }
+      },
+      "12": {
+        "carry_transplant": {
+          "cei": 21.09,
+          "far": 52.34,
+          "omr": 26.56,
+          "per_position_cei": [
+            3.12,
+            21.88,
+            21.88,
+            37.5
+          ]
+        },
+        "hidden_transplant": {
+          "cei": 48.44,
+          "far": 22.66,
+          "omr": 28.91,
+          "per_position_cei": [
+            96.88,
+            25.0,
+            31.25,
+            40.62
+          ]
+        },
+        "full_transplant": {
+          "cei": 49.22,
+          "far": 22.66,
+          "omr": 28.12,
+          "per_position_cei": [
+            96.88,
+            28.12,
+            31.25,
+            40.62
+          ]
+        }
+      },
+      "16": {
+        "carry_transplant": {
+          "cei": 17.19,
+          "far": 47.66,
+          "omr": 35.16,
+          "per_position_cei": [
+            0.0,
+            18.75,
+            21.88,
+            28.12
+          ]
+        },
+        "hidden_transplant": {
+          "cei": 56.25,
+          "far": 14.84,
+          "omr": 28.91,
+          "per_position_cei": [
+            87.5,
+            40.62,
+            43.75,
+            53.12
+          ]
+        },
+        "full_transplant": {
+          "cei": 54.69,
+          "far": 17.19,
+          "omr": 28.12,
+          "per_position_cei": [
+            90.62,
+            40.62,
+            43.75,
+            43.75
+          ]
+        }
+      },
+      "20": {
+        "carry_transplant": {
+          "cei": 16.41,
+          "far": 50.78,
+          "omr": 32.81,
+          "per_position_cei": [
+            0.0,
+            21.88,
+            15.62,
+            28.12
+          ]
+        },
+        "hidden_transplant": {
+          "cei": 47.66,
+          "far": 22.66,
+          "omr": 29.69,
+          "per_position_cei": [
+            90.62,
+            31.25,
+            31.25,
+            37.5
+          ]
+        },
+        "full_transplant": {
+          "cei": 46.09,
+          "far": 21.88,
+          "omr": 32.03,
+          "per_position_cei": [
+            90.62,
+            34.38,
+            28.12,
+            31.25
+          ]
+        }
+      }
+    },
+    "phase2_contrastive_controls": {
+      "carry_transplant": {
+        "cei": 21.09,
+        "far": 52.34,
+        "omr": 26.56,
+        "per_position_cei": [
+          3.12,
+          21.88,
+          21.88,
+          37.5
+        ]
+      },
+      "same_bracket_null": {
+        "cei": 46.88,
+        "far": 0.0,
+        "omr": 53.12,
+        "per_position_cei": [
+          96.88,
+          28.12,
+          37.5,
+          25.0
+        ]
+      },
+      "gaussian_noise_carry": {
+        "cei": 16.41,
+        "far": 52.34,
+        "omr": 31.25,
+        "per_position_cei": [
+          3.12,
+          15.62,
+          25.0,
+          21.88
+        ]
+      },
+      "spatial_roll_carry": {
+        "cei": 18.75,
+        "far": 55.47,
+        "omr": 25.78,
+        "per_position_cei": [
+          3.12,
+          18.75,
+          25.0,
+          28.12
+        ]
+      }
+    },
+    "phase3_depth_sweep": {
+      "2": {
+        "cei": 4.69,
+        "far": 67.19,
+        "omr": 28.12,
+        "per_position_cei": [
+          0.0,
+          9.38
+        ]
+      },
+      "4": {
+        "cei": 21.09,
+        "far": 52.34,
+        "omr": 26.56,
+        "per_position_cei": [
+          3.12,
+          21.88,
+          21.88,
+          37.5
+        ]
+      },
+      "8": {
+        "cei": 21.48,
+        "far": 41.02,
+        "omr": 37.5,
+        "per_position_cei": [
+          0.0,
+          21.88,
+          31.25,
+          28.12,
+          12.5,
+          28.12,
+          9.38,
+          40.62
+        ]
+      }
+    }
+  }
+}

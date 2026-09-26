@@ -1,0 +1,110 @@
+{
+  "benchmark": "extreme_ood_128_causal_reach",
+  "date": "2026-09-22T00:07:38Z",
+  "seq_len": 128,
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "cddv_sweep": {
+    "16": {
+      "reach_ratio": 0.25,
+      "acc_mean": 45.0,
+      "acc_std": 3.8,
+      "loss_mean": 2.2777
+    },
+    "24": {
+      "reach_ratio": 0.375,
+      "acc_mean": 42.8,
+      "acc_std": 5.8,
+      "loss_mean": 3.6433
+    },
+    "32": {
+      "reach_ratio": 0.5,
+      "acc_mean": 41.3,
+      "acc_std": 4.9,
+      "loss_mean": 5.1012
+    },
+    "48": {
+      "reach_ratio": 0.75,
+      "acc_mean": 37.0,
+      "acc_std": 2.2,
+      "loss_mean": 8.5107
+    },
+    "64": {
+      "reach_ratio": 1.0,
+      "acc_mean": 36.7,
+      "acc_std": 3.4,
+      "loss_mean": 12.4544
+    },
+    "80": {
+      "reach_ratio": 1.0,
+      "acc_mean": 34.8,
+      "acc_std": 3.6,
+      "loss_mean": 16.7334
+    }
+  },
+  "baseline_sweep": {
+    "16": {
+      "reach_ratio": 0.062,
+      "acc_mean": 39.2,
+      "acc_std": 4.3,
+      "loss_mean": 3.5084
+    },
+    "32": {
+      "reach_ratio": 0.125,
+      "acc_mean": 33.2,
+      "acc_std": 2.4,
+      "loss_mean": 8.0665
+    },
+    "64": {
+      "reach_ratio": 0.25,
+      "acc_mean": 31.4,
+      "acc_std": 4.3,
+      "loss_mean": 19.603
+    }
+  },
+  "theoretical_predictions": {
+    "cddv_k4": {
+      "16": {
+        "reach_ratio": 0.25,
+        "acc_regime": "chance_floor (25-30%)"
+      },
+      "24": {
+        "reach_ratio": 0.375,
+        "acc_regime": "sub_reach (30-35%)"
+      },
+      "32": {
+        "reach_ratio": 0.5,
+        "acc_regime": "half_reach (35-40%)"
+      },
+      "48": {
+        "reach_ratio": 0.75,
+        "acc_regime": "partial_closure (40-48%)"
+      },
+      "64": {
+        "reach_ratio": 1.0,
+        "acc_regime": "causal_closure (50-60%)"
+      },
+      "80": {
+        "reach_ratio": 1.0,
+        "acc_regime": "post_closure_saturation"
+      }
+    },
+    "baseline_k1": {
+      "16": {
+        "reach_ratio": 0.062,
+        "acc_regime": "chance_floor (25%)"
+      },
+      "32": {
+        "reach_ratio": 0.125,
+        "acc_regime": "chance_floor (25%)"
+      },
+      "64": {
+        "reach_ratio": 0.25,
+        "acc_regime": "chance_floor (25%)"
+      }
+    }
+  }
+}

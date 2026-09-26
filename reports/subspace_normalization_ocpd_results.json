@@ -1,0 +1,103 @@
+{
+  "benchmark": "subspace_normalization_ocpd",
+  "date": "2026-09-22T00:20:37Z",
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "arms": {
+    "arm_a_no_norm": {
+      "description": "Arm A: No Norm (Unbounded Continuous Drift)",
+      "state_norm": "none",
+      "carry_quantization": "ste_sign",
+      "eval_l16_t20": {
+        "loss_mean": 2.5588,
+        "loss_std": 0.2634,
+        "acc_mean": 52.0,
+        "acc_std": 1.9
+      },
+      "eval_l64_t32": {
+        "loss_mean": 5.1291,
+        "loss_std": 0.352,
+        "acc_mean": 42.4,
+        "acc_std": 3.2
+      },
+      "eval_l128_t64": {
+        "loss_mean": 12.4544,
+        "loss_std": 0.5599,
+        "acc_mean": 36.7,
+        "acc_std": 3.4
+      }
+    },
+    "arm_b_subspace_h_only": {
+      "description": "Arm B: Subspace H-Only Norm (OCPD Clean Decoupling)",
+      "state_norm": "bounded_h_only",
+      "carry_quantization": "ste_sign",
+      "eval_l16_t20": {
+        "loss_mean": 2.1999,
+        "loss_std": 0.2649,
+        "acc_mean": 50.6,
+        "acc_std": 6.8
+      },
+      "eval_l64_t32": {
+        "loss_mean": 2.7046,
+        "loss_std": 0.275,
+        "acc_mean": 39.8,
+        "acc_std": 6.5
+      },
+      "eval_l128_t64": {
+        "loss_mean": 3.5945,
+        "loss_std": 0.223,
+        "acc_mean": 30.9,
+        "acc_std": 3.3
+      }
+    },
+    "arm_c_full64_no_quant": {
+      "description": "Arm C: Full-64 Norm (All Channels Squashed, No STE)",
+      "state_norm": "bounded",
+      "carry_quantization": "none",
+      "eval_l16_t20": {
+        "loss_mean": 2.3221,
+        "loss_std": 0.5006,
+        "acc_mean": 49.9,
+        "acc_std": 2.0
+      },
+      "eval_l64_t32": {
+        "loss_mean": 2.9264,
+        "loss_std": 0.1611,
+        "acc_mean": 33.2,
+        "acc_std": 6.0
+      },
+      "eval_l128_t64": {
+        "loss_mean": 3.534,
+        "loss_std": 0.3122,
+        "acc_mean": 25.8,
+        "acc_std": 4.7
+      }
+    },
+    "arm_d_full64_ste_sign": {
+      "description": "Arm D: Full-64 Norm + STE-Sign (Squashed then Re-quantized)",
+      "state_norm": "bounded",
+      "carry_quantization": "ste_sign",
+      "eval_l16_t20": {
+        "loss_mean": 2.7027,
+        "loss_std": 0.271,
+        "acc_mean": 46.7,
+        "acc_std": 4.0
+      },
+      "eval_l64_t32": {
+        "loss_mean": 3.6195,
+        "loss_std": 0.248,
+        "acc_mean": 34.5,
+        "acc_std": 7.1
+      },
+      "eval_l128_t64": {
+        "loss_mean": 4.1586,
+        "loss_std": 0.0717,
+        "acc_mean": 30.1,
+        "acc_std": 1.7
+      }
+    }
+  }
+}

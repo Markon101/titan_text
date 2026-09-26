@@ -1,0 +1,111 @@
+{
+  "benchmark": "stratified_depth_dyck4",
+  "date": "2026-09-21T03:48:27Z",
+  "seq_len": 64,
+  "dev_steps": 24,
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "depth_evaluations": {
+    "1": {
+      "intact_acc": 81.2,
+      "intact_std": 10.8,
+      "lesion_acc": 83.3,
+      "lesion_std": 7.2,
+      "scramble_acc": 81.2,
+      "scramble_std": 10.8,
+      "delta_causal": -2.1,
+      "theory_lesion_acc": 100.0,
+      "theory_gap": -16.7
+    },
+    "2": {
+      "intact_acc": 58.3,
+      "intact_std": 3.6,
+      "lesion_acc": 50.0,
+      "lesion_std": 5.4,
+      "scramble_acc": 26.0,
+      "scramble_std": 7.9,
+      "delta_causal": 8.3,
+      "theory_lesion_acc": 62.5,
+      "theory_gap": -12.5
+    },
+    "4": {
+      "intact_acc": 50.5,
+      "intact_std": 3.9,
+      "lesion_acc": 38.0,
+      "lesion_std": 4.5,
+      "scramble_acc": 32.8,
+      "scramble_std": 0.0,
+      "delta_causal": 12.5,
+      "theory_lesion_acc": 43.75,
+      "theory_gap": -5.75
+    },
+    "8": {
+      "intact_acc": 37.2,
+      "intact_std": 5.9,
+      "lesion_acc": 31.5,
+      "lesion_std": 6.1,
+      "scramble_acc": 28.4,
+      "scramble_std": 3.3,
+      "delta_causal": 5.7,
+      "theory_lesion_acc": 34.38,
+      "theory_gap": -2.88
+    },
+    "12": {
+      "intact_acc": 29.3,
+      "intact_std": 2.6,
+      "lesion_acc": 26.9,
+      "lesion_std": 1.3,
+      "scramble_acc": 25.9,
+      "scramble_std": 2.1,
+      "delta_causal": 2.4,
+      "theory_lesion_acc": 31.25,
+      "theory_gap": -4.35
+    },
+    "16": {
+      "intact_acc": 29.7,
+      "intact_std": 4.1,
+      "lesion_acc": 27.3,
+      "lesion_std": 2.1,
+      "scramble_acc": 24.9,
+      "scramble_std": 1.4,
+      "delta_causal": 2.4,
+      "theory_lesion_acc": 29.69,
+      "theory_gap": -2.39
+    }
+  },
+  "theoretical_predictions": {
+    "1": {
+      "intact_pred": 98.0,
+      "lesion_th": 100.0,
+      "delta_pred": 0.0
+    },
+    "2": {
+      "intact_pred": 85.0,
+      "lesion_th": 62.5,
+      "delta_pred": 22.5
+    },
+    "4": {
+      "intact_pred": 68.0,
+      "lesion_th": 43.75,
+      "delta_pred": 24.25
+    },
+    "8": {
+      "intact_pred": 44.0,
+      "lesion_th": 34.38,
+      "delta_pred": 9.62
+    },
+    "12": {
+      "intact_pred": 38.0,
+      "lesion_th": 31.25,
+      "delta_pred": 6.75
+    },
+    "16": {
+      "intact_pred": 34.0,
+      "lesion_th": 29.69,
+      "delta_pred": 4.31
+    }
+  }
+}

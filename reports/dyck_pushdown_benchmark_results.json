@@ -1,0 +1,116 @@
+{
+  "benchmark": "dyck4_pushdown_dpda",
+  "date": "2026-09-21T02:59:42Z",
+  "markov_bounds": {
+    "2": {
+      "n2_ceiling_pct": 25.0,
+      "n3_ceiling_pct": 100.0,
+      "n4_ceiling_pct": 100.0
+    },
+    "4": {
+      "n2_ceiling_pct": 1.5625,
+      "n3_ceiling_pct": 6.25,
+      "n4_ceiling_pct": 25.0
+    },
+    "6": {
+      "n2_ceiling_pct": 0.09766,
+      "n3_ceiling_pct": 0.39062,
+      "n4_ceiling_pct": 1.5625
+    },
+    "8": {
+      "n2_ceiling_pct": 0.0061,
+      "n3_ceiling_pct": 0.02441,
+      "n4_ceiling_pct": 0.09766
+    },
+    "12": {
+      "n2_ceiling_pct": 2e-05,
+      "n3_ceiling_pct": 0.0001,
+      "n4_ceiling_pct": 0.00038
+    }
+  },
+  "evaluations": {
+    "32": {
+      "baseline_causal": {
+        "acc_mean": 36.23,
+        "acc_std": 0.4,
+        "loss_mean": 3.9825,
+        "loss_std": 0.8649,
+        "seeds_evaluated": 3
+      },
+      "cd_dv_nca": {
+        "acc_mean": 40.83,
+        "acc_std": 1.58,
+        "loss_mean": 2.9831,
+        "loss_std": 0.158,
+        "seeds_evaluated": 3
+      },
+      "carry_lesion": {
+        "acc_mean": 32.7,
+        "acc_std": 4.53,
+        "loss_mean": 3.1316,
+        "loss_std": 0.4093,
+        "seeds_evaluated": 3
+      },
+      "shuffle_control": {
+        "acc_mean": 20.3,
+        "acc_std": 2.36,
+        "loss_mean": 4.806,
+        "loss_std": 0.3678,
+        "seeds_evaluated": 3
+      }
+    },
+    "64": {
+      "baseline_causal": {
+        "acc_mean": 35.6,
+        "acc_std": 2.49,
+        "loss_mean": 5.4583,
+        "loss_std": 1.0488,
+        "seeds_evaluated": 3
+      },
+      "cd_dv_nca": {
+        "acc_mean": 43.9,
+        "acc_std": 1.61,
+        "loss_mean": 3.6756,
+        "loss_std": 0.2898,
+        "seeds_evaluated": 3
+      },
+      "carry_lesion": {
+        "acc_mean": 32.33,
+        "acc_std": 1.82,
+        "loss_mean": 4.0277,
+        "loss_std": 0.4336,
+        "seeds_evaluated": 3
+      },
+      "shuffle_control": {
+        "acc_mean": 18.1,
+        "acc_std": 4.14,
+        "loss_mean": 6.2029,
+        "loss_std": 0.3168,
+        "seeds_evaluated": 3
+      }
+    }
+  },
+  "adversarial_audit": {
+    "fc1_markov_refutation": {
+      "criterion": "ESMR(L=64) >= 20.0% vs Markov-4 floor of 0.098%",
+      "observed_cd_dv_acc": 43.9,
+      "markov4_floor": 0.098,
+      "passed": true
+    },
+    "fc3_context_scramble_ratio": {
+      "criterion": "Shuffle control accuracy ratio <= 0.25 or <= 12.0%",
+      "observed_intact_acc": 43.9,
+      "observed_shuffle_acc": 18.1,
+      "ratio_shuffle": 0.412,
+      "passed": false
+    },
+    "fc4_carry_mediation": {
+      "criterion": "Carry lesion drops accuracy significantly",
+      "observed_intact_acc": 43.9,
+      "observed_lesion_acc": 32.33,
+      "delta_lesion": -11.57,
+      "passed": false
+    },
+    "verdict": "FALSIFIED"
+  }
+}

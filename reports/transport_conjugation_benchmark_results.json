@@ -1,0 +1,477 @@
+{
+  "benchmark": "transport_conjugation_invariance",
+  "date": "2026-09-22T00:15:21Z",
+  "seq_len": 64,
+  "dev_steps": 24,
+  "n_pairs": 32,
+  "checkpoints": [
+    "checkpoints/dyck4_pushdown/cd_dv_nca_seed_42",
+    "checkpoints/dyck4_pushdown/cd_dv_nca_seed_43",
+    "checkpoints/dyck4_pushdown/cd_dv_nca_seed_44"
+  ],
+  "t_stars": [
+    8,
+    12,
+    16
+  ],
+  "depths": [
+    4,
+    8
+  ],
+  "modes": [
+    "identity",
+    "conjugate_reverse",
+    "conjugate_cyclic_shift",
+    "conjugate_subregister_swap",
+    "conjugate_negate",
+    "roll_spatial_4",
+    "gaussian_noise",
+    "lesion_zero"
+  ],
+  "experiments": {
+    "t_8_depth_4": {
+      "identity": {
+        "cei": 18.49,
+        "far": 44.79,
+        "omr": 36.72,
+        "h_norm": 5.7234,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.0,
+        "tost_invariant": true
+      },
+      "conjugate_reverse": {
+        "cei": 19.01,
+        "far": 47.14,
+        "omr": 33.85,
+        "h_norm": 5.5626,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.1607,
+        "tost_invariant": false
+      },
+      "conjugate_cyclic_shift": {
+        "cei": 19.01,
+        "far": 44.27,
+        "omr": 36.72,
+        "h_norm": 5.3754,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.3479,
+        "tost_invariant": false
+      },
+      "conjugate_subregister_swap": {
+        "cei": 16.93,
+        "far": 48.18,
+        "omr": 34.89,
+        "h_norm": 5.4924,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.231,
+        "tost_invariant": false
+      },
+      "conjugate_negate": {
+        "cei": 16.4,
+        "far": 47.39,
+        "omr": 36.2,
+        "h_norm": 5.1978,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.5255,
+        "tost_invariant": false
+      },
+      "roll_spatial_4": {
+        "cei": 19.53,
+        "far": 43.23,
+        "omr": 37.24,
+        "h_norm": 5.7247,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.0013,
+        "tost_invariant": true
+      },
+      "gaussian_noise": {
+        "cei": 18.23,
+        "far": 46.35,
+        "omr": 35.42,
+        "h_norm": 5.3289,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.3945,
+        "tost_invariant": false
+      },
+      "lesion_zero": {
+        "cei": 16.66,
+        "far": 47.65,
+        "omr": 35.68,
+        "h_norm": 5.5772,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.1461,
+        "tost_invariant": false
+      }
+    },
+    "t_8_depth_8": {
+      "identity": {
+        "cei": 24.22,
+        "far": 35.16,
+        "omr": 40.62,
+        "h_norm": 5.6109,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.0,
+        "tost_invariant": true
+      },
+      "conjugate_reverse": {
+        "cei": 23.44,
+        "far": 34.9,
+        "omr": 41.67,
+        "h_norm": 5.4468,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.1641,
+        "tost_invariant": false
+      },
+      "conjugate_cyclic_shift": {
+        "cei": 24.35,
+        "far": 32.68,
+        "omr": 42.97,
+        "h_norm": 5.3493,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.2616,
+        "tost_invariant": false
+      },
+      "conjugate_subregister_swap": {
+        "cei": 22.66,
+        "far": 35.68,
+        "omr": 41.67,
+        "h_norm": 5.4355,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.1754,
+        "tost_invariant": false
+      },
+      "conjugate_negate": {
+        "cei": 22.66,
+        "far": 35.81,
+        "omr": 41.54,
+        "h_norm": 5.1811,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.4298,
+        "tost_invariant": false
+      },
+      "roll_spatial_4": {
+        "cei": 24.09,
+        "far": 35.68,
+        "omr": 40.23,
+        "h_norm": 5.6124,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.0015,
+        "tost_invariant": true
+      },
+      "gaussian_noise": {
+        "cei": 24.09,
+        "far": 33.72,
+        "omr": 42.19,
+        "h_norm": 5.28,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.3309,
+        "tost_invariant": false
+      },
+      "lesion_zero": {
+        "cei": 22.92,
+        "far": 35.42,
+        "omr": 41.66,
+        "h_norm": 5.5192,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.0918,
+        "tost_invariant": false
+      }
+    },
+    "t_12_depth_4": {
+      "identity": {
+        "cei": 19.27,
+        "far": 49.74,
+        "omr": 30.99,
+        "h_norm": 5.7256,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.0,
+        "tost_invariant": true
+      },
+      "conjugate_reverse": {
+        "cei": 16.4,
+        "far": 49.74,
+        "omr": 33.86,
+        "h_norm": 5.5898,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.1358,
+        "tost_invariant": false
+      },
+      "conjugate_cyclic_shift": {
+        "cei": 17.45,
+        "far": 49.22,
+        "omr": 33.33,
+        "h_norm": 5.5029,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.2227,
+        "tost_invariant": false
+      },
+      "conjugate_subregister_swap": {
+        "cei": 17.45,
+        "far": 50.0,
+        "omr": 32.55,
+        "h_norm": 5.5519,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.1737,
+        "tost_invariant": false
+      },
+      "conjugate_negate": {
+        "cei": 16.93,
+        "far": 49.74,
+        "omr": 33.33,
+        "h_norm": 5.3359,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.3897,
+        "tost_invariant": false
+      },
+      "roll_spatial_4": {
+        "cei": 18.49,
+        "far": 51.04,
+        "omr": 30.47,
+        "h_norm": 5.7265,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.0009,
+        "tost_invariant": true
+      },
+      "gaussian_noise": {
+        "cei": 19.53,
+        "far": 48.96,
+        "omr": 31.51,
+        "h_norm": 5.4582,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.2674,
+        "tost_invariant": false
+      },
+      "lesion_zero": {
+        "cei": 16.93,
+        "far": 50.52,
+        "omr": 32.55,
+        "h_norm": 5.6296,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.096,
+        "tost_invariant": false
+      }
+    },
+    "t_12_depth_8": {
+      "identity": {
+        "cei": 22.79,
+        "far": 39.19,
+        "omr": 38.02,
+        "h_norm": 5.619,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.0,
+        "tost_invariant": true
+      },
+      "conjugate_reverse": {
+        "cei": 22.66,
+        "far": 39.58,
+        "omr": 37.76,
+        "h_norm": 5.4831,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.1359,
+        "tost_invariant": false
+      },
+      "conjugate_cyclic_shift": {
+        "cei": 22.13,
+        "far": 37.63,
+        "omr": 40.24,
+        "h_norm": 5.4514,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.1676,
+        "tost_invariant": false
+      },
+      "conjugate_subregister_swap": {
+        "cei": 22.14,
+        "far": 39.32,
+        "omr": 38.54,
+        "h_norm": 5.4793,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.1397,
+        "tost_invariant": false
+      },
+      "conjugate_negate": {
+        "cei": 23.05,
+        "far": 38.8,
+        "omr": 38.15,
+        "h_norm": 5.2908,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.3283,
+        "tost_invariant": false
+      },
+      "roll_spatial_4": {
+        "cei": 23.05,
+        "far": 38.8,
+        "omr": 38.15,
+        "h_norm": 5.6167,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.0023,
+        "tost_invariant": true
+      },
+      "gaussian_noise": {
+        "cei": 22.79,
+        "far": 40.36,
+        "omr": 36.85,
+        "h_norm": 5.3936,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.2254,
+        "tost_invariant": false
+      },
+      "lesion_zero": {
+        "cei": 22.78,
+        "far": 39.71,
+        "omr": 37.5,
+        "h_norm": 5.555,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.0641,
+        "tost_invariant": false
+      }
+    },
+    "t_16_depth_4": {
+      "identity": {
+        "cei": 18.23,
+        "far": 44.79,
+        "omr": 36.98,
+        "h_norm": 5.7287,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.0,
+        "tost_invariant": true
+      },
+      "conjugate_reverse": {
+        "cei": 17.45,
+        "far": 45.83,
+        "omr": 36.72,
+        "h_norm": 5.6179,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.1108,
+        "tost_invariant": false
+      },
+      "conjugate_cyclic_shift": {
+        "cei": 16.92,
+        "far": 45.57,
+        "omr": 37.5,
+        "h_norm": 5.5732,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.1555,
+        "tost_invariant": false
+      },
+      "conjugate_subregister_swap": {
+        "cei": 17.45,
+        "far": 46.09,
+        "omr": 36.46,
+        "h_norm": 5.6,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.1287,
+        "tost_invariant": false
+      },
+      "conjugate_negate": {
+        "cei": 17.19,
+        "far": 45.31,
+        "omr": 37.5,
+        "h_norm": 5.4549,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.2738,
+        "tost_invariant": false
+      },
+      "roll_spatial_4": {
+        "cei": 18.23,
+        "far": 46.61,
+        "omr": 35.16,
+        "h_norm": 5.7281,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.0006,
+        "tost_invariant": true
+      },
+      "gaussian_noise": {
+        "cei": 19.53,
+        "far": 45.31,
+        "omr": 35.16,
+        "h_norm": 5.5605,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.1682,
+        "tost_invariant": false
+      },
+      "lesion_zero": {
+        "cei": 17.71,
+        "far": 46.1,
+        "omr": 36.2,
+        "h_norm": 5.6595,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.0692,
+        "tost_invariant": false
+      }
+    },
+    "t_16_depth_8": {
+      "identity": {
+        "cei": 21.22,
+        "far": 39.45,
+        "omr": 39.32,
+        "h_norm": 5.6267,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.0,
+        "tost_invariant": true
+      },
+      "conjugate_reverse": {
+        "cei": 22.26,
+        "far": 39.06,
+        "omr": 38.67,
+        "h_norm": 5.5352,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.0916,
+        "tost_invariant": false
+      },
+      "conjugate_cyclic_shift": {
+        "cei": 22.27,
+        "far": 39.06,
+        "omr": 38.67,
+        "h_norm": 5.4992,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.1276,
+        "tost_invariant": false
+      },
+      "conjugate_subregister_swap": {
+        "cei": 21.61,
+        "far": 37.76,
+        "omr": 40.63,
+        "h_norm": 5.522,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.1048,
+        "tost_invariant": false
+      },
+      "conjugate_negate": {
+        "cei": 21.22,
+        "far": 36.98,
+        "omr": 41.8,
+        "h_norm": 5.3838,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.2429,
+        "tost_invariant": false
+      },
+      "roll_spatial_4": {
+        "cei": 23.05,
+        "far": 39.19,
+        "omr": 37.76,
+        "h_norm": 5.6276,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.0009,
+        "tost_invariant": true
+      },
+      "gaussian_noise": {
+        "cei": 21.87,
+        "far": 37.24,
+        "omr": 40.88,
+        "h_norm": 5.4785,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.1482,
+        "tost_invariant": false
+      },
+      "lesion_zero": {
+        "cei": 21.22,
+        "far": 40.1,
+        "omr": 38.67,
+        "h_norm": 5.5748,
+        "c_norm": 1.0,
+        "h_delta_vs_identity": 0.052,
+        "tost_invariant": false
+      }
+    }
+  }
+}

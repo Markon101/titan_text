@@ -1,0 +1,2153 @@
+{
+  "benchmark": "adversarial_balanced_dyck4",
+  "date": "2026-09-22T03:39:30Z",
+  "seq_len": 64,
+  "dev_steps": 24,
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "depths": [
+    2,
+    4,
+    8
+  ],
+  "gaps": [
+    0,
+    4,
+    8
+  ],
+  "conditions": [
+    "intact",
+    "carry_lesion",
+    "scramble"
+  ],
+  "cells": {
+    "D2_G0": {
+      "intact": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 1.9979,
+            "loss_std": 0.6327,
+            "acc_mean": 74.0,
+            "acc_std": 1.8
+          },
+          "Transformer": {
+            "loss_mean": 0.7878,
+            "loss_std": 0.0475,
+            "acc_mean": 46.9,
+            "acc_std": 3.1
+          },
+          "GRU Recurrent": {
+            "loss_mean": 0.7506,
+            "loss_std": 0.0108,
+            "acc_mean": 54.2,
+            "acc_std": 3.6
+          },
+          "Simple RNN": {
+            "loss_mean": 0.3011,
+            "loss_std": 0.0328,
+            "acc_mean": 100.0,
+            "acc_std": 0.0
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4618,
+            "loss_std": 0.0643,
+            "acc_mean": 26.0,
+            "acc_std": 7.2
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 2,
+            "nca_acc": 100.0,
+            "tf_acc": 70.8,
+            "gru_acc": 31.2,
+            "sr_acc": 100.0,
+            "untied_acc": 20.8
+          },
+          {
+            "slot": 1,
+            "distance": 4,
+            "nca_acc": 47.9,
+            "tf_acc": 22.9,
+            "gru_acc": 77.1,
+            "sr_acc": 100.0,
+            "untied_acc": 31.2
+          }
+        ]
+      },
+      "carry_lesion": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 2.1266,
+            "loss_std": 0.3401,
+            "acc_mean": 60.4,
+            "acc_std": 4.8
+          },
+          "Transformer": {
+            "loss_mean": 0.7878,
+            "loss_std": 0.0475,
+            "acc_mean": 46.9,
+            "acc_std": 3.1
+          },
+          "GRU Recurrent": {
+            "loss_mean": 0.7506,
+            "loss_std": 0.0108,
+            "acc_mean": 54.2,
+            "acc_std": 3.6
+          },
+          "Simple RNN": {
+            "loss_mean": 0.3011,
+            "loss_std": 0.0328,
+            "acc_mean": 100.0,
+            "acc_std": 0.0
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4618,
+            "loss_std": 0.0643,
+            "acc_mean": 26.0,
+            "acc_std": 7.2
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 2,
+            "nca_acc": 85.4,
+            "tf_acc": 70.8,
+            "gru_acc": 31.2,
+            "sr_acc": 100.0,
+            "untied_acc": 20.8
+          },
+          {
+            "slot": 1,
+            "distance": 4,
+            "nca_acc": 35.4,
+            "tf_acc": 22.9,
+            "gru_acc": 77.1,
+            "sr_acc": 100.0,
+            "untied_acc": 31.2
+          }
+        ]
+      },
+      "scramble": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 9.7166,
+            "loss_std": 0.31,
+            "acc_mean": 0.0,
+            "acc_std": 0.0
+          },
+          "Transformer": {
+            "loss_mean": 0.8981,
+            "loss_std": 0.0519,
+            "acc_mean": 56.2,
+            "acc_std": 6.2
+          },
+          "GRU Recurrent": {
+            "loss_mean": 0.7818,
+            "loss_std": 0.0062,
+            "acc_mean": 46.9,
+            "acc_std": 3.1
+          },
+          "Simple RNN": {
+            "loss_mean": 3.2449,
+            "loss_std": 0.1983,
+            "acc_mean": 0.0,
+            "acc_std": 0.0
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.439,
+            "loss_std": 0.0275,
+            "acc_mean": 30.2,
+            "acc_std": 9.5
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 2,
+            "nca_acc": 0.0,
+            "tf_acc": 31.2,
+            "gru_acc": 70.8,
+            "sr_acc": 0.0,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 1,
+            "distance": 4,
+            "nca_acc": 0.0,
+            "tf_acc": 81.2,
+            "gru_acc": 22.9,
+            "sr_acc": 0.0,
+            "untied_acc": 31.2
+          }
+        ]
+      }
+    },
+    "D2_G4": {
+      "intact": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 5.4605,
+            "loss_std": 0.1889,
+            "acc_mean": 11.5,
+            "acc_std": 1.8
+          },
+          "Transformer": {
+            "loss_mean": 1.2948,
+            "loss_std": 0.1105,
+            "acc_mean": 26.0,
+            "acc_std": 7.2
+          },
+          "GRU Recurrent": {
+            "loss_mean": 0.8485,
+            "loss_std": 0.0101,
+            "acc_mean": 44.8,
+            "acc_std": 4.8
+          },
+          "Simple RNN": {
+            "loss_mean": 0.7407,
+            "loss_std": 0.121,
+            "acc_mean": 74.0,
+            "acc_std": 6.5
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4618,
+            "loss_std": 0.0643,
+            "acc_mean": 26.0,
+            "acc_std": 7.2
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 6,
+            "nca_acc": 8.3,
+            "tf_acc": 20.8,
+            "gru_acc": 29.2,
+            "sr_acc": 85.4,
+            "untied_acc": 20.8
+          },
+          {
+            "slot": 1,
+            "distance": 8,
+            "nca_acc": 14.6,
+            "tf_acc": 31.2,
+            "gru_acc": 60.4,
+            "sr_acc": 62.5,
+            "untied_acc": 31.2
+          }
+        ]
+      },
+      "carry_lesion": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 5.5018,
+            "loss_std": 0.467,
+            "acc_mean": 21.9,
+            "acc_std": 9.4
+          },
+          "Transformer": {
+            "loss_mean": 1.2948,
+            "loss_std": 0.1105,
+            "acc_mean": 26.0,
+            "acc_std": 7.2
+          },
+          "GRU Recurrent": {
+            "loss_mean": 0.8485,
+            "loss_std": 0.0101,
+            "acc_mean": 44.8,
+            "acc_std": 4.8
+          },
+          "Simple RNN": {
+            "loss_mean": 0.7407,
+            "loss_std": 0.121,
+            "acc_mean": 74.0,
+            "acc_std": 6.5
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4618,
+            "loss_std": 0.0643,
+            "acc_mean": 26.0,
+            "acc_std": 7.2
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 6,
+            "nca_acc": 20.8,
+            "tf_acc": 20.8,
+            "gru_acc": 29.2,
+            "sr_acc": 85.4,
+            "untied_acc": 20.8
+          },
+          {
+            "slot": 1,
+            "distance": 8,
+            "nca_acc": 22.9,
+            "tf_acc": 31.2,
+            "gru_acc": 60.4,
+            "sr_acc": 62.5,
+            "untied_acc": 31.2
+          }
+        ]
+      },
+      "scramble": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 5.309,
+            "loss_std": 0.9557,
+            "acc_mean": 26.0,
+            "acc_std": 4.8
+          },
+          "Transformer": {
+            "loss_mean": 1.3205,
+            "loss_std": 0.1266,
+            "acc_mean": 30.2,
+            "acc_std": 9.5
+          },
+          "GRU Recurrent": {
+            "loss_mean": 0.8568,
+            "loss_std": 0.0082,
+            "acc_mean": 53.1,
+            "acc_std": 3.1
+          },
+          "Simple RNN": {
+            "loss_mean": 2.4866,
+            "loss_std": 0.2239,
+            "acc_mean": 6.2,
+            "acc_std": 6.2
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.439,
+            "loss_std": 0.0275,
+            "acc_mean": 30.2,
+            "acc_std": 9.5
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 6,
+            "nca_acc": 35.4,
+            "tf_acc": 29.2,
+            "gru_acc": 70.8,
+            "sr_acc": 0.0,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 1,
+            "distance": 8,
+            "nca_acc": 16.7,
+            "tf_acc": 31.2,
+            "gru_acc": 35.4,
+            "sr_acc": 12.5,
+            "untied_acc": 31.2
+          }
+        ]
+      }
+    },
+    "D2_G8": {
+      "intact": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 6.0858,
+            "loss_std": 0.4837,
+            "acc_mean": 21.9,
+            "acc_std": 9.4
+          },
+          "Transformer": {
+            "loss_mean": 1.3979,
+            "loss_std": 0.1141,
+            "acc_mean": 26.0,
+            "acc_std": 7.2
+          },
+          "GRU Recurrent": {
+            "loss_mean": 0.9654,
+            "loss_std": 0.0332,
+            "acc_mean": 43.8,
+            "acc_std": 3.1
+          },
+          "Simple RNN": {
+            "loss_mean": 1.2674,
+            "loss_std": 0.0697,
+            "acc_mean": 46.9,
+            "acc_std": 3.1
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4618,
+            "loss_std": 0.0643,
+            "acc_mean": 26.0,
+            "acc_std": 7.2
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 10,
+            "nca_acc": 20.8,
+            "tf_acc": 20.8,
+            "gru_acc": 37.5,
+            "sr_acc": 41.7,
+            "untied_acc": 20.8
+          },
+          {
+            "slot": 1,
+            "distance": 12,
+            "nca_acc": 22.9,
+            "tf_acc": 31.2,
+            "gru_acc": 50.0,
+            "sr_acc": 52.1,
+            "untied_acc": 31.2
+          }
+        ]
+      },
+      "carry_lesion": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 5.5524,
+            "loss_std": 0.4843,
+            "acc_mean": 21.9,
+            "acc_std": 9.4
+          },
+          "Transformer": {
+            "loss_mean": 1.3979,
+            "loss_std": 0.1141,
+            "acc_mean": 26.0,
+            "acc_std": 7.2
+          },
+          "GRU Recurrent": {
+            "loss_mean": 0.9654,
+            "loss_std": 0.0332,
+            "acc_mean": 43.8,
+            "acc_std": 3.1
+          },
+          "Simple RNN": {
+            "loss_mean": 1.2674,
+            "loss_std": 0.0697,
+            "acc_mean": 46.9,
+            "acc_std": 3.1
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4618,
+            "loss_std": 0.0643,
+            "acc_mean": 26.0,
+            "acc_std": 7.2
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 10,
+            "nca_acc": 20.8,
+            "tf_acc": 20.8,
+            "gru_acc": 37.5,
+            "sr_acc": 41.7,
+            "untied_acc": 20.8
+          },
+          {
+            "slot": 1,
+            "distance": 12,
+            "nca_acc": 22.9,
+            "tf_acc": 31.2,
+            "gru_acc": 50.0,
+            "sr_acc": 52.1,
+            "untied_acc": 31.2
+          }
+        ]
+      },
+      "scramble": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 5.8387,
+            "loss_std": 1.8091,
+            "acc_mean": 21.9,
+            "acc_std": 10.8
+          },
+          "Transformer": {
+            "loss_mean": 1.3242,
+            "loss_std": 0.1421,
+            "acc_mean": 30.2,
+            "acc_std": 9.5
+          },
+          "GRU Recurrent": {
+            "loss_mean": 0.9667,
+            "loss_std": 0.0258,
+            "acc_mean": 53.1,
+            "acc_std": 3.1
+          },
+          "Simple RNN": {
+            "loss_mean": 1.9277,
+            "loss_std": 0.1624,
+            "acc_mean": 20.8,
+            "acc_std": 11.0
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.439,
+            "loss_std": 0.0275,
+            "acc_mean": 30.2,
+            "acc_std": 9.5
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 10,
+            "nca_acc": 29.2,
+            "tf_acc": 29.2,
+            "gru_acc": 64.6,
+            "sr_acc": 22.9,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 1,
+            "distance": 12,
+            "nca_acc": 14.6,
+            "tf_acc": 31.2,
+            "gru_acc": 41.7,
+            "sr_acc": 18.8,
+            "untied_acc": 31.2
+          }
+        ]
+      }
+    },
+    "D4_G0": {
+      "intact": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 2.2976,
+            "loss_std": 0.3506,
+            "acc_mean": 58.3,
+            "acc_std": 6.3
+          },
+          "Transformer": {
+            "loss_mean": 1.028,
+            "loss_std": 0.0458,
+            "acc_mean": 56.2,
+            "acc_std": 3.1
+          },
+          "GRU Recurrent": {
+            "loss_mean": 1.0948,
+            "loss_std": 0.0431,
+            "acc_mean": 44.8,
+            "acc_std": 2.4
+          },
+          "Simple RNN": {
+            "loss_mean": 0.7533,
+            "loss_std": 0.1127,
+            "acc_mean": 66.7,
+            "acc_std": 7.0
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4706,
+            "loss_std": 0.0397,
+            "acc_mean": 22.4,
+            "acc_std": 4.5
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 2,
+            "nca_acc": 97.9,
+            "tf_acc": 91.7,
+            "gru_acc": 54.2,
+            "sr_acc": 89.6,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 1,
+            "distance": 4,
+            "nca_acc": 45.8,
+            "tf_acc": 16.7,
+            "gru_acc": 27.1,
+            "sr_acc": 62.5,
+            "untied_acc": 14.6
+          },
+          {
+            "slot": 2,
+            "distance": 6,
+            "nca_acc": 43.8,
+            "tf_acc": 20.8,
+            "gru_acc": 47.9,
+            "sr_acc": 60.4,
+            "untied_acc": 16.7
+          },
+          {
+            "slot": 3,
+            "distance": 8,
+            "nca_acc": 45.8,
+            "tf_acc": 95.8,
+            "gru_acc": 50.0,
+            "sr_acc": 54.2,
+            "untied_acc": 29.2
+          }
+        ]
+      },
+      "carry_lesion": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 2.9791,
+            "loss_std": 0.3293,
+            "acc_mean": 45.3,
+            "acc_std": 3.1
+          },
+          "Transformer": {
+            "loss_mean": 1.028,
+            "loss_std": 0.0458,
+            "acc_mean": 56.2,
+            "acc_std": 3.1
+          },
+          "GRU Recurrent": {
+            "loss_mean": 1.0948,
+            "loss_std": 0.0431,
+            "acc_mean": 44.8,
+            "acc_std": 2.4
+          },
+          "Simple RNN": {
+            "loss_mean": 0.7533,
+            "loss_std": 0.1127,
+            "acc_mean": 66.7,
+            "acc_std": 7.0
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4706,
+            "loss_std": 0.0397,
+            "acc_mean": 22.4,
+            "acc_std": 4.5
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 2,
+            "nca_acc": 93.8,
+            "tf_acc": 91.7,
+            "gru_acc": 54.2,
+            "sr_acc": 89.6,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 1,
+            "distance": 4,
+            "nca_acc": 41.7,
+            "tf_acc": 16.7,
+            "gru_acc": 27.1,
+            "sr_acc": 62.5,
+            "untied_acc": 14.6
+          },
+          {
+            "slot": 2,
+            "distance": 6,
+            "nca_acc": 22.9,
+            "tf_acc": 20.8,
+            "gru_acc": 47.9,
+            "sr_acc": 60.4,
+            "untied_acc": 16.7
+          },
+          {
+            "slot": 3,
+            "distance": 8,
+            "nca_acc": 22.9,
+            "tf_acc": 95.8,
+            "gru_acc": 50.0,
+            "sr_acc": 54.2,
+            "untied_acc": 29.2
+          }
+        ]
+      },
+      "scramble": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 6.298,
+            "loss_std": 0.7039,
+            "acc_mean": 20.8,
+            "acc_std": 2.4
+          },
+          "Transformer": {
+            "loss_mean": 1.3522,
+            "loss_std": 0.0504,
+            "acc_mean": 34.9,
+            "acc_std": 3.6
+          },
+          "GRU Recurrent": {
+            "loss_mean": 1.1135,
+            "loss_std": 0.019,
+            "acc_mean": 44.3,
+            "acc_std": 3.6
+          },
+          "Simple RNN": {
+            "loss_mean": 2.2559,
+            "loss_std": 0.1838,
+            "acc_mean": 23.4,
+            "acc_std": 7.2
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4485,
+            "loss_std": 0.0371,
+            "acc_mean": 26.0,
+            "acc_std": 3.9
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 2,
+            "nca_acc": 14.6,
+            "tf_acc": 16.7,
+            "gru_acc": 41.7,
+            "sr_acc": 16.7,
+            "untied_acc": 16.7
+          },
+          {
+            "slot": 1,
+            "distance": 4,
+            "nca_acc": 22.9,
+            "tf_acc": 54.2,
+            "gru_acc": 45.8,
+            "sr_acc": 22.9,
+            "untied_acc": 31.2
+          },
+          {
+            "slot": 2,
+            "distance": 6,
+            "nca_acc": 22.9,
+            "tf_acc": 41.7,
+            "gru_acc": 43.8,
+            "sr_acc": 29.2,
+            "untied_acc": 31.2
+          },
+          {
+            "slot": 3,
+            "distance": 8,
+            "nca_acc": 22.9,
+            "tf_acc": 27.1,
+            "gru_acc": 45.8,
+            "sr_acc": 25.0,
+            "untied_acc": 25.0
+          }
+        ]
+      }
+    },
+    "D4_G4": {
+      "intact": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 3.78,
+            "loss_std": 0.5989,
+            "acc_mean": 36.5,
+            "acc_std": 7.4
+          },
+          "Transformer": {
+            "loss_mean": 1.4781,
+            "loss_std": 0.0586,
+            "acc_mean": 31.2,
+            "acc_std": 6.2
+          },
+          "GRU Recurrent": {
+            "loss_mean": 1.167,
+            "loss_std": 0.0321,
+            "acc_mean": 46.4,
+            "acc_std": 2.4
+          },
+          "Simple RNN": {
+            "loss_mean": 1.0848,
+            "loss_std": 0.0304,
+            "acc_mean": 49.0,
+            "acc_std": 4.8
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4706,
+            "loss_std": 0.0397,
+            "acc_mean": 22.4,
+            "acc_std": 4.5
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 6,
+            "nca_acc": 22.9,
+            "tf_acc": 29.2,
+            "gru_acc": 54.2,
+            "sr_acc": 79.2,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 1,
+            "distance": 8,
+            "nca_acc": 27.1,
+            "tf_acc": 29.2,
+            "gru_acc": 35.4,
+            "sr_acc": 35.4,
+            "untied_acc": 14.6
+          },
+          {
+            "slot": 2,
+            "distance": 10,
+            "nca_acc": 45.8,
+            "tf_acc": 16.7,
+            "gru_acc": 39.6,
+            "sr_acc": 37.5,
+            "untied_acc": 16.7
+          },
+          {
+            "slot": 3,
+            "distance": 12,
+            "nca_acc": 50.0,
+            "tf_acc": 50.0,
+            "gru_acc": 56.2,
+            "sr_acc": 43.8,
+            "untied_acc": 29.2
+          }
+        ]
+      },
+      "carry_lesion": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 4.0891,
+            "loss_std": 0.4962,
+            "acc_mean": 27.1,
+            "acc_std": 7.0
+          },
+          "Transformer": {
+            "loss_mean": 1.4781,
+            "loss_std": 0.0586,
+            "acc_mean": 31.2,
+            "acc_std": 6.2
+          },
+          "GRU Recurrent": {
+            "loss_mean": 1.167,
+            "loss_std": 0.0321,
+            "acc_mean": 46.4,
+            "acc_std": 2.4
+          },
+          "Simple RNN": {
+            "loss_mean": 1.0848,
+            "loss_std": 0.0304,
+            "acc_mean": 49.0,
+            "acc_std": 4.8
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4706,
+            "loss_std": 0.0397,
+            "acc_mean": 22.4,
+            "acc_std": 4.5
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 6,
+            "nca_acc": 29.2,
+            "tf_acc": 29.2,
+            "gru_acc": 54.2,
+            "sr_acc": 79.2,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 1,
+            "distance": 8,
+            "nca_acc": 25.0,
+            "tf_acc": 29.2,
+            "gru_acc": 35.4,
+            "sr_acc": 35.4,
+            "untied_acc": 14.6
+          },
+          {
+            "slot": 2,
+            "distance": 10,
+            "nca_acc": 31.2,
+            "tf_acc": 16.7,
+            "gru_acc": 39.6,
+            "sr_acc": 37.5,
+            "untied_acc": 16.7
+          },
+          {
+            "slot": 3,
+            "distance": 12,
+            "nca_acc": 22.9,
+            "tf_acc": 50.0,
+            "gru_acc": 56.2,
+            "sr_acc": 43.8,
+            "untied_acc": 29.2
+          }
+        ]
+      },
+      "scramble": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 5.3801,
+            "loss_std": 0.4563,
+            "acc_mean": 16.7,
+            "acc_std": 3.9
+          },
+          "Transformer": {
+            "loss_mean": 1.4422,
+            "loss_std": 0.0211,
+            "acc_mean": 30.7,
+            "acc_std": 2.4
+          },
+          "GRU Recurrent": {
+            "loss_mean": 1.1545,
+            "loss_std": 0.0143,
+            "acc_mean": 43.2,
+            "acc_std": 2.4
+          },
+          "Simple RNN": {
+            "loss_mean": 2.0065,
+            "loss_std": 0.0762,
+            "acc_mean": 22.9,
+            "acc_std": 5.0
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4485,
+            "loss_std": 0.0371,
+            "acc_mean": 26.0,
+            "acc_std": 3.9
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 6,
+            "nca_acc": 18.8,
+            "tf_acc": 16.7,
+            "gru_acc": 39.6,
+            "sr_acc": 14.6,
+            "untied_acc": 16.7
+          },
+          {
+            "slot": 1,
+            "distance": 8,
+            "nca_acc": 18.8,
+            "tf_acc": 35.4,
+            "gru_acc": 45.8,
+            "sr_acc": 25.0,
+            "untied_acc": 31.2
+          },
+          {
+            "slot": 2,
+            "distance": 10,
+            "nca_acc": 16.7,
+            "tf_acc": 35.4,
+            "gru_acc": 43.8,
+            "sr_acc": 27.1,
+            "untied_acc": 31.2
+          },
+          {
+            "slot": 3,
+            "distance": 12,
+            "nca_acc": 12.5,
+            "tf_acc": 35.4,
+            "gru_acc": 43.8,
+            "sr_acc": 25.0,
+            "untied_acc": 25.0
+          }
+        ]
+      }
+    },
+    "D4_G8": {
+      "intact": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 3.769,
+            "loss_std": 0.5706,
+            "acc_mean": 30.2,
+            "acc_std": 11.3
+          },
+          "Transformer": {
+            "loss_mean": 1.6742,
+            "loss_std": 0.0695,
+            "acc_mean": 22.4,
+            "acc_std": 4.5
+          },
+          "GRU Recurrent": {
+            "loss_mean": 1.2442,
+            "loss_std": 0.0207,
+            "acc_mean": 44.3,
+            "acc_std": 3.3
+          },
+          "Simple RNN": {
+            "loss_mean": 1.38,
+            "loss_std": 0.0744,
+            "acc_mean": 33.9,
+            "acc_std": 1.8
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4706,
+            "loss_std": 0.0397,
+            "acc_mean": 22.4,
+            "acc_std": 4.5
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 10,
+            "nca_acc": 22.9,
+            "tf_acc": 29.2,
+            "gru_acc": 56.2,
+            "sr_acc": 45.8,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 1,
+            "distance": 12,
+            "nca_acc": 27.1,
+            "tf_acc": 14.6,
+            "gru_acc": 27.1,
+            "sr_acc": 27.1,
+            "untied_acc": 14.6
+          },
+          {
+            "slot": 2,
+            "distance": 14,
+            "nca_acc": 37.5,
+            "tf_acc": 16.7,
+            "gru_acc": 33.3,
+            "sr_acc": 27.1,
+            "untied_acc": 16.7
+          },
+          {
+            "slot": 3,
+            "distance": 16,
+            "nca_acc": 33.3,
+            "tf_acc": 29.2,
+            "gru_acc": 60.4,
+            "sr_acc": 35.4,
+            "untied_acc": 29.2
+          }
+        ]
+      },
+      "carry_lesion": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 4.1218,
+            "loss_std": 0.4931,
+            "acc_mean": 27.1,
+            "acc_std": 7.0
+          },
+          "Transformer": {
+            "loss_mean": 1.6742,
+            "loss_std": 0.0695,
+            "acc_mean": 22.4,
+            "acc_std": 4.5
+          },
+          "GRU Recurrent": {
+            "loss_mean": 1.2442,
+            "loss_std": 0.0207,
+            "acc_mean": 44.3,
+            "acc_std": 3.3
+          },
+          "Simple RNN": {
+            "loss_mean": 1.38,
+            "loss_std": 0.0744,
+            "acc_mean": 33.9,
+            "acc_std": 1.8
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4706,
+            "loss_std": 0.0397,
+            "acc_mean": 22.4,
+            "acc_std": 4.5
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 10,
+            "nca_acc": 29.2,
+            "tf_acc": 29.2,
+            "gru_acc": 56.2,
+            "sr_acc": 45.8,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 1,
+            "distance": 12,
+            "nca_acc": 25.0,
+            "tf_acc": 14.6,
+            "gru_acc": 27.1,
+            "sr_acc": 27.1,
+            "untied_acc": 14.6
+          },
+          {
+            "slot": 2,
+            "distance": 14,
+            "nca_acc": 31.2,
+            "tf_acc": 16.7,
+            "gru_acc": 33.3,
+            "sr_acc": 27.1,
+            "untied_acc": 16.7
+          },
+          {
+            "slot": 3,
+            "distance": 16,
+            "nca_acc": 22.9,
+            "tf_acc": 29.2,
+            "gru_acc": 60.4,
+            "sr_acc": 35.4,
+            "untied_acc": 29.2
+          }
+        ]
+      },
+      "scramble": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 4.9371,
+            "loss_std": 0.297,
+            "acc_mean": 21.9,
+            "acc_std": 2.7
+          },
+          "Transformer": {
+            "loss_mean": 1.548,
+            "loss_std": 0.0537,
+            "acc_mean": 26.0,
+            "acc_std": 3.9
+          },
+          "GRU Recurrent": {
+            "loss_mean": 1.225,
+            "loss_std": 0.0166,
+            "acc_mean": 43.8,
+            "acc_std": 3.1
+          },
+          "Simple RNN": {
+            "loss_mean": 1.8039,
+            "loss_std": 0.0338,
+            "acc_mean": 24.0,
+            "acc_std": 2.4
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4485,
+            "loss_std": 0.0371,
+            "acc_mean": 26.0,
+            "acc_std": 3.9
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 10,
+            "nca_acc": 20.8,
+            "tf_acc": 16.7,
+            "gru_acc": 37.5,
+            "sr_acc": 20.8,
+            "untied_acc": 16.7
+          },
+          {
+            "slot": 1,
+            "distance": 12,
+            "nca_acc": 20.8,
+            "tf_acc": 31.2,
+            "gru_acc": 41.7,
+            "sr_acc": 25.0,
+            "untied_acc": 31.2
+          },
+          {
+            "slot": 2,
+            "distance": 14,
+            "nca_acc": 25.0,
+            "tf_acc": 31.2,
+            "gru_acc": 50.0,
+            "sr_acc": 29.2,
+            "untied_acc": 31.2
+          },
+          {
+            "slot": 3,
+            "distance": 16,
+            "nca_acc": 20.8,
+            "tf_acc": 25.0,
+            "gru_acc": 45.8,
+            "sr_acc": 20.8,
+            "untied_acc": 25.0
+          }
+        ]
+      }
+    },
+    "D8_G0": {
+      "intact": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 3.1641,
+            "loss_std": 0.1635,
+            "acc_mean": 46.6,
+            "acc_std": 3.0
+          },
+          "Transformer": {
+            "loss_mean": 1.4314,
+            "loss_std": 0.0105,
+            "acc_mean": 36.2,
+            "acc_std": 4.0
+          },
+          "GRU Recurrent": {
+            "loss_mean": 1.2951,
+            "loss_std": 0.0068,
+            "acc_mean": 38.5,
+            "acc_std": 1.2
+          },
+          "Simple RNN": {
+            "loss_mean": 1.2093,
+            "loss_std": 0.0945,
+            "acc_mean": 50.0,
+            "acc_std": 2.7
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4494,
+            "loss_std": 0.0211,
+            "acc_mean": 25.8,
+            "acc_std": 4.1
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 2,
+            "nca_acc": 97.9,
+            "tf_acc": 52.1,
+            "gru_acc": 60.4,
+            "sr_acc": 81.2,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 1,
+            "distance": 4,
+            "nca_acc": 33.3,
+            "tf_acc": 27.1,
+            "gru_acc": 33.3,
+            "sr_acc": 62.5,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 2,
+            "distance": 6,
+            "nca_acc": 35.4,
+            "tf_acc": 33.3,
+            "gru_acc": 27.1,
+            "sr_acc": 50.0,
+            "untied_acc": 27.1
+          },
+          {
+            "slot": 3,
+            "distance": 8,
+            "nca_acc": 31.2,
+            "tf_acc": 29.2,
+            "gru_acc": 33.3,
+            "sr_acc": 41.7,
+            "untied_acc": 16.7
+          },
+          {
+            "slot": 4,
+            "distance": 10,
+            "nca_acc": 47.9,
+            "tf_acc": 27.1,
+            "gru_acc": 33.3,
+            "sr_acc": 35.4,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 5,
+            "distance": 12,
+            "nca_acc": 47.9,
+            "tf_acc": 41.7,
+            "gru_acc": 43.8,
+            "sr_acc": 37.5,
+            "untied_acc": 25.0
+          },
+          {
+            "slot": 6,
+            "distance": 14,
+            "nca_acc": 50.0,
+            "tf_acc": 25.0,
+            "gru_acc": 27.1,
+            "sr_acc": 43.8,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 7,
+            "distance": 16,
+            "nca_acc": 29.2,
+            "tf_acc": 54.2,
+            "gru_acc": 50.0,
+            "sr_acc": 47.9,
+            "untied_acc": 20.8
+          }
+        ]
+      },
+      "carry_lesion": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 3.6796,
+            "loss_std": 0.1212,
+            "acc_mean": 34.6,
+            "acc_std": 1.2
+          },
+          "Transformer": {
+            "loss_mean": 1.4314,
+            "loss_std": 0.0105,
+            "acc_mean": 36.2,
+            "acc_std": 4.0
+          },
+          "GRU Recurrent": {
+            "loss_mean": 1.2951,
+            "loss_std": 0.0068,
+            "acc_mean": 38.5,
+            "acc_std": 1.2
+          },
+          "Simple RNN": {
+            "loss_mean": 1.2093,
+            "loss_std": 0.0945,
+            "acc_mean": 50.0,
+            "acc_std": 2.7
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4494,
+            "loss_std": 0.0211,
+            "acc_mean": 25.8,
+            "acc_std": 4.1
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 2,
+            "nca_acc": 93.8,
+            "tf_acc": 52.1,
+            "gru_acc": 60.4,
+            "sr_acc": 81.2,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 1,
+            "distance": 4,
+            "nca_acc": 33.3,
+            "tf_acc": 27.1,
+            "gru_acc": 33.3,
+            "sr_acc": 62.5,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 2,
+            "distance": 6,
+            "nca_acc": 29.2,
+            "tf_acc": 33.3,
+            "gru_acc": 27.1,
+            "sr_acc": 50.0,
+            "untied_acc": 27.1
+          },
+          {
+            "slot": 3,
+            "distance": 8,
+            "nca_acc": 25.0,
+            "tf_acc": 29.2,
+            "gru_acc": 33.3,
+            "sr_acc": 41.7,
+            "untied_acc": 16.7
+          },
+          {
+            "slot": 4,
+            "distance": 10,
+            "nca_acc": 22.9,
+            "tf_acc": 27.1,
+            "gru_acc": 33.3,
+            "sr_acc": 35.4,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 5,
+            "distance": 12,
+            "nca_acc": 33.3,
+            "tf_acc": 41.7,
+            "gru_acc": 43.8,
+            "sr_acc": 37.5,
+            "untied_acc": 25.0
+          },
+          {
+            "slot": 6,
+            "distance": 14,
+            "nca_acc": 25.0,
+            "tf_acc": 25.0,
+            "gru_acc": 27.1,
+            "sr_acc": 43.8,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 7,
+            "distance": 16,
+            "nca_acc": 14.6,
+            "tf_acc": 54.2,
+            "gru_acc": 50.0,
+            "sr_acc": 47.9,
+            "untied_acc": 20.8
+          }
+        ]
+      },
+      "scramble": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 4.9065,
+            "loss_std": 0.1716,
+            "acc_mean": 25.8,
+            "acc_std": 3.6
+          },
+          "Transformer": {
+            "loss_mean": 1.4116,
+            "loss_std": 0.0429,
+            "acc_mean": 33.9,
+            "acc_std": 4.4
+          },
+          "GRU Recurrent": {
+            "loss_mean": 1.3174,
+            "loss_std": 0.0197,
+            "acc_mean": 37.5,
+            "acc_std": 2.3
+          },
+          "Simple RNN": {
+            "loss_mean": 1.9186,
+            "loss_std": 0.1661,
+            "acc_mean": 25.5,
+            "acc_std": 8.4
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4435,
+            "loss_std": 0.0167,
+            "acc_mean": 26.6,
+            "acc_std": 2.7
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 2,
+            "nca_acc": 20.8,
+            "tf_acc": 33.3,
+            "gru_acc": 43.8,
+            "sr_acc": 20.8,
+            "untied_acc": 18.8
+          },
+          {
+            "slot": 1,
+            "distance": 4,
+            "nca_acc": 29.2,
+            "tf_acc": 18.8,
+            "gru_acc": 33.3,
+            "sr_acc": 14.6,
+            "untied_acc": 25.0
+          },
+          {
+            "slot": 2,
+            "distance": 6,
+            "nca_acc": 27.1,
+            "tf_acc": 35.4,
+            "gru_acc": 41.7,
+            "sr_acc": 20.8,
+            "untied_acc": 25.0
+          },
+          {
+            "slot": 3,
+            "distance": 8,
+            "nca_acc": 29.2,
+            "tf_acc": 29.2,
+            "gru_acc": 31.2,
+            "sr_acc": 37.5,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 4,
+            "distance": 10,
+            "nca_acc": 20.8,
+            "tf_acc": 37.5,
+            "gru_acc": 39.6,
+            "sr_acc": 25.0,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 5,
+            "distance": 12,
+            "nca_acc": 33.3,
+            "tf_acc": 43.8,
+            "gru_acc": 39.6,
+            "sr_acc": 20.8,
+            "untied_acc": 27.1
+          },
+          {
+            "slot": 6,
+            "distance": 14,
+            "nca_acc": 14.6,
+            "tf_acc": 33.3,
+            "gru_acc": 39.6,
+            "sr_acc": 31.2,
+            "untied_acc": 25.0
+          },
+          {
+            "slot": 7,
+            "distance": 16,
+            "nca_acc": 31.2,
+            "tf_acc": 39.6,
+            "gru_acc": 31.2,
+            "sr_acc": 33.3,
+            "untied_acc": 33.3
+          }
+        ]
+      }
+    },
+    "D8_G4": {
+      "intact": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 3.5849,
+            "loss_std": 0.2504,
+            "acc_mean": 37.0,
+            "acc_std": 4.6
+          },
+          "Transformer": {
+            "loss_mean": 1.5378,
+            "loss_std": 0.038,
+            "acc_mean": 28.4,
+            "acc_std": 3.6
+          },
+          "GRU Recurrent": {
+            "loss_mean": 1.3327,
+            "loss_std": 0.0127,
+            "acc_mean": 37.8,
+            "acc_std": 0.5
+          },
+          "Simple RNN": {
+            "loss_mean": 1.3431,
+            "loss_std": 0.087,
+            "acc_mean": 41.1,
+            "acc_std": 3.2
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4494,
+            "loss_std": 0.0211,
+            "acc_mean": 25.8,
+            "acc_std": 4.1
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 6,
+            "nca_acc": 35.4,
+            "tf_acc": 41.7,
+            "gru_acc": 45.8,
+            "sr_acc": 62.5,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 1,
+            "distance": 8,
+            "nca_acc": 22.9,
+            "tf_acc": 29.2,
+            "gru_acc": 33.3,
+            "sr_acc": 47.9,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 2,
+            "distance": 10,
+            "nca_acc": 39.6,
+            "tf_acc": 29.2,
+            "gru_acc": 33.3,
+            "sr_acc": 43.8,
+            "untied_acc": 27.1
+          },
+          {
+            "slot": 3,
+            "distance": 12,
+            "nca_acc": 29.2,
+            "tf_acc": 20.8,
+            "gru_acc": 29.2,
+            "sr_acc": 39.6,
+            "untied_acc": 16.7
+          },
+          {
+            "slot": 4,
+            "distance": 14,
+            "nca_acc": 45.8,
+            "tf_acc": 29.2,
+            "gru_acc": 37.5,
+            "sr_acc": 33.3,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 5,
+            "distance": 16,
+            "nca_acc": 47.9,
+            "tf_acc": 27.1,
+            "gru_acc": 35.4,
+            "sr_acc": 25.0,
+            "untied_acc": 25.0
+          },
+          {
+            "slot": 6,
+            "distance": 18,
+            "nca_acc": 45.8,
+            "tf_acc": 29.2,
+            "gru_acc": 37.5,
+            "sr_acc": 35.4,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 7,
+            "distance": 20,
+            "nca_acc": 29.2,
+            "tf_acc": 20.8,
+            "gru_acc": 50.0,
+            "sr_acc": 41.7,
+            "untied_acc": 20.8
+          }
+        ]
+      },
+      "carry_lesion": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 4.3314,
+            "loss_std": 0.1639,
+            "acc_mean": 24.7,
+            "acc_std": 2.0
+          },
+          "Transformer": {
+            "loss_mean": 1.5378,
+            "loss_std": 0.038,
+            "acc_mean": 28.4,
+            "acc_std": 3.6
+          },
+          "GRU Recurrent": {
+            "loss_mean": 1.3327,
+            "loss_std": 0.0127,
+            "acc_mean": 37.8,
+            "acc_std": 0.5
+          },
+          "Simple RNN": {
+            "loss_mean": 1.3431,
+            "loss_std": 0.087,
+            "acc_mean": 41.1,
+            "acc_std": 3.2
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4494,
+            "loss_std": 0.0211,
+            "acc_mean": 25.8,
+            "acc_std": 4.1
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 6,
+            "nca_acc": 29.2,
+            "tf_acc": 41.7,
+            "gru_acc": 45.8,
+            "sr_acc": 62.5,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 1,
+            "distance": 8,
+            "nca_acc": 22.9,
+            "tf_acc": 29.2,
+            "gru_acc": 33.3,
+            "sr_acc": 47.9,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 2,
+            "distance": 10,
+            "nca_acc": 20.8,
+            "tf_acc": 29.2,
+            "gru_acc": 33.3,
+            "sr_acc": 43.8,
+            "untied_acc": 27.1
+          },
+          {
+            "slot": 3,
+            "distance": 12,
+            "nca_acc": 22.9,
+            "tf_acc": 20.8,
+            "gru_acc": 29.2,
+            "sr_acc": 39.6,
+            "untied_acc": 16.7
+          },
+          {
+            "slot": 4,
+            "distance": 14,
+            "nca_acc": 29.2,
+            "tf_acc": 29.2,
+            "gru_acc": 37.5,
+            "sr_acc": 33.3,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 5,
+            "distance": 16,
+            "nca_acc": 33.3,
+            "tf_acc": 27.1,
+            "gru_acc": 35.4,
+            "sr_acc": 25.0,
+            "untied_acc": 25.0
+          },
+          {
+            "slot": 6,
+            "distance": 18,
+            "nca_acc": 25.0,
+            "tf_acc": 29.2,
+            "gru_acc": 37.5,
+            "sr_acc": 35.4,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 7,
+            "distance": 20,
+            "nca_acc": 14.6,
+            "tf_acc": 20.8,
+            "gru_acc": 50.0,
+            "sr_acc": 41.7,
+            "untied_acc": 20.8
+          }
+        ]
+      },
+      "scramble": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 4.3029,
+            "loss_std": 0.2769,
+            "acc_mean": 24.0,
+            "acc_std": 3.9
+          },
+          "Transformer": {
+            "loss_mean": 1.5009,
+            "loss_std": 0.0251,
+            "acc_mean": 29.9,
+            "acc_std": 1.6
+          },
+          "GRU Recurrent": {
+            "loss_mean": 1.3334,
+            "loss_std": 0.0102,
+            "acc_mean": 35.9,
+            "acc_std": 2.7
+          },
+          "Simple RNN": {
+            "loss_mean": 1.7914,
+            "loss_std": 0.0552,
+            "acc_mean": 22.1,
+            "acc_std": 2.7
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4435,
+            "loss_std": 0.0167,
+            "acc_mean": 26.6,
+            "acc_std": 2.7
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 6,
+            "nca_acc": 22.9,
+            "tf_acc": 29.2,
+            "gru_acc": 31.2,
+            "sr_acc": 18.8,
+            "untied_acc": 18.8
+          },
+          {
+            "slot": 1,
+            "distance": 8,
+            "nca_acc": 27.1,
+            "tf_acc": 25.0,
+            "gru_acc": 33.3,
+            "sr_acc": 22.9,
+            "untied_acc": 25.0
+          },
+          {
+            "slot": 2,
+            "distance": 10,
+            "nca_acc": 27.1,
+            "tf_acc": 29.2,
+            "gru_acc": 43.8,
+            "sr_acc": 27.1,
+            "untied_acc": 25.0
+          },
+          {
+            "slot": 3,
+            "distance": 12,
+            "nca_acc": 33.3,
+            "tf_acc": 43.8,
+            "gru_acc": 33.3,
+            "sr_acc": 14.6,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 4,
+            "distance": 14,
+            "nca_acc": 18.8,
+            "tf_acc": 27.1,
+            "gru_acc": 43.8,
+            "sr_acc": 27.1,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 5,
+            "distance": 16,
+            "nca_acc": 27.1,
+            "tf_acc": 27.1,
+            "gru_acc": 31.2,
+            "sr_acc": 16.7,
+            "untied_acc": 27.1
+          },
+          {
+            "slot": 6,
+            "distance": 18,
+            "nca_acc": 14.6,
+            "tf_acc": 25.0,
+            "gru_acc": 45.8,
+            "sr_acc": 22.9,
+            "untied_acc": 25.0
+          },
+          {
+            "slot": 7,
+            "distance": 20,
+            "nca_acc": 20.8,
+            "tf_acc": 33.3,
+            "gru_acc": 25.0,
+            "sr_acc": 27.1,
+            "untied_acc": 33.3
+          }
+        ]
+      }
+    },
+    "D8_G8": {
+      "intact": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 3.6151,
+            "loss_std": 0.1956,
+            "acc_mean": 36.2,
+            "acc_std": 2.5
+          },
+          "Transformer": {
+            "loss_mean": 1.693,
+            "loss_std": 0.0504,
+            "acc_mean": 27.1,
+            "acc_std": 3.9
+          },
+          "GRU Recurrent": {
+            "loss_mean": 1.3806,
+            "loss_std": 0.0189,
+            "acc_mean": 35.7,
+            "acc_std": 1.2
+          },
+          "Simple RNN": {
+            "loss_mean": 1.4941,
+            "loss_std": 0.0417,
+            "acc_mean": 34.9,
+            "acc_std": 3.0
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4494,
+            "loss_std": 0.0211,
+            "acc_mean": 25.8,
+            "acc_std": 4.1
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 10,
+            "nca_acc": 33.3,
+            "tf_acc": 29.2,
+            "gru_acc": 43.8,
+            "sr_acc": 37.5,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 1,
+            "distance": 12,
+            "nca_acc": 25.0,
+            "tf_acc": 29.2,
+            "gru_acc": 27.1,
+            "sr_acc": 43.8,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 2,
+            "distance": 14,
+            "nca_acc": 29.2,
+            "tf_acc": 27.1,
+            "gru_acc": 41.7,
+            "sr_acc": 33.3,
+            "untied_acc": 27.1
+          },
+          {
+            "slot": 3,
+            "distance": 16,
+            "nca_acc": 33.3,
+            "tf_acc": 16.7,
+            "gru_acc": 27.1,
+            "sr_acc": 41.7,
+            "untied_acc": 16.7
+          },
+          {
+            "slot": 4,
+            "distance": 18,
+            "nca_acc": 43.8,
+            "tf_acc": 29.2,
+            "gru_acc": 35.4,
+            "sr_acc": 31.2,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 5,
+            "distance": 20,
+            "nca_acc": 50.0,
+            "tf_acc": 27.1,
+            "gru_acc": 33.3,
+            "sr_acc": 20.8,
+            "untied_acc": 25.0
+          },
+          {
+            "slot": 6,
+            "distance": 22,
+            "nca_acc": 45.8,
+            "tf_acc": 33.3,
+            "gru_acc": 27.1,
+            "sr_acc": 33.3,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 7,
+            "distance": 24,
+            "nca_acc": 29.2,
+            "tf_acc": 25.0,
+            "gru_acc": 50.0,
+            "sr_acc": 37.5,
+            "untied_acc": 20.8
+          }
+        ]
+      },
+      "carry_lesion": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 4.3416,
+            "loss_std": 0.1617,
+            "acc_mean": 24.7,
+            "acc_std": 2.0
+          },
+          "Transformer": {
+            "loss_mean": 1.693,
+            "loss_std": 0.0504,
+            "acc_mean": 27.1,
+            "acc_std": 3.9
+          },
+          "GRU Recurrent": {
+            "loss_mean": 1.3806,
+            "loss_std": 0.0189,
+            "acc_mean": 35.7,
+            "acc_std": 1.2
+          },
+          "Simple RNN": {
+            "loss_mean": 1.4941,
+            "loss_std": 0.0417,
+            "acc_mean": 34.9,
+            "acc_std": 3.0
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4494,
+            "loss_std": 0.0211,
+            "acc_mean": 25.8,
+            "acc_std": 4.1
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 10,
+            "nca_acc": 29.2,
+            "tf_acc": 29.2,
+            "gru_acc": 43.8,
+            "sr_acc": 37.5,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 1,
+            "distance": 12,
+            "nca_acc": 22.9,
+            "tf_acc": 29.2,
+            "gru_acc": 27.1,
+            "sr_acc": 43.8,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 2,
+            "distance": 14,
+            "nca_acc": 20.8,
+            "tf_acc": 27.1,
+            "gru_acc": 41.7,
+            "sr_acc": 33.3,
+            "untied_acc": 27.1
+          },
+          {
+            "slot": 3,
+            "distance": 16,
+            "nca_acc": 22.9,
+            "tf_acc": 16.7,
+            "gru_acc": 27.1,
+            "sr_acc": 41.7,
+            "untied_acc": 16.7
+          },
+          {
+            "slot": 4,
+            "distance": 18,
+            "nca_acc": 29.2,
+            "tf_acc": 29.2,
+            "gru_acc": 35.4,
+            "sr_acc": 31.2,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 5,
+            "distance": 20,
+            "nca_acc": 33.3,
+            "tf_acc": 27.1,
+            "gru_acc": 33.3,
+            "sr_acc": 20.8,
+            "untied_acc": 25.0
+          },
+          {
+            "slot": 6,
+            "distance": 22,
+            "nca_acc": 25.0,
+            "tf_acc": 33.3,
+            "gru_acc": 27.1,
+            "sr_acc": 33.3,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 7,
+            "distance": 24,
+            "nca_acc": 14.6,
+            "tf_acc": 25.0,
+            "gru_acc": 50.0,
+            "sr_acc": 37.5,
+            "untied_acc": 20.8
+          }
+        ]
+      },
+      "scramble": {
+        "models": {
+          "Titan NCA": {
+            "loss_mean": 4.1799,
+            "loss_std": 0.3455,
+            "acc_mean": 24.2,
+            "acc_std": 5.6
+          },
+          "Transformer": {
+            "loss_mean": 1.6483,
+            "loss_std": 0.0353,
+            "acc_mean": 27.6,
+            "acc_std": 2.4
+          },
+          "GRU Recurrent": {
+            "loss_mean": 1.3775,
+            "loss_std": 0.011,
+            "acc_mean": 35.9,
+            "acc_std": 1.4
+          },
+          "Simple RNN": {
+            "loss_mean": 1.6926,
+            "loss_std": 0.0397,
+            "acc_mean": 22.4,
+            "acc_std": 2.5
+          },
+          "Untied FF (4-step)": {
+            "loss_mean": 1.4435,
+            "loss_std": 0.0167,
+            "acc_mean": 26.6,
+            "acc_std": 2.7
+          }
+        },
+        "per_slot": [
+          {
+            "slot": 0,
+            "distance": 10,
+            "nca_acc": 20.8,
+            "tf_acc": 18.8,
+            "gru_acc": 27.1,
+            "sr_acc": 14.6,
+            "untied_acc": 18.8
+          },
+          {
+            "slot": 1,
+            "distance": 12,
+            "nca_acc": 20.8,
+            "tf_acc": 25.0,
+            "gru_acc": 33.3,
+            "sr_acc": 25.0,
+            "untied_acc": 25.0
+          },
+          {
+            "slot": 2,
+            "distance": 14,
+            "nca_acc": 27.1,
+            "tf_acc": 25.0,
+            "gru_acc": 41.7,
+            "sr_acc": 27.1,
+            "untied_acc": 25.0
+          },
+          {
+            "slot": 3,
+            "distance": 16,
+            "nca_acc": 35.4,
+            "tf_acc": 29.2,
+            "gru_acc": 31.2,
+            "sr_acc": 8.3,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 4,
+            "distance": 18,
+            "nca_acc": 16.7,
+            "tf_acc": 29.2,
+            "gru_acc": 50.0,
+            "sr_acc": 33.3,
+            "untied_acc": 29.2
+          },
+          {
+            "slot": 5,
+            "distance": 20,
+            "nca_acc": 33.3,
+            "tf_acc": 27.1,
+            "gru_acc": 35.4,
+            "sr_acc": 25.0,
+            "untied_acc": 27.1
+          },
+          {
+            "slot": 6,
+            "distance": 22,
+            "nca_acc": 14.6,
+            "tf_acc": 27.1,
+            "gru_acc": 37.5,
+            "sr_acc": 20.8,
+            "untied_acc": 25.0
+          },
+          {
+            "slot": 7,
+            "distance": 24,
+            "nca_acc": 25.0,
+            "tf_acc": 39.6,
+            "gru_acc": 31.2,
+            "sr_acc": 25.0,
+            "untied_acc": 33.3
+          }
+        ]
+      }
+    }
+  },
+  "summary": {}
+}

@@ -1,0 +1,112 @@
+{
+  "benchmark": "hostile_baselines_dyck4",
+  "date": "2026-09-21T03:35:46Z",
+  "trained_epochs": 100,
+  "trained_length": 16,
+  "evaluations": {
+    "16": {
+      "nca": {
+        "loss_mean": 2.0268,
+        "loss_std": 0.2457,
+        "acc_mean": 47.5,
+        "acc_std": 4.1
+      },
+      "transformer": {
+        "loss_mean": 0.9951,
+        "loss_std": 0.0542,
+        "acc_mean": 60.6,
+        "acc_std": 2.5
+      },
+      "gru": {
+        "loss_mean": 0.9727,
+        "loss_std": 0.0688,
+        "acc_mean": 52.8,
+        "acc_std": 5.8
+      },
+      "simple_rnn": {
+        "loss_mean": 0.821,
+        "loss_std": 0.1402,
+        "acc_mean": 68.4,
+        "acc_std": 8.8
+      },
+      "untied_ff": {
+        "loss_mean": 1.432,
+        "loss_std": 0.0269,
+        "acc_mean": 26.6,
+        "acc_std": 3.9
+      }
+    },
+    "32": {
+      "nca": {
+        "loss_mean": 3.1069,
+        "loss_std": 0.2339,
+        "acc_mean": 40.6,
+        "acc_std": 4.3
+      },
+      "transformer": {
+        "loss_mean": 1.2242,
+        "loss_std": 0.0752,
+        "acc_mean": 45.6,
+        "acc_std": 2.8
+      },
+      "gru": {
+        "loss_mean": 1.0862,
+        "loss_std": 0.073,
+        "acc_mean": 49.5,
+        "acc_std": 3.1
+      },
+      "simple_rnn": {
+        "loss_mean": 1.0212,
+        "loss_std": 0.0962,
+        "acc_mean": 55.9,
+        "acc_std": 4.9
+      },
+      "untied_ff": {
+        "loss_mean": 1.4091,
+        "loss_std": 0.0345,
+        "acc_mean": 31.0,
+        "acc_std": 7.6
+      }
+    },
+    "64": {
+      "nca": {
+        "loss_mean": 3.5485,
+        "loss_std": 0.2185,
+        "acc_mean": 43.8,
+        "acc_std": 5.1
+      },
+      "transformer": {
+        "loss_mean": 1.198,
+        "loss_std": 0.0809,
+        "acc_mean": 46.2,
+        "acc_std": 2.9
+      },
+      "gru": {
+        "loss_mean": 1.0793,
+        "loss_std": 0.1012,
+        "acc_mean": 47.8,
+        "acc_std": 3.4
+      },
+      "simple_rnn": {
+        "loss_mean": 1.1045,
+        "loss_std": 0.071,
+        "acc_mean": 52.2,
+        "acc_std": 6.0
+      },
+      "untied_ff": {
+        "loss_mean": 1.4194,
+        "loss_std": 0.0212,
+        "acc_mean": 24.2,
+        "acc_std": 8.6
+      }
+    }
+  },
+  "sealed_predictions_comparison": {
+    "transformer_l16_pred": 68.0,
+    "transformer_l64_pred": 26.5,
+    "gru_l16_pred": 82.0,
+    "gru_l64_pred": 34.0,
+    "nca_l16_pred": 58.0,
+    "nca_l64_pred": 43.9
+  }
+}

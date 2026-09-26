@@ -1,0 +1,48 @@
+{
+  "publication_readiness": {
+    "status": "ok",
+    "decision_type": "publication_readiness_audit",
+    "decision": "requires_minor_cleanup",
+    "confidence": 0.17,
+    "probabilities": {
+      "insufficient_controls": 0.03,
+      "premature_theoretical_claims": 0.34,
+      "publication_ready_exceptional": 0.25,
+      "requires_minor_cleanup": 0.38
+    },
+    "entropy": 0.8557,
+    "model": "typesafe/jev-1.13-20260917",
+    "cost_usd": 4.5738e-05,
+    "usage": {
+      "input_tokens": 1089,
+      "output_tokens": 69,
+      "cost": 4.5738e-05
+    },
+    "elapsed_seconds": 0.431466,
+    "fallback_applied": false
+  },
+  "next_phase_roadmap": {
+    "status": "ok",
+    "decision_type": "next_phase_target_prioritization",
+    "decision": "composite_A_and_B",
+    "confidence": 0.19,
+    "probabilities": {
+      "composite_A_and_B": 0.36,
+      "target_D_natural_language": 0.1,
+      "target_C_neon_kernel": 0,
+      "target_A_intrinsic_halting": 0.3,
+      "target_B_cd_dv_nca": 0.24
+    },
+    "entropy": 0.8088,
+    "model": "typesafe/jev-1.13-20260917",
+    "cost_usd": 3.2676e-05,
+    "usage": {
+      "input_tokens": 778,
+      "output_tokens": 90,
+      "cost": 3.2676e-05
+    },
+    "elapsed_seconds": 0.308325,
+    "fallback_applied": false
+  },
+  "elapsed_seconds": 0.7403130531311035
+}

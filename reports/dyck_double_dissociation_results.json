@@ -1,0 +1,47 @@
+{
+  "benchmark": "dyck4_double_dissociation",
+  "date": "2026-09-21T03:41:22Z",
+  "seq_len": 64,
+  "dev_steps": 24,
+  "conditions": {
+    "intact": {
+      "acc_mean": 43.9,
+      "acc_std": 1.61,
+      "loss_mean": 3.6756,
+      "loss_std": 0.2898
+    },
+    "carry_lesion": {
+      "acc_mean": 32.33,
+      "acc_std": 1.82,
+      "loss_mean": 4.0277,
+      "loss_std": 0.4336
+    },
+    "hidden_lesion": {
+      "acc_mean": 2.73,
+      "acc_std": 2.19,
+      "loss_mean": 4.9519,
+      "loss_std": 0.1559
+    },
+    "joint_lesion": {
+      "acc_mean": 24.1,
+      "acc_std": 0.28,
+      "loss_mean": 4.5119,
+      "loss_std": 0.0097
+    },
+    "batch_shuffle": {
+      "acc_mean": 18.1,
+      "acc_std": 4.14,
+      "loss_mean": 6.2029,
+      "loss_std": 0.3168
+    }
+  },
+  "interaction_analysis": {
+    "chance_floor": 25.0,
+    "total_signal_intact": 18.9,
+    "signal_hidden_alone": 7.33,
+    "signal_carry_alone": -22.27,
+    "linear_additive_sum": -14.94,
+    "nonlinear_synergy_gap": 33.84,
+    "is_approximately_additive": false
+  }
+}

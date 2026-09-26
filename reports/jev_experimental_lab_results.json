@@ -1,0 +1,94 @@
+{
+  "bayesian_mechanism": {
+    "status": "ok",
+    "decision_type": "bayesian_mechanism_adjudication",
+    "decision": "H1_H3_unified_dual",
+    "confidence": 0.96,
+    "probabilities": {
+      "H1_advection_dominant": 0.01,
+      "H1_H3_unified_dual": 0.96,
+      "H2_dilation_shortcut": 0,
+      "H3_decoupling_dominant": 0.03,
+      "H4_gradient_highway": 0
+    },
+    "entropy": 0.1183,
+    "model": "typesafe/jev-1.13-20260917",
+    "cost_usd": 4.7712e-05,
+    "usage": {
+      "input_tokens": 1136,
+      "output_tokens": 100,
+      "cost": 4.7712e-05
+    },
+    "elapsed_seconds": 0.432487,
+    "fallback_applied": false
+  },
+  "next_gen_architecture": {
+    "status": "ok",
+    "decision_type": "next_gen_architecture_tournament",
+    "decision": "candidate_1_M_ECR",
+    "confidence": 0.42,
+    "probabilities": {
+      "candidate_2_CD_NCA": 0.36,
+      "candidate_4_H_NCA": 0.01,
+      "candidate_3_SRC_NCA": 0,
+      "composite_M_CD_NCA": 0.11,
+      "candidate_1_M_ECR": 0.52,
+      "candidate_5_HYBRID_BUS": 0
+    },
+    "entropy": 0.5563,
+    "model": "typesafe/jev-1.13-20260917",
+    "cost_usd": 4.8972e-05,
+    "usage": {
+      "input_tokens": 1166,
+      "output_tokens": 105,
+      "cost": 4.8972e-05
+    },
+    "elapsed_seconds": 0.312068,
+    "fallback_applied": false
+  },
+  "discrepancy_audit": {
+    "status": "ok",
+    "decision_type": "scientific_discrepancy_audit",
+    "decision": "minor_reach_confound",
+    "confidence": 0.84,
+    "probabilities": {
+      "temporal_overfitting": 0,
+      "minor_reach_confound": 0.89,
+      "consistent_fully_explained": 0.05,
+      "unmodeled_boundary_aliasing": 0.06
+    },
+    "entropy": 0.3046,
+    "model": "typesafe/jev-1.13-20260917",
+    "cost_usd": 3.507e-05,
+    "usage": {
+      "input_tokens": 835,
+      "output_tokens": 78,
+      "cost": 3.507e-05
+    },
+    "elapsed_seconds": 0.389068,
+    "fallback_applied": false
+  },
+  "subagent_debate": {
+    "status": "ok",
+    "decision_type": "velocity_strategy_adjudication",
+    "decision": "adopt_position_B_dual_velocity",
+    "confidence": 0.99,
+    "probabilities": {
+      "hybrid_3_octave": 0.01,
+      "adopt_position_B_dual_velocity": 0.99,
+      "adopt_position_A_full_octave": 0,
+      "adaptive_learned_routing": 0
+    },
+    "entropy": 0.0404,
+    "model": "typesafe/jev-1.13-20260917",
+    "cost_usd": 3.801e-05,
+    "usage": {
+      "input_tokens": 905,
+      "output_tokens": 80,
+      "cost": 3.801e-05
+    },
+    "elapsed_seconds": 0.303968,
+    "fallback_applied": false
+  },
+  "elapsed_seconds": 1.4404048919677734
+}

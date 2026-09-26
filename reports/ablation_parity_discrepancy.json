@@ -1,0 +1,140 @@
+{
+  "results": [
+    {
+      "condition": {
+        "name": "Cond A: Hist task-667 (Causal + Bounded + 100ep)",
+        "causal": true,
+        "state_norm": "bounded",
+        "epochs": 100
+      },
+      "train_time": 79.15120768547058,
+      "train_metrics": {
+        "train_acc": 100.0,
+        "train_loss": 0.027,
+        "single_batch_val_acc": 78.1,
+        "single_batch_val_loss": 0.7585
+      },
+      "single_batch_eval": {
+        "loss_mean": 1.2545,
+        "loss_std": 0.0,
+        "acc_mean": 65.6,
+        "acc_std": 0.0
+      },
+      "multi_batch_eval": {
+        "loss_mean": 1.452,
+        "loss_std": 0.1968,
+        "acc_mean": 62.3,
+        "acc_std": 4.0
+      }
+    },
+    {
+      "condition": {
+        "name": "Cond B: Ablate Causal (Periodic + Bounded + 100ep)",
+        "causal": false,
+        "state_norm": "bounded",
+        "epochs": 100
+      },
+      "train_time": 74.06679606437683,
+      "train_metrics": {
+        "train_acc": 99.2,
+        "train_loss": 0.0477,
+        "single_batch_val_acc": 70.3,
+        "single_batch_val_loss": 0.9571
+      },
+      "single_batch_eval": {
+        "loss_mean": 1.3463,
+        "loss_std": 0.0,
+        "acc_mean": 56.2,
+        "acc_std": 0.0
+      },
+      "multi_batch_eval": {
+        "loss_mean": 1.4552,
+        "loss_std": 0.2411,
+        "acc_mean": 57.0,
+        "acc_std": 4.0
+      }
+    },
+    {
+      "condition": {
+        "name": "Cond C: Ablate State-Norm (Causal + None + 100ep)",
+        "causal": true,
+        "state_norm": "none",
+        "epochs": 100
+      },
+      "train_time": 81.41258096694946,
+      "train_metrics": {
+        "train_acc": 100.0,
+        "train_loss": 0.0144,
+        "single_batch_val_acc": 71.9,
+        "single_batch_val_loss": 0.9923
+      },
+      "single_batch_eval": {
+        "loss_mean": 1.6228,
+        "loss_std": 0.0,
+        "acc_mean": 59.4,
+        "acc_std": 0.0
+      },
+      "multi_batch_eval": {
+        "loss_mean": 1.5681,
+        "loss_std": 0.1103,
+        "acc_mean": 62.7,
+        "acc_std": 2.4
+      }
+    },
+    {
+      "condition": {
+        "name": "Cond D: Ablate Epochs (Causal + Bounded + 50ep)",
+        "causal": true,
+        "state_norm": "bounded",
+        "epochs": 50
+      },
+      "train_time": 53.78461313247681,
+      "train_metrics": {
+        "train_acc": 94.5,
+        "train_loss": 0.1811,
+        "single_batch_val_acc": 74.2,
+        "single_batch_val_loss": 0.5309
+      },
+      "single_batch_eval": {
+        "loss_mean": 0.7736,
+        "loss_std": 0.0,
+        "acc_mean": 68.8,
+        "acc_std": 0.0
+      },
+      "multi_batch_eval": {
+        "loss_mean": 0.8637,
+        "loss_std": 0.0887,
+        "acc_mean": 66.7,
+        "acc_std": 1.2
+      }
+    },
+    {
+      "condition": {
+        "name": "Cond E: Drift Campaign Baseline (Periodic + None + 50ep)",
+        "causal": false,
+        "state_norm": "none",
+        "epochs": 50
+      },
+      "train_time": 53.79829025268555,
+      "train_metrics": {
+        "train_acc": 98.4,
+        "train_loss": 0.1641,
+        "single_batch_val_acc": 68.8,
+        "single_batch_val_loss": 0.7646
+      },
+      "single_batch_eval": {
+        "loss_mean": 1.0353,
+        "loss_std": 0.0,
+        "acc_mean": 58.6,
+        "acc_std": 0.0
+      },
+      "multi_batch_eval": {
+        "loss_mean": 0.9971,
+        "loss_std": 0.1153,
+        "acc_mean": 55.9,
+        "acc_std": 4.5
+      }
+    }
+  ],
+  "total_time": 430.65378165245056
+}

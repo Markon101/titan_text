@@ -1,0 +1,782 @@
+[
+  {
+    "model": "Untrained Random-Weights Baseline",
+    "task": "parity",
+    "results_by_site": [
+      {
+        "site": 3,
+        "label": "Slot 0 (d=0)",
+        "temporal_curves": {
+          "0": {
+            "acc_full": 0.5,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.7222222222222222
+          },
+          "1": {
+            "acc_full": 0.4444444444444444,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.4444444444444444,
+            "acc_null_shuffled": 0.4444444444444444
+          },
+          "2": {
+            "acc_full": 0.2777777777777778,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.2777777777777778,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "4": {
+            "acc_full": 0.4444444444444444,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.4444444444444444,
+            "acc_null_shuffled": 0.5
+          },
+          "8": {
+            "acc_full": 0.3333333333333333,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.3333333333333333,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "15": {
+            "acc_full": 0.4444444444444444,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.4444444444444444,
+            "acc_null_shuffled": 0.5
+          }
+        }
+      },
+      {
+        "site": 7,
+        "label": "Slot 1 (d=4)",
+        "temporal_curves": {
+          "0": {
+            "acc_full": 0.5,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.3888888888888889
+          },
+          "1": {
+            "acc_full": 0.5,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.4444444444444444
+          },
+          "2": {
+            "acc_full": 0.6111111111111112,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.6111111111111112,
+            "acc_null_shuffled": 0.5
+          },
+          "4": {
+            "acc_full": 0.5555555555555556,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.6111111111111112
+          },
+          "8": {
+            "acc_full": 0.3888888888888889,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.3888888888888889,
+            "acc_null_shuffled": 0.4444444444444444
+          },
+          "15": {
+            "acc_full": 0.5555555555555556,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.6111111111111112
+          }
+        }
+      },
+      {
+        "site": 11,
+        "label": "Slot 2 (d=8)",
+        "temporal_curves": {
+          "0": {
+            "acc_full": 0.5,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.6111111111111112
+          },
+          "1": {
+            "acc_full": 0.5,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.3888888888888889
+          },
+          "2": {
+            "acc_full": 0.4444444444444444,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.4444444444444444,
+            "acc_null_shuffled": 0.5
+          },
+          "4": {
+            "acc_full": 0.5,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.3888888888888889
+          },
+          "8": {
+            "acc_full": 0.5,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.7222222222222222
+          },
+          "15": {
+            "acc_full": 0.7777777777777778,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.7777777777777778,
+            "acc_null_shuffled": 0.5
+          }
+        }
+      },
+      {
+        "site": 15,
+        "label": "Slot 3 (d=12)",
+        "temporal_curves": {
+          "0": {
+            "acc_full": 0.5,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.7222222222222222
+          },
+          "1": {
+            "acc_full": 0.4444444444444444,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.4444444444444444,
+            "acc_null_shuffled": 0.4444444444444444
+          },
+          "2": {
+            "acc_full": 0.5555555555555556,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.3888888888888889
+          },
+          "4": {
+            "acc_full": 0.5,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.3333333333333333
+          },
+          "8": {
+            "acc_full": 0.3888888888888889,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.3888888888888889,
+            "acc_null_shuffled": 0.3888888888888889
+          },
+          "15": {
+            "acc_full": 0.3888888888888889,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.3888888888888889,
+            "acc_null_shuffled": 0.4444444444444444
+          }
+        }
+      }
+    ]
+  },
+  {
+    "model": "ECR-32 Bi Skip-4 Deep (T=24, Seed 42)",
+    "task": "arithmetic",
+    "results_by_site": [
+      {
+        "site": 3,
+        "label": "Col 0 (Gen, d=0)",
+        "temporal_curves": {
+          "0": {
+            "acc_full": 0.5,
+            "acc_carry": 0.3888888888888889,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.3888888888888889
+          },
+          "1": {
+            "acc_full": 0.5555555555555556,
+            "acc_carry": 0.5555555555555556,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.4444444444444444
+          },
+          "2": {
+            "acc_full": 0.7222222222222222,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.6111111111111112,
+            "acc_null_shuffled": 0.4444444444444444
+          },
+          "4": {
+            "acc_full": 0.6111111111111112,
+            "acc_carry": 0.4444444444444444,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.7777777777777778
+          },
+          "8": {
+            "acc_full": 0.5,
+            "acc_carry": 0.3333333333333333,
+            "acc_hidden": 0.6111111111111112,
+            "acc_null_shuffled": 0.3888888888888889
+          },
+          "23": {
+            "acc_full": 0.5,
+            "acc_carry": 0.5555555555555556,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.5
+          }
+        }
+      },
+      {
+        "site": 2,
+        "label": "Col 1 (Ripple, d=1)",
+        "temporal_curves": {
+          "0": {
+            "acc_full": 0.6111111111111112,
+            "acc_carry": 0.6111111111111112,
+            "acc_hidden": 0.6111111111111112,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "1": {
+            "acc_full": 0.3888888888888889,
+            "acc_carry": 0.3333333333333333,
+            "acc_hidden": 0.2222222222222222,
+            "acc_null_shuffled": 0.5
+          },
+          "2": {
+            "acc_full": 0.5555555555555556,
+            "acc_carry": 0.6666666666666666,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "4": {
+            "acc_full": 0.6666666666666666,
+            "acc_carry": 0.6111111111111112,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.2777777777777778
+          },
+          "8": {
+            "acc_full": 0.4444444444444444,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.3888888888888889
+          },
+          "23": {
+            "acc_full": 0.6666666666666666,
+            "acc_carry": 0.4444444444444444,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.5
+          }
+        }
+      },
+      {
+        "site": 1,
+        "label": "Col 2 (Ripple, d=2)",
+        "temporal_curves": {
+          "0": {
+            "acc_full": 0.5555555555555556,
+            "acc_carry": 0.5555555555555556,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.7777777777777778
+          },
+          "1": {
+            "acc_full": 0.6666666666666666,
+            "acc_carry": 0.6666666666666666,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.3333333333333333
+          },
+          "2": {
+            "acc_full": 0.3333333333333333,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.3888888888888889,
+            "acc_null_shuffled": 0.5
+          },
+          "4": {
+            "acc_full": 0.6111111111111112,
+            "acc_carry": 0.6666666666666666,
+            "acc_hidden": 0.6666666666666666,
+            "acc_null_shuffled": 0.3333333333333333
+          },
+          "8": {
+            "acc_full": 0.5,
+            "acc_carry": 0.3888888888888889,
+            "acc_hidden": 0.6111111111111112,
+            "acc_null_shuffled": 0.3888888888888889
+          },
+          "23": {
+            "acc_full": 0.5,
+            "acc_carry": 0.6111111111111112,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.3333333333333333
+          }
+        }
+      },
+      {
+        "site": 0,
+        "label": "Col 3 (Ripple, d=3)",
+        "temporal_curves": {
+          "0": {
+            "acc_full": 0.5555555555555556,
+            "acc_carry": 0.5555555555555556,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.6666666666666666
+          },
+          "1": {
+            "acc_full": 0.5555555555555556,
+            "acc_carry": 0.3333333333333333,
+            "acc_hidden": 0.6111111111111112,
+            "acc_null_shuffled": 0.5
+          },
+          "2": {
+            "acc_full": 0.7222222222222222,
+            "acc_carry": 0.7222222222222222,
+            "acc_hidden": 0.6666666666666666,
+            "acc_null_shuffled": 0.5
+          },
+          "4": {
+            "acc_full": 0.5555555555555556,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.3888888888888889
+          },
+          "8": {
+            "acc_full": 0.5,
+            "acc_carry": 0.5555555555555556,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "23": {
+            "acc_full": 0.5,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.4444444444444444
+          }
+        }
+      },
+      {
+        "site": 10,
+        "label": "Query (Out, d=7)",
+        "temporal_curves": {
+          "0": {
+            "acc_full": 0.5555555555555556,
+            "acc_carry": 0.5555555555555556,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.5
+          },
+          "1": {
+            "acc_full": 0.3888888888888889,
+            "acc_carry": 0.3888888888888889,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.5
+          },
+          "2": {
+            "acc_full": 0.6666666666666666,
+            "acc_carry": 0.6666666666666666,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "4": {
+            "acc_full": 0.5555555555555556,
+            "acc_carry": 0.6111111111111112,
+            "acc_hidden": 0.6666666666666666,
+            "acc_null_shuffled": 0.4444444444444444
+          },
+          "8": {
+            "acc_full": 0.5555555555555556,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.4444444444444444
+          },
+          "23": {
+            "acc_full": 0.6666666666666666,
+            "acc_carry": 0.3888888888888889,
+            "acc_hidden": 0.6111111111111112,
+            "acc_null_shuffled": 0.6111111111111112
+          }
+        }
+      }
+    ]
+  },
+  {
+    "model": "ECR-16 Bi Skip-2 (T=16, Seed 42)",
+    "task": "arithmetic",
+    "results_by_site": [
+      {
+        "site": 3,
+        "label": "Col 0 (Gen, d=0)",
+        "temporal_curves": {
+          "0": {
+            "acc_full": 0.3888888888888889,
+            "acc_carry": 0.3888888888888889,
+            "acc_hidden": 0.3888888888888889,
+            "acc_null_shuffled": 0.4444444444444444
+          },
+          "1": {
+            "acc_full": 0.5,
+            "acc_carry": 0.6111111111111112,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.5
+          },
+          "2": {
+            "acc_full": 0.6111111111111112,
+            "acc_carry": 0.5555555555555556,
+            "acc_hidden": 0.3333333333333333,
+            "acc_null_shuffled": 0.3333333333333333
+          },
+          "4": {
+            "acc_full": 0.5555555555555556,
+            "acc_carry": 0.3888888888888889,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.4444444444444444
+          },
+          "8": {
+            "acc_full": 0.6111111111111112,
+            "acc_carry": 0.7222222222222222,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "15": {
+            "acc_full": 0.6111111111111112,
+            "acc_carry": 0.6111111111111112,
+            "acc_hidden": 0.3888888888888889,
+            "acc_null_shuffled": 0.4444444444444444
+          }
+        }
+      },
+      {
+        "site": 2,
+        "label": "Col 1 (Ripple, d=1)",
+        "temporal_curves": {
+          "0": {
+            "acc_full": 0.6111111111111112,
+            "acc_carry": 0.6111111111111112,
+            "acc_hidden": 0.6111111111111112,
+            "acc_null_shuffled": 0.7222222222222222
+          },
+          "1": {
+            "acc_full": 0.4444444444444444,
+            "acc_carry": 0.5555555555555556,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.3888888888888889
+          },
+          "2": {
+            "acc_full": 0.5,
+            "acc_carry": 0.3888888888888889,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.6111111111111112
+          },
+          "4": {
+            "acc_full": 0.5,
+            "acc_carry": 0.6111111111111112,
+            "acc_hidden": 0.7222222222222222,
+            "acc_null_shuffled": 0.6111111111111112
+          },
+          "8": {
+            "acc_full": 0.4444444444444444,
+            "acc_carry": 0.6111111111111112,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "15": {
+            "acc_full": 0.6111111111111112,
+            "acc_carry": 0.4444444444444444,
+            "acc_hidden": 0.6111111111111112,
+            "acc_null_shuffled": 0.5555555555555556
+          }
+        }
+      },
+      {
+        "site": 1,
+        "label": "Col 2 (Ripple, d=2)",
+        "temporal_curves": {
+          "0": {
+            "acc_full": 0.5555555555555556,
+            "acc_carry": 0.6111111111111112,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "1": {
+            "acc_full": 0.3888888888888889,
+            "acc_carry": 0.4444444444444444,
+            "acc_hidden": 0.6666666666666666,
+            "acc_null_shuffled": 0.5
+          },
+          "2": {
+            "acc_full": 0.6666666666666666,
+            "acc_carry": 0.5555555555555556,
+            "acc_hidden": 0.4444444444444444,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "4": {
+            "acc_full": 0.3333333333333333,
+            "acc_carry": 0.3333333333333333,
+            "acc_hidden": 0.3888888888888889,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "8": {
+            "acc_full": 0.5555555555555556,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.6666666666666666
+          },
+          "15": {
+            "acc_full": 0.7222222222222222,
+            "acc_carry": 0.7777777777777778,
+            "acc_hidden": 0.7777777777777778,
+            "acc_null_shuffled": 0.4444444444444444
+          }
+        }
+      },
+      {
+        "site": 0,
+        "label": "Col 3 (Ripple, d=3)",
+        "temporal_curves": {
+          "0": {
+            "acc_full": 0.5555555555555556,
+            "acc_carry": 0.5555555555555556,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.6111111111111112
+          },
+          "1": {
+            "acc_full": 0.2777777777777778,
+            "acc_carry": 0.4444444444444444,
+            "acc_hidden": 0.2777777777777778,
+            "acc_null_shuffled": 0.3333333333333333
+          },
+          "2": {
+            "acc_full": 0.6666666666666666,
+            "acc_carry": 0.5555555555555556,
+            "acc_hidden": 0.6111111111111112,
+            "acc_null_shuffled": 0.5
+          },
+          "4": {
+            "acc_full": 0.6111111111111112,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.3888888888888889,
+            "acc_null_shuffled": 0.2777777777777778
+          },
+          "8": {
+            "acc_full": 0.7222222222222222,
+            "acc_carry": 0.5555555555555556,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.4444444444444444
+          },
+          "15": {
+            "acc_full": 0.6111111111111112,
+            "acc_carry": 0.6111111111111112,
+            "acc_hidden": 0.6111111111111112,
+            "acc_null_shuffled": 0.5555555555555556
+          }
+        }
+      },
+      {
+        "site": 10,
+        "label": "Query (Out, d=7)",
+        "temporal_curves": {
+          "0": {
+            "acc_full": 0.5555555555555556,
+            "acc_carry": 0.5555555555555556,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "1": {
+            "acc_full": 0.5555555555555556,
+            "acc_carry": 0.5555555555555556,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.4444444444444444
+          },
+          "2": {
+            "acc_full": 0.7777777777777778,
+            "acc_carry": 0.8888888888888888,
+            "acc_hidden": 0.7777777777777778,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "4": {
+            "acc_full": 0.5555555555555556,
+            "acc_carry": 0.6111111111111112,
+            "acc_hidden": 0.6666666666666666,
+            "acc_null_shuffled": 0.6666666666666666
+          },
+          "8": {
+            "acc_full": 0.5,
+            "acc_carry": 0.6666666666666666,
+            "acc_hidden": 0.4444444444444444,
+            "acc_null_shuffled": 0.4444444444444444
+          },
+          "15": {
+            "acc_full": 0.5,
+            "acc_carry": 0.6111111111111112,
+            "acc_hidden": 0.5555555555555556,
+            "acc_null_shuffled": 0.5555555555555556
+          }
+        }
+      }
+    ]
+  },
+  {
+    "model": "ECR-16 Bi (T=16, Parity)",
+    "task": "parity",
+    "results_by_site": [
+      {
+        "site": 3,
+        "label": "Slot 0 (d=0)",
+        "temporal_curves": {
+          "0": {
+            "acc_full": 0.3333333333333333,
+            "acc_carry": 0.3333333333333333,
+            "acc_hidden": 0.3333333333333333,
+            "acc_null_shuffled": 0.3333333333333333
+          },
+          "1": {
+            "acc_full": 0.3333333333333333,
+            "acc_carry": 0.3333333333333333,
+            "acc_hidden": 0.3333333333333333,
+            "acc_null_shuffled": 0.4444444444444444
+          },
+          "2": {
+            "acc_full": 0.3333333333333333,
+            "acc_carry": 0.3333333333333333,
+            "acc_hidden": 0.3333333333333333,
+            "acc_null_shuffled": 0.4444444444444444
+          },
+          "4": {
+            "acc_full": 1.0,
+            "acc_carry": 1.0,
+            "acc_hidden": 1.0,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "8": {
+            "acc_full": 1.0,
+            "acc_carry": 1.0,
+            "acc_hidden": 1.0,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "15": {
+            "acc_full": 1.0,
+            "acc_carry": 1.0,
+            "acc_hidden": 1.0,
+            "acc_null_shuffled": 0.5
+          }
+        }
+      },
+      {
+        "site": 7,
+        "label": "Slot 1 (d=4)",
+        "temporal_curves": {
+          "0": {
+            "acc_full": 0.3333333333333333,
+            "acc_carry": 0.3333333333333333,
+            "acc_hidden": 0.3333333333333333,
+            "acc_null_shuffled": 0.3333333333333333
+          },
+          "1": {
+            "acc_full": 0.3333333333333333,
+            "acc_carry": 0.3333333333333333,
+            "acc_hidden": 0.3333333333333333,
+            "acc_null_shuffled": 0.4444444444444444
+          },
+          "2": {
+            "acc_full": 0.3333333333333333,
+            "acc_carry": 0.3333333333333333,
+            "acc_hidden": 0.3333333333333333,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "4": {
+            "acc_full": 0.3333333333333333,
+            "acc_carry": 0.3333333333333333,
+            "acc_hidden": 0.3333333333333333,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "8": {
+            "acc_full": 0.6111111111111112,
+            "acc_carry": 0.6666666666666666,
+            "acc_hidden": 0.7222222222222222,
+            "acc_null_shuffled": 0.6111111111111112
+          },
+          "15": {
+            "acc_full": 0.8888888888888888,
+            "acc_carry": 0.9444444444444444,
+            "acc_hidden": 0.6111111111111112,
+            "acc_null_shuffled": 0.7222222222222222
+          }
+        }
+      },
+      {
+        "site": 11,
+        "label": "Slot 2 (d=8)",
+        "temporal_curves": {
+          "0": {
+            "acc_full": 0.3333333333333333,
+            "acc_carry": 0.3333333333333333,
+            "acc_hidden": 0.3333333333333333,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "1": {
+            "acc_full": 0.3333333333333333,
+            "acc_carry": 0.3333333333333333,
+            "acc_hidden": 0.3333333333333333,
+            "acc_null_shuffled": 0.4444444444444444
+          },
+          "2": {
+            "acc_full": 0.3333333333333333,
+            "acc_carry": 0.3333333333333333,
+            "acc_hidden": 0.3333333333333333,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "4": {
+            "acc_full": 0.3333333333333333,
+            "acc_carry": 0.3333333333333333,
+            "acc_hidden": 0.3333333333333333,
+            "acc_null_shuffled": 0.6111111111111112
+          },
+          "8": {
+            "acc_full": 0.3888888888888889,
+            "acc_carry": 0.4444444444444444,
+            "acc_hidden": 0.3888888888888889,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "15": {
+            "acc_full": 0.7222222222222222,
+            "acc_carry": 0.6111111111111112,
+            "acc_hidden": 0.4444444444444444,
+            "acc_null_shuffled": 0.6111111111111112
+          }
+        }
+      },
+      {
+        "site": 15,
+        "label": "Slot 3 (d=12)",
+        "temporal_curves": {
+          "0": {
+            "acc_full": 0.3333333333333333,
+            "acc_carry": 0.3333333333333333,
+            "acc_hidden": 0.3333333333333333,
+            "acc_null_shuffled": 0.5
+          },
+          "1": {
+            "acc_full": 0.3333333333333333,
+            "acc_carry": 0.3333333333333333,
+            "acc_hidden": 0.3333333333333333,
+            "acc_null_shuffled": 0.5555555555555556
+          },
+          "2": {
+            "acc_full": 0.3333333333333333,
+            "acc_carry": 0.3333333333333333,
+            "acc_hidden": 0.3333333333333333,
+            "acc_null_shuffled": 0.4444444444444444
+          },
+          "4": {
+            "acc_full": 0.5,
+            "acc_carry": 0.5,
+            "acc_hidden": 0.5,
+            "acc_null_shuffled": 0.3888888888888889
+          },
+          "8": {
+            "acc_full": 0.6666666666666666,
+            "acc_carry": 0.6666666666666666,
+            "acc_hidden": 0.6666666666666666,
+            "acc_null_shuffled": 0.5
+          },
+          "15": {
+            "acc_full": 0.6111111111111112,
+            "acc_carry": 0.3333333333333333,
+            "acc_hidden": 0.6666666666666666,
+            "acc_null_shuffled": 0.7222222222222222
+          }
+        }
+      }
+    ]
+  }
+]

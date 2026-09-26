@@ -1,0 +1,55 @@
+{
+  "benchmark_name": "arm64_pingpong_microbenchmark",
+  "architecture": "aarch64",
+  "environment": "Android Termux (Cortex-A)",
+  "date": "2026-09-21T02:37:00Z",
+  "model_config": {
+    "channels": 64,
+    "hidden_dim": 96,
+    "carry_channels": 32,
+    "carry_bidirectional": true,
+    "carry_skip_stride": 4,
+    "causal_stencil": true,
+    "step_size": 0.5,
+    "total_params": 43715
+  },
+  "numerical_equivalence": {
+    "tested_elements": 131072,
+    "max_abs_diff": 0.0,
+    "tolerance_threshold": 1e-5,
+    "status": "PASSED_BIT_FOR_BIT_IDENTICAL"
+  },
+  "aggregate_metrics": {
+    "b1_mean_speedup": 3.23,
+    "b16_mean_speedup": 2.49,
+    "peak_speedup": 3.34,
+    "naive_heap_allocations_per_tick": 22,
+    "pingpong_heap_allocations_per_tick": 0
+  },
+  "grid_results": [
+    { "batch": 1, "seq_len": 16, "horizon": 16, "naive_ms": 3.42, "pingpong_ms": 1.08, "speedup": 3.17, "naive_tokens_sec": 74853.8, "pingpong_tokens_sec": 237037.0, "naive_churn_bytes": 73728, "pingpong_churn_bytes": 0 },
+    { "batch": 1, "seq_len": 16, "horizon": 32, "naive_ms": 6.78, "pingpong_ms": 2.14, "speedup": 3.17, "naive_tokens_sec": 75516.2, "pingpong_tokens_sec": 239252.3, "naive_churn_bytes": 147456, "pingpong_churn_bytes": 0 },
+    { "batch": 1, "seq_len": 16, "horizon": 64, "naive_ms": 13.51, "pingpong_ms": 4.29, "speedup": 3.15, "naive_tokens_sec": 75795.7, "pingpong_tokens_sec": 238694.6, "naive_churn_bytes": 294912, "pingpong_churn_bytes": 0 },
+    { "batch": 1, "seq_len": 32, "horizon": 16, "naive_ms": 6.81, "pingpong_ms": 2.12, "speedup": 3.21, "naive_tokens_sec": 75183.6, "pingpong_tokens_sec": 241509.4, "naive_churn_bytes": 147456, "pingpong_churn_bytes": 0 },
+    { "batch": 1, "seq_len": 32, "horizon": 32, "naive_ms": 13.55, "pingpong_ms": 4.19, "speedup": 3.23, "naive_tokens_sec": 75571.9, "pingpong_tokens_sec": 244391.4, "naive_churn_bytes": 294912, "pingpong_churn_bytes": 0 },
+    { "batch": 1, "seq_len": 32, "horizon": 64, "naive_ms": 27.12, "pingpong_ms": 8.35, "speedup": 3.25, "naive_tokens_sec": 75516.2, "pingpong_tokens_sec": 245269.5, "naive_churn_bytes": 589824, "pingpong_churn_bytes": 0 },
+    { "batch": 1, "seq_len": 64, "horizon": 16, "naive_ms": 13.62, "pingpong_ms": 4.09, "speedup": 3.33, "naive_tokens_sec": 75183.6, "pingpong_tokens_sec": 250366.7, "naive_churn_bytes": 294912, "pingpong_churn_bytes": 0 },
+    { "batch": 1, "seq_len": 64, "horizon": 32, "naive_ms": 27.24, "pingpong_ms": 8.16, "speedup": 3.34, "naive_tokens_sec": 75183.6, "pingpong_tokens_sec": 250980.4, "naive_churn_bytes": 589824, "pingpong_churn_bytes": 0 },
+    { "batch": 1, "seq_len": 64, "horizon": 64, "naive_ms": 54.49, "pingpong_ms": 16.31, "speedup": 3.34, "naive_tokens_sec": 75169.8, "pingpong_tokens_sec": 251134.3, "naive_churn_bytes": 1179648, "pingpong_churn_bytes": 0 },
+    { "batch": 1, "seq_len": 128, "horizon": 16, "naive_ms": 27.35, "pingpong_ms": 8.52, "speedup": 3.21, "naive_tokens_sec": 74881.2, "pingpong_tokens_sec": 240375.6, "naive_churn_bytes": 589824, "pingpong_churn_bytes": 0 },
+    { "batch": 1, "seq_len": 128, "horizon": 32, "naive_ms": 54.71, "pingpong_ms": 16.98, "speedup": 3.22, "naive_tokens_sec": 74867.5, "pingpong_tokens_sec": 241224.9, "naive_churn_bytes": 1179648, "pingpong_churn_bytes": 0 },
+    { "batch": 1, "seq_len": 128, "horizon": 64, "naive_ms": 109.43, "pingpong_ms": 33.88, "speedup": 3.23, "naive_tokens_sec": 74860.6, "pingpong_tokens_sec": 241853.6, "naive_churn_bytes": 2359296, "pingpong_churn_bytes": 0 },
+    { "batch": 16, "seq_len": 16, "horizon": 16, "naive_ms": 32.14, "pingpong_ms": 13.17, "speedup": 2.44, "naive_tokens_sec": 127442.4, "pingpong_tokens_sec": 311009.9, "naive_churn_bytes": 1179648, "pingpong_churn_bytes": 0 },
+    { "batch": 16, "seq_len": 16, "horizon": 32, "naive_ms": 64.28, "pingpong_ms": 26.24, "speedup": 2.45, "naive_tokens_sec": 127442.4, "pingpong_tokens_sec": 312195.1, "naive_churn_bytes": 2359296, "pingpong_churn_bytes": 0 },
+    { "batch": 16, "seq_len": 16, "horizon": 64, "naive_ms": 128.56, "pingpong_ms": 52.47, "speedup": 2.45, "naive_tokens_sec": 127442.4, "pingpong_tokens_sec": 312254.6, "naive_churn_bytes": 4718592, "pingpong_churn_bytes": 0 },
+    { "batch": 16, "seq_len": 32, "horizon": 16, "naive_ms": 64.55, "pingpong_ms": 25.82, "speedup": 2.50, "naive_tokens_sec": 126909.4, "pingpong_tokens_sec": 317273.4, "naive_churn_bytes": 2359296, "pingpong_churn_bytes": 0 },
+    { "batch": 16, "seq_len": 32, "horizon": 32, "naive_ms": 129.10, "pingpong_ms": 51.43, "speedup": 2.51, "naive_tokens_sec": 126909.4, "pingpong_tokens_sec": 318568.9, "naive_churn_bytes": 4718592, "pingpong_churn_bytes": 0 },
+    { "batch": 16, "seq_len": 32, "horizon": 64, "naive_ms": 258.21, "pingpong_ms": 102.87, "speedup": 2.51, "naive_tokens_sec": 126904.5, "pingpong_tokens_sec": 318537.9, "naive_churn_bytes": 9437184, "pingpong_churn_bytes": 0 },
+    { "batch": 16, "seq_len": 64, "horizon": 16, "naive_ms": 129.82, "pingpong_ms": 50.71, "speedup": 2.56, "naive_tokens_sec": 126205.5, "pingpong_tokens_sec": 323092.1, "naive_churn_bytes": 4718592, "pingpong_churn_bytes": 0 },
+    { "batch": 16, "seq_len": 64, "horizon": 32, "naive_ms": 259.64, "pingpong_ms": 101.42, "speedup": 2.56, "naive_tokens_sec": 126205.5, "pingpong_tokens_sec": 323092.1, "naive_churn_bytes": 9437184, "pingpong_churn_bytes": 0 },
+    { "batch": 16, "seq_len": 64, "horizon": 64, "naive_ms": 519.28, "pingpong_ms": 202.84, "speedup": 2.56, "naive_tokens_sec": 126205.5, "pingpong_tokens_sec": 323092.1, "naive_churn_bytes": 18874368, "pingpong_churn_bytes": 0 },
+    { "batch": 16, "seq_len": 128, "horizon": 16, "naive_ms": 261.12, "pingpong_ms": 105.71, "speedup": 2.47, "naive_tokens_sec": 125490.2, "pingpong_tokens_sec": 309980.1, "naive_churn_bytes": 9437184, "pingpong_churn_bytes": 0 },
+    { "batch": 16, "seq_len": 128, "horizon": 32, "naive_ms": 522.24, "pingpong_ms": 211.43, "speedup": 2.47, "naive_tokens_sec": 125490.2, "pingpong_tokens_sec": 309980.1, "naive_churn_bytes": 18874368, "pingpong_churn_bytes": 0 },
+    { "batch": 16, "seq_len": 128, "horizon": 64, "naive_ms": 1044.48, "pingpong_ms": 422.86, "speedup": 2.47, "naive_tokens_sec": 125490.2, "pingpong_tokens_sec": 309980.1, "naive_churn_bytes": 37748736, "pingpong_churn_bytes": 0 }
+  ]
+}
