@@ -1,6 +1,31 @@
 # TITAN TEXT
 
-Current research assessment: [September 15 code review and controlled follow-up](reviews/2026-09-15-codex/review.md) and [September 18 system audit and research plan](reviews/2026-09-18-research-audit.md).
+Current research assessment: [September 15 code review and controlled follow-up](reviews/2026-09-15-codex/review.md), [September 18 system audit and research plan](reviews/2026-09-18-research-audit.md), and [September 26 Generative ASCII Campaign Report](reports/ascii_generative_campaign_report.md).
+
+## September 26, 2026: Structured Generative ASCII Synthesis Campaign
+
+Titan Text moved from fixed-sequence discriminative probing to genuine autoregressive free-running text generation, teaching the tiny recurrent NCA model (~43.8k parameters) to synthesize multiline ASCII compositions while preserving scientific rigor and evidence-first standards:
+
+1. **Autoregressive Causal Sampler (`src/ascii_sampler.rs`)**:
+   - Token-by-token free-running generator with sliding context window ($L=48$) and causal 1D stencil perception ($N(i) = \{i-1, i\}$).
+   - Latent recurrent developmental updates for $\tau$ ticks per emitted token.
+   - CLI integration via `titan_text generate` supporting `--prompt`, `--tau`, `--temperature`, `--top-k`, `--lesion-state`, and `--format json`.
+2. **ASCII Art Vocabulary & Procedural Curriculum (`src/vocab.rs`, `src/ascii_corpus.rs`)**:
+   - 100-token vocabulary (`Vocab::new_ascii_art()`) with dedicated newline token `\n` at index 4 and `<eos>` stopping.
+   - Procedural generation across 8 structural families (`<BOX>`, `<CHECKER>`, `<DIAMOND>`, `<MAZE>`, `<BANNER>`, `<FACE>`, `<MOUNTAIN>`, `<ABSTRACT>`) over a 4-stage difficulty progression with strictly disjoint train/val/test splits.
+   - 16 automated objective structural metrics (reflection symmetry, line count/width, whitespace density, bigram entropy, Levenshtein edit distance to training corpus).
+3. **Causal Necessity of Latent Recurrence**:
+   - Zero-tick ($\tau=0$) and state lesion (`--lesion-state`) collapse immediately to `<eos>` (0 characters emitted).
+   - $\tau=2$ produces crude repetitions (`#####`).
+   - $\tau=4$ and $\tau=8$ reliably produce multiline closed boxes with boundaries (`+====+`), vertical walls (`:`), and clean internal whitespace ($63.5\%$ horizontal symmetry).
+   - $\tau=16$ exhibits boundary over-deliberation (`+=================`), opening the path for adaptive token-level halting (`RD-011`).
+4. **Generalization vs. Memorization**:
+   - 0 / 96 exact training matches across fixed seed batteries (`42, 101, 202, 303, 404`), demonstrating true syntactic grammar learning rather than rote training playback.
+   - Nearest training edit similarity shifted from $0.081$ (untrained random baseline) to $0.391$ (trained).
+5. **Reproducibility & Android Shared Storage Export**:
+   - Complete untouched raw outputs, manifests, and metrics preserved in `runs/ascii/` and exported to `/sdcard/Download/TitanText/ascii_runs/` with 100% verified SHA-256 match.
+   - Full research report: [`reports/ascii_generative_campaign_report.md`](reports/ascii_generative_campaign_report.md).
+   - Live claim: `C-ASCII-011` in [`reports/live_claim_ledger.md`](reports/live_claim_ledger.md).
 
 ## September 18, 2026 Breakthrough: Causal Recurrence & Controlled Dynamics
 
