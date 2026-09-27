@@ -14,6 +14,8 @@ recurrent dynamics analysis, Chomsky pushdown evaluation, causal interventions, 
 **Gemini acts as Research Lead / Principal Investigator (PI)**, coordinating high-context specialists,
 synthesizing findings, preserving empirical disagreements, and maintaining ground-truth experimental state.
 
+Context transport for delegated workers: pass condensed packets with `investigate --roles <role> --context-file <packet.txt>` (or pipe via `--context-file -` / `--context -`). Plain `--context` is literal text only — a file path passed there is sent as a path string, NOT read (this silently starved workers of context; fixed 2026-09 with sentinel-tested `resolve_context_argument`, `research_coordinator.py`). Verify worker prompt size via `prompt_tokens` in the JSON output before trusting an audit.
+
 Jev is an optional adviser for routing and identifying uncertainty. `verify` returns an advisory assessment, never a scientific certification: `model_supports_claim` describes the model's opinion, while `is_supported` remains false pending independent artifact verification. Positive assessments route to artifact inspection; negative assessments route to investigation rather than automatically falsifying a hypothesis.
 
 Only explicit PI-verified immutable artifact/run references (`verify --evidence-id`, Python `evidence_ids`) count as new evidence; repeated IDs within a coordinator do not reset its stopping counter. Across CLI sessions the PI must track whether evidence is actually new. A changed model opinion does not count. Calibration outcomes are recorded separately with independent outcome provenance, never from Jev's own verdict. Failed/malformed calls are unavailable judgments, not confirming evidence; retain unscored ideas for manual review.

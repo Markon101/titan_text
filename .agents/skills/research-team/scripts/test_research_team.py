@@ -130,6 +130,10 @@ class TestRecursiveInterrogator(unittest.TestCase):
 
 
 class TestResearchCoordinator(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+
     @patch("research_coordinator.jev_decide")
     def test_plan_task_routing(self, mock_jev):
         def mock_decision(qtype, *args, **kwargs):
@@ -141,7 +145,7 @@ class TestResearchCoordinator(unittest.TestCase):
 
         mock_jev.side_effect = mock_decision
 
-        coord = ResearchCoordinator()
+        coord = ResearchCoordinator(state_directory=Path(self.tmp.name))
         plan = coord.plan_task("Investigate recurrent mechanism")
         self.assertEqual(plan["thinking_budget"], "deep")
         self.assertEqual(plan["uncertainty_type"], "conceptual")
@@ -159,7 +163,7 @@ class TestResearchCoordinator(unittest.TestCase):
 
         mock_jev.side_effect = mock_decision
 
-        coord = ResearchCoordinator()
+        coord = ResearchCoordinator(state_directory=Path(self.tmp.name))
         gate = coord.verify_synthesis_gate("Claim verified", "Evidence from 3 seeds")
         self.assertEqual(gate["evidence_status"], "supported")
         self.assertEqual(gate["action_branch"], "inspect_supporting_artifacts")
@@ -174,7 +178,7 @@ class TestResearchCoordinator(unittest.TestCase):
             "accepted_candidates_count": 2,
             "new_branches_added": ["B1", "B2"],
         }
-        coord = ResearchCoordinator()
+        coord = ResearchCoordinator(state_directory=Path(self.tmp.name))
         res = coord.run_ideation("Investigate bifurcation")
         self.assertEqual(res["status"], "ok")
         self.assertEqual(len(res["new_branches_added"]), 2)
@@ -187,7 +191,7 @@ class TestResearchCoordinator(unittest.TestCase):
     @patch("research_coordinator.jev_decide")
     def test_coordinator_overrides(self, mock_jev):
         mock_jev.return_value = {"decision": "normal", "confidence": 0.85, "probabilities": {"normal": 0.85}}
-        coord = ResearchCoordinator()
+        coord = ResearchCoordinator(state_directory=Path(self.tmp.name))
         plan = coord.plan_task(
             "Task with override",
             overrides={"thinking_budget": "escalate", "recommended_branch": "escalation_astra", "should_branch": True},
@@ -198,7 +202,7 @@ class TestResearchCoordinator(unittest.TestCase):
         self.assertEqual(plan["overrides_applied"]["thinking_budget"], "escalate")
 
     def test_coordinator_active_archive_retrieval(self):
-        coord = ResearchCoordinator()
+        coord = ResearchCoordinator(state_directory=Path(self.tmp.name))
         hid = coord.state.add_hypothesis("Baseline linear attention model", confidence=0.7)
         coord.state.reject_hypothesis(hid, falsified_by="Gradient collapse test")
         coord.state.archive_stale(max_rejected_kept=0)
@@ -545,7 +549,7 @@ class TestContextTransport(unittest.TestCase):
                 "created_at_utc": "2026-01-01T00:00:00+00:00",
             }
 
-        coordinator = ResearchCoordinator()
+        coordinator = ResearchCoordinator(state_directory=Path(self.tmp.name))
 
         with patch.object(research_coordinator_module, "run_subagent", fake_run_subagent):
             results = coordinator.run_parallel_investigators(
