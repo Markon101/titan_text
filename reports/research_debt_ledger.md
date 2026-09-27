@@ -22,12 +22,20 @@
 | **`RD-002`** | **Resolve Automated Benchmark Audit Failure on FC-4 (`FALSIFIED`)**<br>*"Carry channels appear to mediate stack dynamics despite FC-4 failing."* | 0.90 | 0.05 | 300 | **0.05** | `RESOLVED` | `C-CARRY-002` |
 | **`RD-011`** | **Adaptive Recurrent Halting for Generative ASCII Token Transitions**<br>*"Can adaptive token-level tau allocation prevent boundary over-deliberation and improve multi-family generation?"* | 0.85 | 0.05 | 180 | **0.14** | `RESOLVED` | `C-ASCII-011`, `C-HALT-012` |
 | **`RD-012`** | **Optimal Halting Threshold Calibration and Causal Verification at Deep Recurrence ($\theta^*=0.25$)**<br>*"Does calibrating the adaptive halting threshold eliminate the under-compute confound and establish statistically significant causal superiority over fixed and shuffled compute?"* | 0.95 | 0.05 | 240 | **0.20** | `RESOLVED` | `C-HALT-013`, `C-ASCII-011` |
+| **`RD-013`** | **Held-Out Seed Generalization & Causal Alignment Boundary Battery**<br>*"Does the calibrated adaptive halting policy generalize to unseen seeds without post-hoc selection bias, and does causal alignment advantage over shuffled compute persist under matched EOS lengths?"* | 0.90 | 0.05 | 300 | **0.15** | `RESOLVED` | `C-HALT-013` |
 
 ---
 
 ## 2. Autopsy & Action Plan for Newly Resolved Debts
 
-### Priority 1: `RD-012` — Optimal Halting Threshold Calibration & Causal Verification ($\theta^*=0.25$)
+### Priority 1: `RD-013` — Held-Out Seed Generalization & Causal Alignment Boundary Battery
+- **Empirical Resolution**: Evaluated frozen policy ($\theta^* = 0.25$) across 10 unseen seeds (`[501..605]`, 270 total runs) in [`reports/ascii_adaptive_halting_campaign.md`](file:///data/data/com.termux/files/home/projects/titan_text/reports/ascii_adaptive_halting_campaign.md) and [`reports/raw/heldout_halting/campaign_analysis.json`](file:///data/data/com.termux/files/home/projects/titan_text/reports/raw/heldout_halting/campaign_analysis.json).
+- **Key Findings**:
+  1. *Robust Pareto Superiority Out-of-Distribution*: Arm A achieves $0.5535 \pm 0.0261$ at $\bar{\tau} = 4.60$, outperforming fixed $\tau=4$ ($0.4735, +16.9\%$) with a net Pareto gain of $+0.0535$ ($+10.71\%$) over fixed interpolation.
+  2. *Causal Alignment Boundary*: Paired comparison against shuffled schedule Arm C drops to $\Delta = +0.0292 \pm 0.0262$ with 95% bootstrap CI `[-0.0186, +0.0821]` (8 wins, 13 ties, 9 losses, $p = 0.1468$).
+  3. *Scientific Takeaway*: Adaptive halting's primary causal mechanism is budget-operating efficiency (hovering in the $\tau \in [4, 8]$ sweet spot while avoiding over-smoothing collapse at $\tau=16$), while fine-grained per-token state alignment provides a modest secondary benefit.
+
+### Priority 2: `RD-012` — Optimal Halting Threshold Calibration & Causal Verification ($\theta^*=0.25$)
 - **Empirical Resolution**: Executed 105-run calibration sweep across $\theta \in [0.10, 0.35]$ followed by full 135-run 4-arm campaign at $\theta^* = 0.25$ in [`reports/ascii_adaptive_halting_campaign.md`](file:///data/data/com.termux/files/home/projects/titan_text/reports/ascii_adaptive_halting_campaign.md) and [`reports/raw/calibrated_halting/campaign_analysis.json`](file:///data/data/com.termux/files/home/projects/titan_text/reports/raw/calibrated_halting/campaign_analysis.json).
 - **Key Findings**:
   1. *Threshold Response Mapping*: Monotonically shifts compute from $\bar{\tau} = 12.84$ ($\theta=0.10$, over-smoothing) down to $\bar{\tau} = 2.35$ ($\theta=0.35$, premature halting). Identifies $\theta^* = 0.25$ as optimal operating point ($\bar{\tau} = 4.53$, edit sim $0.6719$).

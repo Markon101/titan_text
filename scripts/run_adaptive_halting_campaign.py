@@ -266,7 +266,10 @@ if __name__ == "__main__":
     parser.add_argument("--halting-metric", default="relative_delta")
     parser.add_argument("--halting-threshold", type=float, default=0.35)
     parser.add_argument("--halting-patience", type=int, default=2)
+    parser.add_argument("--seeds", type=str, default=None, help="Comma-separated seed integers")
     args = parser.parse_args()
+
+    seed_list = [int(s.strip()) for s in args.seeds.split(",") if s.strip()] if args.seeds else None
 
     run_campaign(
         checkpoint=args.checkpoint,
@@ -276,4 +279,5 @@ if __name__ == "__main__":
         halting_metric=args.halting_metric,
         halting_threshold=args.halting_threshold,
         halting_patience=args.halting_patience,
+        seeds=seed_list,
     )

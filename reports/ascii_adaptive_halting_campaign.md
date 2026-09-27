@@ -103,7 +103,37 @@ The calibration sweep across $\theta \in [0.10, 0.35]$ mapped the continuous tra
 
 ---
 
-## 6. Cryptographic Artifact Hashes
+## 7. Held-Out Generalization Evaluation ($N=30$ Runs across 10 Unseen Seeds)
+
+To test whether the calibrated threshold $\theta^* = 0.25$ generalizes out-of-distribution without post-hoc selection bias, we evaluated the exact frozen policy across 10 unseen seeds (`[501, 502, 503, 504, 505, 601, 602, 603, 604, 605]`, 270 total runs):
+
+| Arm | Protocol Description | Mean $\tau$ | Nearest Edit Sim (mean ± se) | Mean H-Symmetry | Exact Matches |
+|---|---|---|---|---|---|
+| **A: Calibrated Adaptive** | Dynamic relative delta ($\le 0.25$, patience 2) | **4.60** | **0.5535 ± 0.0261** | 0.8193 | 0/30 |
+| **B: Fixed $\tau=0$** | State lesion baseline (`--lesion-state`) | 0.00 | 0.0597 ± 0.0102 | 0.0067 | 0/30 |
+| **B: Fixed $\tau=1$** | Fixed 1 tick per token | 1.00 | 0.2474 ± 0.0364 | 0.2716 | 0/30 |
+| **B: Fixed $\tau=2$** | Fixed 2 ticks per token | 2.00 | 0.4291 ± 0.0212 | 0.9667 | 0/30 |
+| **B: Fixed $\tau=4$** | Fixed 4 ticks per token (training regime) | 4.00 | 0.4735 ± 0.0317 | 0.8579 | 0/30 |
+| **B: Fixed $\tau=8$** | Fixed 8 ticks per token | 8.00 | 0.6506 ± 0.0109 | 0.7427 | 0/30 |
+| **B: Fixed $\tau=16$**| Fixed 16 ticks per token (over-smoothing collapse) | 16.00 | 0.4554 ± 0.0353 | 0.7046 | 0/30 |
+| **C: Shuffled Schedule** | Permuted multiset of Arm A ticks (`--tau-schedule`) | 4.57 | 0.5242 ± 0.0329 | 0.8106 | 0/30 |
+| **D: Random Sham** | Uniform random $\tau \sim \text{Uniform}(1, 16)$ | 7.81 | 0.5395 ± 0.0395 | 0.6150 | 0/30 |
+
+### Crucial Deflationary Generalization Findings:
+1. **Pareto Quality Advantage Remains Robust**:
+   - Adaptive Arm A ($\bar{\tau} = 4.60$) delivers $0.5535 \pm 0.0261$, consistently outperforming fixed $\tau=4$ ($0.4735$, $+16.9\%$ relative gain).
+   - Relative to the interpolated fixed recurrence curve at $4.60$ ticks ($0.5000$), Arm A maintains a net Pareto efficiency gain of **$+0.0535$ ($+10.71\%$ quality gain)**.
+2. **Causal Alignment Advantage Narrows on Held-Out Seeds**:
+   - Paired difference against shuffled schedule: $\Delta(A - C) = +0.0292 \pm 0.0262$.
+   - 95% Bootstrap CI: `[-0.0186, +0.0821]` (crosses zero).
+   - Win / Tie / Loss: **8 wins / 13 ties / 9 losses**.
+   - Exact permutation test: $p = 0.1468$; sign test: $p = 0.6855$.
+   - **Mechanism Audit**: On the initial 5 seeds, Arm C consumed only $0.790$ of its schedule due to early `<eos>` truncation on seeds 101 and 404, artificially inflating $\Delta(A - C)$ to $+0.1406$. On the held-out battery, Arm C consumed $0.896$ of its budget and achieved parity on 13 of 30 runs.
+   - **Conclusion**: The primary driver of adaptive halting's superiority is **budget-operating efficiency** (dynamically hovering in the sweet spot $\bar{\tau} \approx 4.6$ rather than over-smoothing at $\tau=16$ or under-computing at $\tau \le 2$). Per-token state-dependent alignment provides a modest, but non-dominant, secondary effect.
+
+---
+
+## 8. Cryptographic Artifact Hashes
 
 | Component | Path | SHA-256 Checksum |
 |---|---|---|
@@ -113,7 +143,11 @@ The calibration sweep across $\theta \in [0.10, 0.35]$ mapped the continuous tra
 | Calibrated Analysis | `reports/raw/calibrated_halting/campaign_analysis.json` | `aef2d546d539b452c638478ad7ff78b8887264d804deac06759881a151a82bbc` |
 | Calibrated Manifest | `reports/raw/calibrated_halting/campaign_manifest.json` | `aae1aba329aeaf6e219ec27fe0dedffa0bcf32257861288c28972cfc532f293b` |
 | Calibrated Samples | `reports/raw/calibrated_halting/campaign_samples.json` | `b8868d5aecc73d352217f76c03f6b926453ee15272228f0e3433737bd128a275` |
+| Held-Out Analysis | `reports/raw/heldout_halting/campaign_analysis.json` | `59a4abb8500a66d120ea7bbb26b1e2f3877143a2630ecccdadd23a900bf58a55` |
+| Held-Out Manifest | `reports/raw/heldout_halting/campaign_manifest.json` | `fa15e19667da969c81d9baa858b1b06d0b34eb5d73328cc4aca1436abc3648a8` |
+| Held-Out Samples | `reports/raw/heldout_halting/campaign_samples.json` | `2028f09b8c1f6ca2249fb562bc2ed80dc1243814ecf8d2f44b45ec0ee46e28b2` |
 
 External Android mirror verified bit-for-bit:
 - `/sdcard/Download/TitanText/calibrated_halting/`
 - `/sdcard/Download/TitanText/halting_calibration/`
+- `/sdcard/Download/TitanText/heldout_halting/`
