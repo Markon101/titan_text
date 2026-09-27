@@ -85,3 +85,10 @@
 - **Seeds Tested**: 42, 101, 202, 303, 404
 - **Preserved Archive**: Verified 100% SHA-256 match on Android shared storage `/sdcard/Download/TitanText/ascii_runs/ascii_v1_trained_1790462724/`
 
+
+### `C-HALT-014`: Qualification Battery Downgrade of Adaptive Halting Superiority
+- **Statement**: Frozen-protocol qualification battery (10 held-out seeds x 3 prompts, theta*=0.25 frozen, seed-level inference) REFUTES the prior claim of adaptive-halting Pareto superiority: fixed tau=5 significantly outperforms frozen-theta adaptive halting at matched compute (paired A-B5 = -0.0403, seed-cluster CI [-0.0709,-0.0115], 8/10 seeds negative); state-independent matched controls (multiset-permuted C_matched, distribution-matched D_matched) are indistinguishable from adaptive in primary analysis (seed-perm p=0.36/0.47) and better under truncation-excluded sensitivity. A state-free char-class rule explains R^2=0.27 of tick variance. Sampling-time adaptive halting on the tau=4-trained checkpoint is a noisy proxy for a fixed operating point near tau=5 with no measurable state-dependent contribution.
+- **Status**: `SUPPORTED` (Confidence: 0.85; downgrades C-HALT-013/C-ASCII-011 superiority language)
+- **Limitations**: 10 independent seeds; sampling-time adaptation only (training-time adaptive halting untested); single checkpoint; realized compute of C/D matched within ~11% mean with 3-4 truncated pairs per arm.
+- **Supporting Artifacts**: [reports/ascii_adaptive_halting_qualification.md](file:///data/data/com.termux/files/home/projects/titan_text/reports/ascii_adaptive_halting_qualification.md), [reports/raw/qualification_battery/qualification_analysis.json](file:///data/data/com.termux/files/home/projects/titan_text/reports/raw/qualification_battery/qualification_analysis.json)
+- **Commit**: (qualification report commit)

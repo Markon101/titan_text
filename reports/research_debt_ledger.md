@@ -69,3 +69,11 @@
 - **Context**: In generative ASCII synthesis, $\tau=4$ and $\tau=8$ produce clean multiline structures, but $\tau=16$ exhibits boundary token saturation (`+=================`), suggesting constant $\tau$ across all token types over-deliberates on simple linear runs.
 - **Proposed Action**: Implement adaptive step halting (`AdaptiveHalting` / kinetic energy threshold) during autoregressive token generation, allowing fewer ticks on repetitive tokens (e.g. horizontal walls `-`) and deeper deliberation at structural branch points (`+`, `\n`, corners).
 
+
+## New Debt from Qualification Battery (2026-09-26)
+
+| Debt ID | Title | Status | Downstream |
+|---|---|---|---|
+| `RD-014` | **Adaptive halting superiority REFUTED at matched compute** — fixed tau=5 beats frozen-theta adaptive; state-independent matched controls (C/D) show no separation. Prior "Pareto superiority"/"causal alignment" claims downgraded to budget artifacts. | `RESOLVED (negative)` | `C-HALT-014` |
+| `RD-015` | **Training-time adaptive halting** — whether a halter learned jointly with the model (vs. sampling-time adaptation of a tau=4-trained checkpoint) yields state-dependent allocation benefits. Untested; requires train-loop integration. | `OPEN` | `C-HALT-014` |
+| `RD-016` | **Per-channel halting-metric telemetry** — which channels dominate the relative-delta signal (full 64-channel vector at active position; carry NOT APPLICABLE, carry_channels=0). | `OPEN` | `C-HALT-014` |
