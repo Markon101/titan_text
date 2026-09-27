@@ -63,6 +63,14 @@
     - *Generalization vs Memorization*: Across 96 post-training evaluations on fixed seeds (`42, 101, 202, 303, 404`), exact training match count is 0/96 ($0.0\%$ memorization), with mean nearest edit similarity shifting from $0.081$ (untrained noise) to $0.391$ (structured grammar).
     - *Source*: [`reports/ascii_generative_campaign_report.md`](file:///data/data/com.termux/files/home/projects/titan_text/reports/ascii_generative_campaign_report.md), [`runs/ascii/ascii_v1_trained_1790462724/`](file:///data/data/com.termux/files/home/projects/titan_text/runs/ascii/ascii_v1_trained_1790462724/).
 
+12. **Adaptive Recurrent Compute / Per-Token Halting Dynamics ($\tau_{eff} \approx 2.35$, +10.4% Pareto Gain vs +0.0001 Lower Bound)**:
+    - Dynamic relative velocity halting ($\|x_t - x_{t-1}\|_2 / (\|x_t\|_2 + \epsilon) \le 0.35$, patience 2) converges to a mean compute budget of $\bar{\tau} = 2.35$ ticks per token across 135 runs.
+    - *Pareto Efficiency*: At $\tau = 2.35$, adaptive halting achieves nearest edit similarity $0.4679 \pm 0.0381$, a $+10.39\%$ gain over the continuous fixed recurrence interpolation ($0.4238$).
+    - *Causal Alignment vs Shuffled Control*: Comparing Arm A (Adaptive) against Arm C (identical tick multiset shuffled across positions) yields a paired difference $\Delta = +0.0768 \pm 0.0422$ with a 95% bootstrap CI of `[+0.0001, +0.1605]` (4 wins, 10 ties, 1 loss, one-tailed $p \approx 0.045$). The lower bound touching zero and high tie rate indicate suggestive, but not decisive, causal superiority.
+    - *Orthogonality of State Velocity and Predictive Entropy*: Pearson correlation $r(H(P_t), \tau_t) = -0.0827$ ($N=485$, 95% CI crosses zero). Recurrent halting is governed by hidden state kinetic velocity, not output categorical uncertainty.
+    - *Fixed Recurrence Sweet Spot and Over-Smoothing Collapse*: Fixed recurrence peaks at $\tau = 8$ ($0.6315 \pm 0.0221$) before collapsing at $\tau = 16$ ($0.4264 \pm 0.0584$) due to contractive over-smoothing onto a low-rank manifold.
+    - *Source*: [`reports/ascii_adaptive_halting_campaign.md`](file:///data/data/com.termux/files/home/projects/titan_text/reports/ascii_adaptive_halting_campaign.md), [`reports/raw/adaptive_halting/campaign_analysis.json`](file:///data/data/com.termux/files/home/projects/titan_text/reports/raw/adaptive_halting/campaign_analysis.json).
+
 ---
 
 ## 2. SUPPORTED BUT NOT ESTABLISHED (Plausible Interpretations With Competing Alternatives)
@@ -119,6 +127,9 @@
 
 7. **[FALSIFIED] "Dyck-4 Pushdown Accuracy is Explained by Shallow Bigrams or Local Convolution"**:
    - *Falsification*: Evaluated on the Adversarial Balanced-N-Gram Benchmark across transport gaps $G \in \{4, 8\}$ where all queries are at physical distances $d \in [6..24]$ cells (exceeding continuous correlation length $\xi \le 6$). Continuous-only models collapse to flat uniform chance ($24.7\% \approx 25.0\%$), while intact CD-DV-NCA maintains $36.2\% - 37.0\%$ with $+11.5\%$ to $+12.3\%$ carry lesion delta and peak retrieval of $50.0\%$ at $d=20$ cells. Untied feedforward collapses to $25.8\%$ chance.
+
+8. **[FALSIFIED] "Predictive Entropy Governs Recurrent Compute Halting"**:
+   - *Falsification*: Measured Pearson correlation between next-token predictive entropy $H(P_t)$ and allocated compute $\tau_t$ is null ($r = -0.0827$, $N=485$, 95% CI includes zero). Output categorical uncertainty and latent continuous state velocity $\|x_t - x_{t-1}\|$ are decoupled in tiny recurrent NCAs; halting is driven by internal velocity, not next-token entropy.
 
 ---
 

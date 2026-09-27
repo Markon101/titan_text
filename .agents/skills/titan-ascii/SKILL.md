@@ -39,7 +39,23 @@ For every generation battery, compare outputs under:
 - Recurrent ablation / state lesion
 - Identical prompts and fixed seeds (`42, 101, 202, 303, 404`)
 
-## 4. External Android Shared Storage Export
+## 4. Adaptive Recurrent Compute & Halting
+
+Evaluate per-token dynamic recurrence allocation against matched controls:
+- **Adaptive Halting**:
+  `cargo run --release -- generate --load-dir checkpoints/ascii_v1 --prompt "<BOX>\n" --halting adaptive --tau-min 1 --tau-max 16 --halting-metric relative_delta --halting-threshold 0.35 --halting-patience 2`
+- **Supported Halting Metrics**:
+  - `relative_delta`: relative state velocity $\|x_t - x_{t-1}\|_2 / (\|x_t\|_2 + \epsilon)$ (recommended).
+  - `state_delta`: unnormalized $L_2$ state norm.
+  - `logit_delta`: maximum coordinate change across vocabulary logits.
+  - `entropy_delta`: predictive entropy delta $|H(P_t) - H(P_{t-1})|$.
+  - `cosine`: cosine distance $1 - \cos(x_t, x_{t-1})$.
+- **Controls**:
+  - **Arm B (Fixed Sweep)**: `--tau 1`, `--tau 2`, `--tau 4`, `--tau 8`, `--tau 16`, and `--lesion-state`.
+  - **Arm C (Shuffled Schedule)**: `--tau-schedule "2,4,3,2,1..."` (preserves multiset budget, breaks state alignment).
+  - **Arm D (Random Sham)**: `--halting random --tau-min 1 --tau-max 16`.
+
+## 5. External Android Shared Storage Export
 
 Export completed runs to external shared storage for accessible viewing outside Termux:
 ```bash

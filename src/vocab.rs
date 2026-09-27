@@ -152,6 +152,18 @@ impl Vocab {
             })
             .collect()
     }
+
+    pub fn id_to_char(&self, id: usize) -> Option<char> {
+        if id < self.chars.len() {
+            Some(self.chars[id])
+        } else {
+            None
+        }
+    }
+
+    pub fn newline_id(&self) -> Option<usize> {
+        self.char_to_id.get(&'\n').copied()
+    }
 }
 
 #[allow(dead_code)]

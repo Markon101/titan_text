@@ -17,4 +17,5 @@ __pycache__/
 patterns.txt
 titantext*.txt
 /runs/
+/reports/raw/
 .agents.backup_baseline/

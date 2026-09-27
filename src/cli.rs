@@ -318,6 +318,15 @@ impl Command {
                 "--output",
                 "--format",
                 "--threads",
+                "--halting",
+                "--halting-mode",
+                "--tau-min",
+                "--tau-max",
+                "--halting-metric",
+                "--halting-threshold",
+                "--halting-patience",
+                "--adaptive-tau",
+                "--tau-schedule",
             ],
         }
     }
@@ -531,6 +540,7 @@ pub fn parse(args: &[String]) -> Result<Invocation> {
             "--raw" => "--patterns-only",
             "--steps" | "--dev-steps" if command == Command::Rollout => "--horizon",
             "--latent-ticks" if command == Command::Generate => "--tau",
+            "--halting-mode" if command == Command::Generate => "--halting",
             "-h" => "--help",
             name => name,
         };

@@ -127,11 +127,11 @@ def load_titan_secrets() -> dict[str, str]:
 
 
 def load_api_key() -> str:
-    """Read environment variable or fall back to ~/.config/titan/secrets.env."""
-    key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    """Read ~/.config/titan/secrets.env first, then environment variable, then fallbacks."""
+    titan_secrets = load_titan_secrets()
+    key = titan_secrets.get("OPENROUTER_API_KEY", "").strip()
     if not key or key == STALE_OPENROUTER_KEY:
-        titan_secrets = load_titan_secrets()
-        key = titan_secrets.get("OPENROUTER_API_KEY", "").strip()
+        key = os.environ.get("OPENROUTER_API_KEY", "").strip()
     if not key or key == STALE_OPENROUTER_KEY:
         config_key_file = Path.home() / ".config" / "openrouter" / "api_key"
         if config_key_file.is_file():

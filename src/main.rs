@@ -1153,6 +1153,41 @@ fn cmd_generate(args: &cli::Options, device: &Device) -> Result<()> {
     }
 
     let tau = tau_opt.unwrap_or(config.train.dev_steps.max(1));
+    let tau_schedule_str: Option<String> = args.value("--tau-schedule")?;
+    let tau_schedule: Option<Vec<usize>> = if let Some(ref s) = tau_schedule_str {
+        let parsed: std::result::Result<Vec<usize>, _> = s.split(',')
+            .map(|tok| tok.trim().parse::<usize>())
+            .collect();
+        Some(parsed.map_err(|e| anyhow::anyhow!("Invalid --tau-schedule comma-separated integer list: {}", e))?)
+    } else {
+        None
+    };
+
+    let halting_str: Option<String> = args.value("--halting")?;
+    let adaptive_tau_flag = args.flag("--adaptive-tau");
+    let halting_mode = if let Some(ref s) = halting_str {
+        ascii_sampler::HaltingMode::parse(s)
+            .ok_or_else(|| anyhow::anyhow!("Unknown halting mode '{}'. Valid modes: fixed, adaptive, random, schedule", s))?
+    } else if adaptive_tau_flag {
+        ascii_sampler::HaltingMode::Adaptive
+    } else if tau_schedule.is_some() {
+        ascii_sampler::HaltingMode::Schedule
+    } else {
+        ascii_sampler::HaltingMode::Fixed
+    };
+
+    let tau_min: usize = args.value("--tau-min")?.unwrap_or(1);
+    let tau_max: usize = args.value("--tau-max")?.unwrap_or(16);
+    let halting_metric_str: Option<String> = args.value("--halting-metric")?;
+    let halting_metric = if let Some(ref s) = halting_metric_str {
+        ascii_sampler::HaltingMetric::parse(s)
+            .ok_or_else(|| anyhow::anyhow!("Unknown halting metric '{}'. Valid metrics: state_delta, relative_delta, logit_delta, entropy_delta, cosine", s))?
+    } else {
+        ascii_sampler::HaltingMetric::StateDelta
+    };
+    let halting_threshold: f32 = args.value("--halting-threshold")?.unwrap_or(0.08);
+    let halting_patience: usize = args.value("--halting-patience")?.unwrap_or(2);
+
     let gen_cfg = ascii_sampler::GenerationConfig {
         prompt: prompt.clone(),
         max_len,
@@ -1161,6 +1196,13 @@ fn cmd_generate(args: &cli::Options, device: &Device) -> Result<()> {
         tau,
         seed,
         lesion_state,
+        halting_mode,
+        tau_min,
+        tau_max,
+        halting_metric,
+        halting_threshold,
+        halting_patience,
+        tau_schedule,
     };
 
     let sampler = ascii_sampler::AsciiSampler::new(&nca, &interface, &dataset.vocab, &config, device);
@@ -1184,7 +1226,34 @@ fn cmd_generate(args: &cli::Options, device: &Device) -> Result<()> {
         println!("╚══════════════════════════════════════════════════════════════════════════════════════╝");
         println!("  Checkpoint       : {}", load_dir.as_deref().unwrap_or("[Untrained baseline]"));
         println!("  Prompt           : {:?}", sample.prompt);
-        println!("  Tau (ticks)      : {}", sample.config.tau);
+        println!("  Halting Mode     : {}", sample.config.halting_mode.as_str());
+        match sample.config.halting_mode {
+            ascii_sampler::HaltingMode::Fixed => {
+                println!("  Tau (ticks)      : {}", sample.config.tau);
+            }
+            ascii_sampler::HaltingMode::Random => {
+                println!("  Tau Range (sham) : {}-{}", sample.config.tau_min, sample.config.tau_max);
+                println!("  Mean Tau / token : {:.2} (median: {:.1}, observed min: {}, observed max: {})", sample.mean_tau, sample.median_tau, sample.min_tau, sample.max_tau);
+                println!("  Total Ticks      : {}", sample.total_ticks);
+            }
+            ascii_sampler::HaltingMode::Schedule => {
+                println!("  Tau Schedule     : ({} scheduled tokens)", sample.config.tau_schedule.as_ref().map_or(0, |s| s.len()));
+                println!("  Mean Tau / token : {:.2} (median: {:.1}, observed min: {}, observed max: {})", sample.mean_tau, sample.median_tau, sample.min_tau, sample.max_tau);
+                println!("  Total Ticks      : {}", sample.total_ticks);
+            }
+            ascii_sampler::HaltingMode::Adaptive => {
+                println!("  Tau Range        : {}-{}", sample.config.tau_min, sample.config.tau_max);
+                println!("  Halting Metric   : {} (thresh: {:.4}, patience: {})", sample.config.halting_metric.as_str(), sample.config.halting_threshold, sample.config.halting_patience);
+                println!("  Mean Tau / token : {:.2} (median: {:.1}, observed min: {}, observed max: {})", sample.mean_tau, sample.median_tau, sample.min_tau, sample.max_tau);
+                println!("  Total Ticks      : {}", sample.total_ticks);
+                if !sample.tau_by_char_class.is_empty() {
+                    let mut class_pairs: Vec<_> = sample.tau_by_char_class.iter().collect();
+                    class_pairs.sort_by_key(|(k, _)| *k);
+                    let class_str = class_pairs.into_iter().map(|(k, v)| format!("{}={:.2}", k, v)).collect::<Vec<_>>().join(", ");
+                    println!("  Tau by Class     : {}", class_str);
+                }
+            }
+        }
         println!("  Temperature      : {:.2}", sample.config.temperature);
         println!("  Top-K            : {}", sample.config.top_k);
         println!("  Seed             : {}", sample.config.seed);
