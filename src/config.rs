@@ -56,6 +56,13 @@ pub struct NcaConfig {
     /// Whether to append a static 1D spatial coordinate channel p_i in [-1, 1] to the perception vector
     #[serde(default)]
     pub coord_channel: bool,
+    /// Coordinate counterfactual applied DURING TRAINING/DEVELOPMENT whenever
+    /// the coordinate channel is active: None = intact positions, or one of
+    /// "zeroed" | "constant" | "shuffled" | "reversed". Used for the
+    /// training-time sham arm (constant = same added dimensionality, no
+    /// positional information). Defaults to None (prior behavior unchanged).
+    #[serde(default)]
+    pub coord_train_mode: Option<String>,
     /// Whether to use a strictly causal / directed spatial stencil N(i) = {i-1, i} (DAG fold)
     #[serde(default)]
     pub causal_stencil: bool,
@@ -182,6 +189,7 @@ impl Default for NcaConfig {
             damping_alpha: default_damping_alpha(),
             leaky_lambda: default_leaky_lambda(),
             coord_channel: false,
+            coord_train_mode: None,
             causal_stencil: false,
             carry_channels: 0,
             carry_skip_stride: 1,

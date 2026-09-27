@@ -89,6 +89,7 @@ impl Command {
                 "--record-activations",
                 "--zero-boundary",
                 "--coord-channel",
+                "--coord-train-mode",
                 "--causal-stencil",
                 "--macro-stride",
                 "--macro-period",

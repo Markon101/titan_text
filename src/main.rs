@@ -225,6 +225,17 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
     if args.flag("--coord-channel") {
         config.nca.coord_channel = true;
     }
+    if let Some(ctm) = args.value::<String>("--coord-train-mode")? {
+        anyhow::ensure!(
+            matches!(ctm.as_str(), "zeroed" | "constant" | "shuffled" | "reversed"),
+            "invalid --coord-train-mode '{ctm}'; expected zeroed, constant, shuffled, or reversed"
+        );
+        anyhow::ensure!(
+            config.nca.coord_channel,
+            "--coord-train-mode requires --coord-channel"
+        );
+        config.nca.coord_train_mode = Some(ctm);
+    }
     if args.flag("--causal-stencil") {
         config.nca.causal_stencil = true;
     }

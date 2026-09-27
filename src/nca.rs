@@ -319,7 +319,8 @@ impl NeuralCellularAutomaton {
 
         let perc = if self.nca_cfg.coord_channel {
             let (b, l, _) = x.dims3()?;
-            let coords = Self::generate_coordinates(b, l, None, x.device())?;
+            let mode = self.nca_cfg.coord_train_mode.as_deref();
+            let coords = Self::generate_coordinates(b, l, mode, x.device())?;
             Tensor::cat(&[&base_perc, &coords], 2)?
         } else {
             base_perc
@@ -1357,6 +1358,81 @@ mod tests {
         let x = Tensor::zeros((b, l, channels), candle_core::DType::F32, &dev)?;
         let perc = nca.perceive(&x)?;
         assert_eq!(perc.dims3()?, (b, l, 3 * channels + 1));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_coord_train_mode_sham_constant() -> Result<()> {
+        // Training-time sham: constant coordinate channel (same +1 dimension,
+        // no positional information). Baseline (mode None) must remain intact.
+        let dev = Device::Cpu;
+        let l = 16;
+        let channels = 4;
+        let field_cfg = FieldConfig { seq_len: l, channels, periodic_boundary: true };
+
+        // Sham: constant mode -> last perception channel is 0.5 everywhere.
+        let nca_cfg_sham = NcaConfig {
+            coord_channel: true,
+            coord_train_mode: Some("constant".to_string()),
+            ..NcaConfig::default()
+        };
+        let varmap = VarMap::new();
+        let vb = VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+        let nca_sham = NeuralCellularAutomaton::new(vb, &nca_cfg_sham, &field_cfg)?;
+        let x = Tensor::zeros((1, l, channels), candle_core::DType::F32, &dev)?;
+        let perc_sham = nca_sham.perceive(&x)?;
+        assert_eq!(perc_sham.dims3()?, (1, l, 3 * channels + 1));
+        let sham_coords = perc_sham.narrow(2, 3 * channels, 1)?.to_vec3::<f32>()?;
+        for i in 0..l {
+            assert!((sham_coords[0][i][0] - 0.5).abs() < 1e-6, "constant sham at {i}");
+        }
+
+        // Baseline: mode None -> intact centered coordinates in [-1, 1].
+        let nca_cfg_intact = NcaConfig {
+            coord_channel: true,
+            coord_train_mode: None,
+            ..NcaConfig::default()
+        };
+        let varmap2 = VarMap::new();
+        let vb2 = VarBuilder::from_varmap(&varmap2, candle_core::DType::F32, &dev);
+        let nca_intact = NeuralCellularAutomaton::new(vb2, &nca_cfg_intact, &field_cfg)?;
+        let perc_intact = nca_intact.perceive(&x)?;
+        let intact_coords = perc_intact.narrow(2, 3 * channels, 1)?.to_vec3::<f32>()?;
+        assert!((intact_coords[0][0][0] - (-1.0)).abs() < 1e-6, "first position = -1");
+        assert!((intact_coords[0][l - 1][0] - 1.0).abs() < 1e-6, "last position = +1");
+        for i in 0..l {
+            let expected = 2.0 * (i as f32) / ((l - 1) as f32) - 1.0;
+            assert!(
+                (intact_coords[0][i][0] - expected).abs() < 1e-6,
+                "coordinate formula at {i}"
+            );
+        }
+
+        // L=1 edge case: single position coordinate must be defined (0.0).
+        let field_cfg1 = FieldConfig { seq_len: 1, channels, periodic_boundary: true };
+        let nca_cfg1 = NcaConfig { coord_channel: true, ..NcaConfig::default() };
+        let varmap3 = VarMap::new();
+        let vb3 = VarBuilder::from_varmap(&varmap3, candle_core::DType::F32, &dev);
+        let nca1 = NeuralCellularAutomaton::new(vb3, &nca_cfg1, &field_cfg1)?;
+        let x1 = Tensor::zeros((1, 1, channels), candle_core::DType::F32, &dev)?;
+        let perc1 = nca1.perceive(&x1)?;
+        assert_eq!(perc1.dims3()?, (1, 1, 3 * channels + 1));
+
+        // Zeroed training mode: channel present but identically 0.
+        let nca_cfg_zero = NcaConfig {
+            coord_channel: true,
+            coord_train_mode: Some("zeroed".to_string()),
+            ..NcaConfig::default()
+        };
+        let varmap4 = VarMap::new();
+        let vb4 = VarBuilder::from_varmap(&varmap4, candle_core::DType::F32, &dev);
+        let nca_zero = NeuralCellularAutomaton::new(vb4, &nca_cfg_zero, &field_cfg)?;
+        let perc_zero = nca_zero.perceive(&x)?;
+        let zero_coords = perc_zero.narrow(2, 3 * channels, 1)?.to_vec3::<f32>()?;
+        for i in 0..l {
+            assert_eq!(zero_coords[0][i][0], 0.0, "zeroed sham at {i}");
+        }
 
         Ok(())
     }
