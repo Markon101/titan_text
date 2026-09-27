@@ -88,6 +88,83 @@ RESEARCH_ROLES: dict[str, str] = {
 }
 
 
+CONTEXT_STDIN_MARKER = "-"
+# Hard guard: file-backed context is read verbatim and sent in full; we only
+# warn (never silently truncate) when it is very large.
+CONTEXT_WARN_CHARS = 200_000
+
+
+def resolve_context_argument(
+    context: str = "",
+    context_file: str | None = None,
+    *,
+    stdin_text: str | None = None,
+) -> tuple[str, str]:
+    """Resolve context transport arguments into actual prompt text.
+
+    Explicit, backwards-compatible transport API:
+      - ``context``      : literal inline text, passed through verbatim
+                           (unchanged semantics for existing callers)
+      - ``context_file`` : path whose contents are inlined verbatim
+                           (no path-sniffing of ``context``; no truncation)
+      - ``context == "-"`` (or ``context_file == "-"``): read from stdin
+                           (``stdin_text`` override for tests)
+
+    Returns (text, source) where source describes the transport used.
+    Raises ValueError for an empty stdin read, a missing/unreadable file,
+    or a context-file argument that is not a regular file.
+    """
+    parts: list[tuple[str, str]] = []
+
+    if context.strip() == CONTEXT_STDIN_MARKER:
+        text = stdin_text if stdin_text is not None else sys.stdin.read()
+        if not text.strip():
+            raise ValueError("context '-' was given but stdin is empty")
+        parts.append((text, "stdin"))
+
+    if context_file:
+        if context_file.strip() == CONTEXT_STDIN_MARKER:
+            text = stdin_text if stdin_text is not None else sys.stdin.read()
+            if not text.strip():
+                raise ValueError("context file '-' was given but stdin is empty")
+            parts.append((text, "stdin"))
+        else:
+            path = Path(context_file).expanduser()
+            if not path.exists():
+                raise ValueError(f"context file does not exist: {context_file}")
+            if not path.is_file():
+                raise ValueError(f"context file is not a regular file: {context_file}")
+            try:
+                text = path.read_text(encoding="utf-8", errors="strict")
+            except (OSError, UnicodeDecodeError) as e:
+                raise ValueError(
+                    f"context file is unreadable: {context_file} ({e})"
+                ) from e
+            if len(text) > CONTEXT_WARN_CHARS:
+                print(
+                    f"WARNING: context packet is large ({len(text)} chars); "
+                    "sending in full (no truncation).",
+                    file=sys.stderr,
+                )
+            parts.append((text, f"file:{context_file}"))
+
+    # Literal inline text (unless already consumed as stdin above).
+    if context and context.strip() != CONTEXT_STDIN_MARKER:
+        parts.append((context, "literal"))
+
+    combined = "\n".join(text for text, _ in parts if text)
+    source = "+".join(source for _, source in parts) or "empty"
+    return combined, source
+
+
+def compose_worker_context(role: str, context: str) -> str:
+    """Compose the full context block transmitted to a delegated worker.
+
+    Pure function so tests can assert exactly what reaches the worker prompt.
+    """
+    return f"Role instruction: {RESEARCH_ROLES.get(role, '')}\n\n{context}"
+
+
 class ResearchCoordinator:
     def __init__(self, topic: str = "Research Campaign", *, decider_fn: Any = None, state_directory: Path | None = None) -> None:
         self.state = ResearchState(
@@ -194,8 +271,15 @@ class ResearchCoordinator:
         *,
         context: str = "",
         max_workers: int = 3,
+        context_source: str = "literal",
     ) -> list[dict[str, Any]]:
-        """Phase 2: Spawn focused DeepSeek specialists concurrently with auto-restored archive context."""
+        """Phase 2: Spawn focused DeepSeek specialists concurrently with auto-restored archive context.
+
+        ``context`` must already be resolved prompt TEXT (use
+        resolve_context_argument() for file/stdin transport); it is transmitted
+        verbatim to every worker prompt. ``context_source`` records how the
+        text was transported for provenance.
+        """
         restored_context = self.check_and_restore_archived_context(question + " " + context)
         combined_context = context
         if restored_context:
@@ -205,13 +289,18 @@ class ResearchCoordinator:
 
         def worker(r: str) -> dict[str, Any]:
             prompt = f"{question}\n\nMaintain compact, evidence-first reporting."
+            worker_context = compose_worker_context(r, combined_context)
             res = run_subagent(
                 prompt,
                 role="researcher",
-                context=f"Role instruction: {RESEARCH_ROLES.get(r, '')}\n\n{combined_context}",
+                context=worker_context,
                 max_tokens=2048,
             )
             res["research_role"] = r
+            res["context_chars_sent"] = len(worker_context)
+            res["context_source"] = context_source
+            usage = res.get("usage") or {}
+            res["prompt_tokens"] = usage.get("prompt_tokens")
             return res
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -221,7 +310,12 @@ class ResearchCoordinator:
                 try:
                     out = fut.result()
                     results.append(out)
-                    self.tracker.record_deepseek(r_name, tokens=out.get("usage", {}).get("total_tokens"))
+                    usage = out.get("usage") or {}
+                    self.tracker.record_deepseek(
+                        r_name,
+                        tokens=usage.get("total_tokens"),
+                        elapsed_seconds=out.get("elapsed_seconds", 0.0),
+                    )
                 except Exception as e:
                     results.append({"research_role": r_name, "status": "error", "error": str(e)})
 
@@ -378,9 +472,14 @@ def main(argv: list[str] | None = None) -> int:
 
     # investigate
     inv_p = subparsers.add_parser("investigate", help="Run parallel DeepSeek specialized investigators")
-    inv_p.add_argument("question", help="Specific investigation question")
     inv_p.add_argument("--roles", default="independent-investigator,skeptical-reviewer", help="Comma-separated roles")
-    inv_p.add_argument("--context", default="")
+    inv_p.add_argument("--context", default="",
+                       help="Literal inline context text (verbatim; unchanged semantics). "
+                            "Use '-' to read context from stdin.")
+    inv_p.add_argument("--context-file", default=None, dest="context_file",
+                       help="Path to a context file whose contents are transmitted verbatim "
+                            "(no truncation). Use '-' for stdin.")
+    inv_p.add_argument("question", help="Specific investigation question")
     inv_p.add_argument("--json", action="store_true")
 
     # verify
@@ -451,7 +550,17 @@ def main(argv: list[str] | None = None) -> int:
 
     elif args.subcommand == "investigate":
         role_list = [r.strip() for r in args.roles.split(",") if r.strip()]
-        res = coordinator.run_parallel_investigators(args.question, role_list, context=args.context)
+        try:
+            resolved_context, context_source = resolve_context_argument(
+                args.context, args.context_file
+            )
+        except ValueError as e:
+            print(f"ERROR: {e}", file=sys.stderr)
+            return 2
+        res = coordinator.run_parallel_investigators(
+            args.question, role_list, context=resolved_context,
+            context_source=context_source,
+        )
         if args.json:
             print(json.dumps(res, indent=2))
         else:

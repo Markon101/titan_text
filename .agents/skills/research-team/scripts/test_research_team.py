@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from typing import Any
 from unittest.mock import patch, MagicMock
 
 import sys
@@ -12,9 +13,14 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 OPENROUTER_SCRIPTS = SCRIPTS_DIR.parent.parent / "openrouter-subagents" / "scripts"
 sys.path.insert(0, str(OPENROUTER_SCRIPTS))
 
+import research_coordinator as research_coordinator_module
+from research_coordinator import (
+    ResearchCoordinator,
+    resolve_context_argument,
+    compose_worker_context,
+)
 from research_state import ResearchState, SOFT_BUDGET_BYTES, HARD_BUDGET_BYTES
 from recursive_interrogator import is_repetitive, run_recursive_interrogation
-from research_coordinator import ResearchCoordinator
 from reasoning_frontier import ReasoningFrontier, BranchNode
 from ideation_engine import filter_and_score_candidates, run_ideation_cycle
 
@@ -435,6 +441,138 @@ class TestResearchMeeting(unittest.TestCase):
         self.assertIn("Test Milestone", rep["objective"])
         self.assertGreaterEqual(len(rep["warnings_against_premature_conclusions"]), 1)
         self.assertIn("pushdown memory is unbounded", rep["warnings_against_premature_conclusions"][0])
+
+
+class TestContextTransport(unittest.TestCase):
+    """Deterministic tests: context packets must reach the worker prompt as
+    actual text, not as a filesystem path. Sentinel-based, offline, no API."""
+
+    SENTINEL = "SENTINEL-XYZZY-9137-DO-NOT-TRUNCATE"
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+
+    def _packet(self, size_chars: int) -> str:
+        # Sentinel at both head and, critically, the END of the packet so any
+        # silent truncation would remove it.
+        filler = "".join(chr(97 + (i % 26)) for i in range(size_chars))
+        return f"HEAD:{self.SENTINEL}\n{filler}\nTAIL:{self.SENTINEL}"
+
+    def test_literal_context_passthrough(self):
+        text, source = resolve_context_argument("plain literal context")
+        self.assertEqual(text, "plain literal context")
+        self.assertEqual(source, "literal")
+
+    def test_empty_context_is_empty_literal(self):
+        text, source = resolve_context_argument("", None)
+        self.assertEqual(text, "")
+        self.assertEqual(source, "empty")
+
+    def test_file_context_inlines_sentinel_not_path(self):
+        packet = self._packet(4000)
+        path = Path(self.tmp.name) / "packet.txt"
+        path.write_text(packet, encoding="utf-8")
+        text, source = resolve_context_argument("", str(path))
+        # Contents (both sentinels) transmitted; path string itself absent.
+        self.assertIn(f"HEAD:{self.SENTINEL}", text)
+        self.assertIn(f"TAIL:{self.SENTINEL}", text)
+        self.assertNotIn(str(path), text)
+        self.assertTrue(source.startswith("file:"))
+
+    def test_large_packet_end_sentinel_preserved_no_truncation(self):
+        packet = self._packet(300_000)
+        path = Path(self.tmp.name) / "big_packet.txt"
+        path.write_text(packet, encoding="utf-8")
+        text, source = resolve_context_argument("", str(path))
+        self.assertEqual(len(text), len(packet))
+        self.assertTrue(text.endswith(f"TAIL:{self.SENTINEL}"))
+
+    def test_stdin_transport(self):
+        import io
+        sentinel_text = f"STDIN:{self.SENTINEL}"
+        with patch.object(sys, "stdin", io.StringIO(sentinel_text)):
+            text, source = resolve_context_argument("-", None)
+        self.assertEqual(text, sentinel_text)
+        self.assertEqual(source, "stdin")
+
+    def test_unicode_context_preserved(self):
+        packet = "αβγδ — émigré — 日本語 ✓ " + self.SENTINEL
+        path = Path(self.tmp.name) / "unicode.txt"
+        path.write_text(packet, encoding="utf-8")
+        text, _ = resolve_context_argument("", str(path))
+        self.assertEqual(text, packet)
+
+    def test_missing_context_file_raises(self):
+        with self.assertRaises(ValueError):
+            resolve_context_argument("", str(Path(self.tmp.name) / "nope.txt"))
+
+    def test_directory_as_context_file_raises(self):
+        with self.assertRaises(ValueError):
+            resolve_context_argument("", self.tmp.name)
+
+    def test_invalid_utf8_context_file_raises(self):
+        path = Path(self.tmp.name) / "binary.bin"
+        path.write_bytes(b"\xff\xfe\xfa\x00\x81")
+        with self.assertRaises(ValueError):
+            resolve_context_argument("", str(path))
+
+    def test_empty_stdin_raises(self):
+        import io
+        with patch.object(sys, "stdin", io.StringIO("")):
+            with self.assertRaises(ValueError):
+                resolve_context_argument("-", None)
+
+    def test_delegated_worker_prompt_receives_packet_contents(self):
+        """End-to-end (offline): run_parallel_investigators must transmit the
+        packet contents to the worker; a bare path alone is insufficient."""
+        packet = self._packet(5000)
+        path = Path(self.tmp.name) / "packet.txt"
+        path.write_text(packet, encoding="utf-8")
+        resolved, source = resolve_context_argument("", str(path))
+
+        captured: dict[str, Any] = {}
+
+        def fake_run_subagent(task, *, role="researcher", context="", **kwargs):
+            captured["task"] = task
+            captured["context"] = context
+            return {
+                "status": "ok", "model": "fake", "role": role,
+                "purpose": task, "answer": "ok", "parsed_json": None,
+                "reasoning": None, "finish_reason": "stop",
+                "usage": {"prompt_tokens": 1234, "total_tokens": 1300},
+                "files": [], "elapsed_seconds": 0.1,
+                "created_at_utc": "2026-01-01T00:00:00+00:00",
+            }
+
+        coordinator = ResearchCoordinator()
+
+        with patch.object(research_coordinator_module, "run_subagent", fake_run_subagent):
+            results = coordinator.run_parallel_investigators(
+                "Question referencing the packet", ["researcher"],
+                context=resolved, context_source=source,
+            )
+
+        self.assertEqual(results[0]["status"], "ok")
+        sent = captured["context"]
+        # Contents present in the actual worker prompt context...
+        self.assertIn(f"HEAD:{self.SENTINEL}", sent)
+        self.assertTrue(sent.rstrip().endswith(f"TAIL:{self.SENTINEL}"))
+        # ...whereas the bare path alone could not contain the sentinel.
+        self.assertNotIn(str(path), self.SENTINEL)
+        self.assertNotIn(str(path), sent)
+        self.assertGreater(len(sent), len(str(path)) * 10)
+        # Provenance and prompt-token usage recorded.
+        self.assertEqual(results[0]["context_source"], source)
+        self.assertEqual(results[0]["context_chars_sent"], len(sent))
+        self.assertEqual(results[0]["prompt_tokens"], 1234)
+
+
+class TestRoleInstructionInWorkerContext(unittest.TestCase):
+    def test_role_instruction_composed(self):
+        ctx = compose_worker_context("skeptical-reviewer", "PACKET BODY")
+        self.assertIn("PACKET BODY", ctx)
+        self.assertIn("Role instruction:", ctx)
 
 
 if __name__ == "__main__":
