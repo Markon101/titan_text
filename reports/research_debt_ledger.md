@@ -21,12 +21,21 @@
 | **`RD-001`** | **Deconstruct Continuous Hidden State Residual Floor (32.33%)**<br>*"The residual floor of 32.33% likely reflects shallow bracket resolution by continuous channels."* | 0.95 | 0.05 | 300 | **0.05** | `RESOLVED` | `C-DYCK-001`, `C-CARRY-002` |
 | **`RD-002`** | **Resolve Automated Benchmark Audit Failure on FC-4 (`FALSIFIED`)**<br>*"Carry channels appear to mediate stack dynamics despite FC-4 failing."* | 0.90 | 0.05 | 300 | **0.05** | `RESOLVED` | `C-CARRY-002` |
 | **`RD-011`** | **Adaptive Recurrent Halting for Generative ASCII Token Transitions**<br>*"Can adaptive token-level tau allocation prevent boundary over-deliberation and improve multi-family generation?"* | 0.85 | 0.05 | 180 | **0.14** | `RESOLVED` | `C-ASCII-011`, `C-HALT-012` |
+| **`RD-012`** | **Optimal Halting Threshold Calibration and Causal Verification at Deep Recurrence ($\theta^*=0.25$)**<br>*"Does calibrating the adaptive halting threshold eliminate the under-compute confound and establish statistically significant causal superiority over fixed and shuffled compute?"* | 0.95 | 0.05 | 240 | **0.20** | `RESOLVED` | `C-HALT-013`, `C-ASCII-011` |
 
 ---
 
 ## 2. Autopsy & Action Plan for Newly Resolved Debts
 
-### Priority 1: `RD-011` — Adaptive Recurrent Halting for Generative ASCII Token Transitions
+### Priority 1: `RD-012` — Optimal Halting Threshold Calibration & Causal Verification ($\theta^*=0.25$)
+- **Empirical Resolution**: Executed 105-run calibration sweep across $\theta \in [0.10, 0.35]$ followed by full 135-run 4-arm campaign at $\theta^* = 0.25$ in [`reports/ascii_adaptive_halting_campaign.md`](file:///data/data/com.termux/files/home/projects/titan_text/reports/ascii_adaptive_halting_campaign.md) and [`reports/raw/calibrated_halting/campaign_analysis.json`](file:///data/data/com.termux/files/home/projects/titan_text/reports/raw/calibrated_halting/campaign_analysis.json).
+- **Key Findings**:
+  1. *Threshold Response Mapping*: Monotonically shifts compute from $\bar{\tau} = 12.84$ ($\theta=0.10$, over-smoothing) down to $\bar{\tau} = 2.35$ ($\theta=0.35$, premature halting). Identifies $\theta^* = 0.25$ as optimal operating point ($\bar{\tau} = 4.53$, edit sim $0.6719$).
+  2. *Pareto & Absolute Superiority*: Achieves $0.6719 \pm 0.0311$ edit similarity, strictly exceeding fixed $\tau=4$ ($0.5274, +27.4\%$) and matching/exceeding prior global fixed peak at $\tau=8$ ($0.6315$) while using $43.4\%$ less compute ($4.53$ vs $8.0$ ticks). Delivers $+24.16\%$ Pareto quality gain over fixed interpolation.
+  3. *Strictly Positive Causal Alignment*: $\Delta(A - C) = +0.1406 \pm 0.0592$, 95% bootstrap CI `[+0.0332, +0.2568]` (bounded away from zero), 11 wins / 0 ties / 4 losses, exact permutation test $p = 0.0139$, paired $t(14) = 2.37, p = 0.0163$, Cohen's $d_z = 0.613$.
+  4. *Falsification Boundaries Registered*: Arm C consumed fraction is $0.790$ due to early `<eos>` truncation under misallocated ticks; $\theta^*$ chosen from sweep; predictive entropy correlation remains null ($r = -0.1475$).
+
+### Priority 2: `RD-011` — Adaptive Recurrent Halting for Generative ASCII Token Transitions
 - **Empirical Resolution**: Executed 4-arm campaign across 135 runs (3 prompts: box, maze, diamond; 5 seeds: 42, 101, 202, 303, 404) in [`reports/ascii_adaptive_halting_campaign.md`](file:///data/data/com.termux/files/home/projects/titan_text/reports/ascii_adaptive_halting_campaign.md) and [`reports/raw/adaptive_halting/campaign_analysis.json`](file:///data/data/com.termux/files/home/projects/titan_text/reports/raw/adaptive_halting/campaign_analysis.json).
 - **Key Findings**:
   1. *Pareto Efficiency*: Converges to mean compute $\bar{\tau} = 2.35$ with edit similarity $0.4679 \pm 0.0381$, achieving a $+10.39\%$ quality advantage over linear interpolation of continuous fixed recurrence ($0.4238$).

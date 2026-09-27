@@ -138,6 +138,19 @@ def analyze_campaign(json_path: str) -> Dict[str, Any]:
         tie = sum(1 for d in diffs_a_c if abs(d) <= 1e-5)
         win_c = sum(1 for d in diffs_a_c if d < -1e-5)
 
+        # Exact non-parametric sign test on non-ties
+        non_ties = win_a + win_c
+        sign_p_val = sum(math.comb(non_ties, k) * (0.5 ** non_ties) for k in range(win_a, non_ties + 1)) if non_ties > 0 else 1.0
+
+        # Exact/Monte-Carlo paired permutation test (10,000 sign-flip permutations)
+        import random
+        rng_perm = random.Random(42)
+        perm_means = []
+        for _ in range(10000):
+            perm_diff = [d * (1 if rng_perm.random() > 0.5 else -1) for d in diffs_a_c]
+            perm_means.append(sum(perm_diff) / len(diffs_a_c))
+        perm_p_val = sum(1 for pm in perm_means if pm >= m_diff) / len(perm_means)
+
         c_samples = list(c_dict.values())
         mean_consumed_frac = sum(s.get("schedule_consumed_fraction", 1.0) for s in c_samples) / max(1, len(c_samples))
         mean_budget_ratio = sum(s.get("realized_budget_ratio", 1.0) for s in c_samples) / max(1, len(c_samples))
@@ -147,6 +160,8 @@ def analyze_campaign(json_path: str) -> Dict[str, Any]:
         print(f"  Mean Delta Sim (A - C)    : {m_diff:+.4f} ± {se_diff:.4f} (95% CI: [{ci_lo:+.4f}, {ci_hi:+.4f}])")
         print(f"  Paired t-statistic        : t = {t_stat:.2f}")
         print(f"  Win / Tie / Loss          : {win_a} / {tie} / {win_c}")
+        print(f"  Sign Test p-value (1-tail): p = {sign_p_val:.4f} (n={non_ties} non-ties)")
+        print(f"  Permutation Test p-value  : p = {perm_p_val:.4f} (10,000 resamples)")
         print(f"  Arm C Schedule Parity     : mean consumed fraction = {mean_consumed_frac:.3f}, realized budget ratio = {mean_budget_ratio:.3f}")
         report_data["head_to_head"]["A_vs_C"] = {
             "mean_delta": m_diff,
@@ -154,6 +169,8 @@ def analyze_campaign(json_path: str) -> Dict[str, Any]:
             "ci_95": [ci_lo, ci_hi],
             "t_stat": t_stat,
             "win_tie_loss": [win_a, tie, win_c],
+            "sign_test_p": sign_p_val,
+            "permutation_test_p": perm_p_val,
             "mean_consumed_fraction": mean_consumed_frac,
             "mean_budget_ratio": mean_budget_ratio,
         }

@@ -63,6 +63,13 @@ fn help_never_starts_work_or_touches_checkpoints() {
         ("fluid-probe", "ns-probe"),
         ("rollout", "rollout"),
         ("falsify", "falsify"),
+        ("generate", "generate"),
+        ("transplant", "transplant"),
+        ("sweep", "sweep"),
+        ("associate", "associate"),
+        ("attractor", "attractor"),
+        ("benchmark", "benchmark"),
+        ("memory", "memory"),
     ] {
         for args in [
             vec![command, "--help"],

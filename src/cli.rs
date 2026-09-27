@@ -600,8 +600,12 @@ pub fn print_help(command: Option<Command>) {
     };
     println!("USAGE:\n  titan_text {} [OPTIONS]\n\nOPTIONS:\n  -h, --help          Show this command's help", command.name());
     for name in command.options() {
+        if *name == "-h" || *name == "--help" {
+            continue;
+        }
         let description = match *name {
             "--load-dir" => "<DIR>    Load checkpoint config, task, and model weights",
+            "--checkpoint" => "<DIR>    Checkpoint directory to load weights and configuration from",
             "--save-dir" => "<DIR>    Save checkpoint (default: load-dir or checkpoints/v0_text)",
             "--task" => "<NAME>       Task (text, dyck, delayed-recall, bracket, parity, reverse, hidden-rule, associative, ambiguous, column-arithmetic)",
             "--epochs" => "<NUM>      Additional training iterations (default: checkpoint or 200)",
@@ -688,7 +692,29 @@ pub fn print_help(command: Option<Command>) {
             "--carry-skip-stride" => "<NUM>   Fast carry skip stride k (default: 1; if > 1, carry channels skip k cells per tick)",
             "--carry-bidirectional" => "       Split carry channels into forward (left-to-right) and backward (right-to-left)",
             "--carry-quantization" => "<NAME>  Carry drift mitigation mode: none, ste_round, ste_sign, bistable (default: none)",
-            _ => unreachable!(),
+            "--channels" => "<NUM>         Number of channels (or comma-separated list of channel indices)",
+            "--dyck-depth" => "<NUM>       Maximum nesting depth for Dyck language evaluation",
+            "--dyck-gap" => "<NUM>         Inter-bracket gap distance for Dyck evaluation",
+            "--dyck-per-slot" => "<NUM>    Number of test pairs per query slot in Dyck evaluation",
+            "--dyck-balanced" => "         Enforce balanced Dyck bracket distribution",
+            "--dyck-scramble" => "         Randomly scramble bracket identifiers to test invariance",
+            "--mode" => "<NAME>            Evaluation mode or strategy",
+            "--n-pairs" => "<NUM>          Number of test token pairs for transplant probe",
+            "--t-star" => "<NUM>           Theoretical reach horizon T* = 2*ceil(L/k)",
+            "--max-len" => "<NUM>          Maximum generated sequence length (default: 64)",
+            "--temperature" => "<FLOAT>    Sampling temperature (default: 0.7; <=0.0001 for greedy argmax)",
+            "--top-k" => "<NUM>            Top-k token sampling cutoff (default: 10)",
+            "--tau" => "<NUM>              Recurrent compute ticks per token (default: 4)",
+            "--format" => "<NAME>          Output format: plain, json, raw (default: plain)",
+            "--halting" | "--halting-mode" => "<NAME>   Halting mode: fixed, adaptive, random, schedule (default: fixed)",
+            "--tau-min" => "<NUM>          Minimum recurrent ticks per token (default: 1)",
+            "--tau-max" => "<NUM>          Maximum recurrent ticks per token (default: 16)",
+            "--halting-metric" => "<NAME>  Halting metric: state_delta, relative_delta, cosine, logit_delta, entropy_delta (default: state_delta)",
+            "--halting-threshold" => "<FLOAT> Halting stability convergence threshold (default: 0.08)",
+            "--halting-patience" => "<NUM> Consecutive ticks below threshold required to halt (default: 1)",
+            "--adaptive-tau" => "          Enable adaptive halting mode",
+            "--tau-schedule" => "<LIST>    Comma-separated schedule of ticks per generated token",
+            _ => "<VALUE>                  Option value",
         };
         println!("  {name} {description}");
     }

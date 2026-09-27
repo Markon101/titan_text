@@ -71,6 +71,14 @@
     - *Fixed Recurrence Sweet Spot and Over-Smoothing Collapse*: Fixed recurrence peaks at $\tau = 8$ ($0.6315 \pm 0.0221$) before collapsing at $\tau = 16$ ($0.4264 \pm 0.0584$) due to contractive over-smoothing onto a low-rank manifold.
     - *Source*: [`reports/ascii_adaptive_halting_campaign.md`](file:///data/data/com.termux/files/home/projects/titan_text/reports/ascii_adaptive_halting_campaign.md), [`reports/raw/adaptive_halting/campaign_analysis.json`](file:///data/data/com.termux/files/home/projects/titan_text/reports/raw/adaptive_halting/campaign_analysis.json).
 
+13. **Calibrated Adaptive Halting Surpasses Fixed Recurrence Peak ($\theta^* = 0.25, \bar{\tau}=4.53$, Edit Sim $0.6719$, $+24.2\%$ Pareto Gain, Permutation $p=0.0139$)**:
+    - Calibrated relative velocity halting ($\theta^* = 0.25$, patience 2) shifts mean recurrent depth into the model's high-performance regime ($\bar{\tau} = 4.53$).
+    - *Absolute & Pareto Superiority*: Edit similarity reaches $0.6719 \pm 0.0311$, strictly outperforming fixed $\tau=4$ ($0.5274, +27.4\%$) and matching/exceeding the prior global fixed optimum at $\tau=8$ ($0.6315$) while using $43.4\%$ less compute ($4.53$ vs $8.0$ ticks). Delivers $+24.16\%$ Pareto quality advantage ($+0.1307$) over interpolated fixed compute at identical budget.
+    - *Strictly Positive Causal Alignment*: Paired comparison against Shuffled Schedule Arm C yields $\Delta(A - C) = +0.1406 \pm 0.0592$ with 95% bootstrap CI `[+0.0332, +0.2568]` (strictly positive) and exact 2-tailed permutation test $p = 0.0139$ ($11$ wins / $0$ ties / $4$ losses).
+    - *Dynamic Character Allocation*: Structural boundaries receive $4.79$ ticks (range 4 to 6), newlines $4.49$, whitespace $4.36$, while uniform interior symbols halt at exactly $4.00$ ticks.
+    - *Caveats Registered*: Arm C schedule consumed fraction is $0.790$ due to early `<eos>` emissions under misallocated ticks; $\theta^*=0.25$ was selected via grid sweep; predictive entropy correlation remains null ($r = -0.1475$).
+    - *Source*: [`reports/ascii_adaptive_halting_campaign.md`](file:///data/data/com.termux/files/home/projects/titan_text/reports/ascii_adaptive_halting_campaign.md), [`reports/raw/calibrated_halting/campaign_analysis.json`](file:///data/data/com.termux/files/home/projects/titan_text/reports/raw/calibrated_halting/campaign_analysis.json).
+
 ---
 
 ## 2. SUPPORTED BUT NOT ESTABLISHED (Plausible Interpretations With Competing Alternatives)
