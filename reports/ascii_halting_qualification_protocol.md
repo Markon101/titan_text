@@ -104,3 +104,32 @@ NOT APPLICABLE: ascii_v1 carry_channels=0).
   6. Truncation asymmetry acknowledged: A's early-EOS length propagates into
      C/D schedule length by design (paired); primary analysis keeps all pairs,
      sensitivity excludes control-truncated pairs (< 0.8 x A length) only.
+
+## CONFIRMATORY BATTERY (frozen addendum, committed BEFORE execution)
+
+Correction of record, forced by post-run audit:
+1. The original battery (seeds 501-605) executed at 2026-09-27T02:14Z while
+   HEAD was f85305e; THIS protocol was committed only afterward (bb58b57).
+   That battery is therefore disk-preregistered but NOT Git-anchored
+   preregistration. Its results are exploratory-confirmatory within-session
+   and are retained unmodified in reports/raw/qualification_battery/.
+2. Seeds 501-605 were previously observed as fixed evaluation seeds in the
+   prior held-out campaign (reports/raw/heldout_halting/). They are NOT
+   pristine; they are reclassified as "previously observed fixed evaluation
+   seeds" wherever this protocol references them.
+
+Confirmatory test (this addendum is the complete frozen spec):
+- Seeds: [701,702,703,704,705,706,707,708,709,710] — verified never used as
+  seed values anywhere in the repository (no seed in 700-799 in any manifest,
+  artifact, or script).
+- Arms, theta, patience, metric, checkpoint, tick_dist_frozen, prompts,
+  max_len, temperature, arm construction, matching rules, decision rule:
+  ALL identical to the sections above, unchanged.
+- Analysis: identical scripts (seed-cluster bootstrap CI + seed-level exact
+  sign-flip permutation primary; token-level permutation descriptive only).
+- Runner/analyzer gain only CLI plumbing (--seeds, --output-dir, sample-path
+  argument). No threshold, metric, arm, or analysis logic changes.
+- No changes permitted after seeing confirmatory results. Outcome applies to
+  the frozen decision rule verbatim: adaptive state-dependence SUPPORTED only
+  if A > B5 AND A > D_matched AND A > C_matched (cluster CI excluding zero
+  for C_matched and D_matched); otherwise H_BUDGET stands.

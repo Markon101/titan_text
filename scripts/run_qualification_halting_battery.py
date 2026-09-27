@@ -58,7 +58,12 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--output-dir", default="reports/raw/qualification_battery")
     ap.add_argument("--bin", default="./target/release/titan_text")
+    ap.add_argument("--seeds", default=None,
+                    help="Comma-separated seed list; default = protocol seeds 501-605")
     args = ap.parse_args()
+    global SEEDS
+    if args.seeds:
+        SEEDS = [int(s) for s in args.seeds.split(",") if s.strip()]
     out = Path(args.output_dir)
     out.mkdir(parents=True, exist_ok=True)
     bin_path = args.bin

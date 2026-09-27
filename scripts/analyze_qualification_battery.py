@@ -25,7 +25,10 @@ from collections import Counter, defaultdict
 from itertools import product
 from pathlib import Path
 
-SAMPLES = Path("reports/raw/qualification_battery/qualification_samples.json")
+SAMPLES = Path(sys.argv[1] if len(sys.argv) > 1
+               else "reports/raw/qualification_battery/qualification_samples.json")
+OUT = Path(sys.argv[2] if len(sys.argv) > 2
+           else str(SAMPLES.parent / "qualification_analysis.json"))
 
 
 def pearson(a, b):
@@ -181,9 +184,9 @@ def main() -> int:
     out["positional"] = {"class_mean_r2": r2, "class_means": cm}
     print(f"\n== positional ==\n  char-class-mean rule R^2={r2:.4f}  class means={ {k: round(v,3) for k,v in cm.items()} }")
 
-    Path("reports/raw/qualification_battery/qualification_analysis.json").write_text(
+    Path(OUT).write_text(
         json.dumps(out, indent=2, default=str))
-    print("\nSaved analysis to reports/raw/qualification_battery/qualification_analysis.json")
+    print(f"\nSaved analysis to {OUT}")
     return 0
 
 
