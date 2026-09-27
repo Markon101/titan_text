@@ -199,3 +199,46 @@ honest mechanism statement is: "adaptive halting is a noisy proxy for a fixed
 operating point near tau=5; state-dependent allocation shows no measurable
 causal contribution." Any future adaptive-compute work requires training-time
 integration (the halter must be learned with the model), not post-hoc sampling.
+
+---
+
+## CONFIRMATORY BATTERY (Git-anchored, frozen at commit c1a30d4, run after)
+
+Correction of record: the 501-605 battery above was disk-preregistered but NOT
+Git-anchored (protocol committed after execution), and seeds 501-605 were
+previously observed fixed evaluation seeds, not pristine. A confirmatory
+battery was therefore run per the frozen protocol addendum:
+
+- Seeds: [701..710] — verified never used as seed values anywhere in the repo.
+- Frozen commit before execution: c1a30d4 (manifest records git_head c1a30d49).
+- Arms/theta/metric/matching/decision rule/analysis: unchanged.
+- Determinism rerun: OK; lesion sanity: OK.
+
+Results (30 runs/arm):
+A_adaptive 0.5904+-0.0140 (ticks 199.9, tau 4.491) | B4 0.5878+-0.0226 |
+B5 0.6342+-0.0191 | B8 0.6118+-0.0193 | C_matched 0.6104+-0.0255 |
+D_matched 0.6343+-0.0228.
+
+Paired A-X (primary; seed-cluster CI; seed-perm p):
+- A-B4: +0.0027, CI [-0.0283,+0.0477], p=0.50, 5/10 seeds neg
+- A-B5: -0.0438, CI [-0.1144,+0.0215], p=0.87, 6/10 seeds neg
+- A-B8: -0.0213, CI [-0.0900,+0.0434], p=0.72, 5/10 seeds neg
+- A-C_matched: -0.0200, CI [-0.1054,+0.0569], p=0.69, 4/10 seeds neg
+- A-D_matched: -0.0438, CI [-0.1126,+0.0222], p=0.87, 6/10 seeds neg
+Sensitivity (truncation-excluded): A-B5 -0.0548; A-D -0.0672
+(CI [-0.1286,-0.0165], excludes zero - matched random control significantly
+BETTER than adaptive).
+
+CONFIRMATORY VERDICT (frozen decision rule verbatim): A>B5 FALSE,
+A>D_matched FALSE, A>C_matched FALSE -> H_BUDGET stands; adaptive
+state-dependent compute allocation NOT supported. Directionally identical to
+the first battery (A loses to B5; A at or below matched controls); the prior
++27.4%-over-tau=4 headline collapses to +0.003 on fresh seeds.
+
+CLAIM LANGUAGE (final): "These results support no detectable causal
+contribution from state-dependent recurrent compute allocation for
+sampling-time adaptive halting on this checkpoint; performance is explained
+by total compute budget, with fixed tau=5 the best matched operating point."
+
+Artifacts: reports/raw/qualification_battery_confirmatory/ (samples, manifest
+with git_head c1a30d49, analysis).
