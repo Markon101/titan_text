@@ -7,6 +7,10 @@ description: Run controlled Titan Text training and causal evaluation experiment
 
 This skill governs scientific inquiry, causal experimentation, and falsification in the Titan Text repository.
 
+## 0. Chunked-resume training artifact (2026-09-26, coordinate-channel campaign)
+
+When training runs exceed ~10 min, do NOT split them into chained 100-epoch increments (`train --load-dir` resume loops). Adam optimizer state (moment estimates) is NOT persisted in checkpoints — only weights. Every resume resets Adam and can destabilize training: in the IPPR L=16 battery ALL 5 fresh-seed baseline runs diverged (NaN loss) under chunking while an identical single-shot 1000-epoch run converged cleanly. If chunking must be used, it applies equally to every arm and must be validated against a single-shot control run before any arm contrast is interpreted. Also: serde_json serializes NaN/Inf as `null` — NaN diagnostics silently corrupt manifests; keep manifest diagnostic fields `Option<f32>` with finite-filter writers, and detect divergence by reading the manifest (null/nonfinite diag or train_accuracy==0), never by relying on nonzero exit codes.
+
 ## 1. Scientific Standards & Research Norms
 
 1. **Mechanistic Claims Require Causal Interventions**:

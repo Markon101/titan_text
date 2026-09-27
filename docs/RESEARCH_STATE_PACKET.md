@@ -1,6 +1,6 @@
 # Canonical Research-State Packet: Titan Text
 **Laboratory for Recurrent Neural-Cellular Latent Dynamics & Formal Pushdown Computation**  
-*Document Version: 3.2 · Date: 2026-09-26 · Repository: `titan_text`*  
+*Document Version: 3.3 · Date: 2026-09-27 · Repository: `titan_text`*  
 *Governed by: Evidence-First Protocol & Jev System-1 Cognitive Governor*
 
 ---
@@ -140,6 +140,20 @@
    - *Falsification*: Measured Pearson correlation between next-token predictive entropy $H(P_t)$ and allocated compute $\tau_t$ is null ($r = -0.0827$, $N=485$, 95% CI includes zero). Output categorical uncertainty and latent continuous state velocity $\|x_t - x_{t-1}\|$ are decoupled in tiny recurrent NCAs; halting is driven by internal velocity, not next-token entropy.
 
 ---
+
+### 4.x CONFIRMATORY FALSIFICATION — Coordinate Channel at L=16 (2026-09-27)
+
+- **Explicit absolute position does NOT rescue the L=16 interior** (C-COORD-015, RD-017 resolved):
+  preregistered 3-arm battery (baseline / training-time constant sham / scalar coordinate
+  p_i = 2i/(L-1)-1), 5 fresh seeds (801-805) per arm, single-shot 1000-epoch training, 15/15 converged.
+  InteriorMean: B-A = +0.31pp (seed sign-flip p=0.938); B-C = +4.38pp (< preregistered +8pp; p=0.062 =
+  exact-test floor at n=5); eval-time coordinate counterfactuals inconsistent (mean G_slot1 = -1.87).
+  H_COORD falsified with proper replication (5 independent models/arm vs prior campaign's 1).
+  *Source*: [reports/ippr_coordinate_channel_campaign.md](file:///data/data/com.termux/files/home/projects/titan_text/reports/ippr_coordinate_channel_campaign.md).
+- **Chunk-resume training artifact**: chained 100-epoch resumes (Adam state not persisted) caused NaN
+  divergence in all 5 fresh-seed baseline runs; single-shot identical run converged. All incremental-resume
+  training artifacts (incl. the 2026-09-18 coordinate campaign) carry unquantified resume risk.
+  *Source*: [runs/ippr_coordinate_chunked_invalid/](file:///data/data/com.termux/files/home/projects/titan_text/runs/ippr_coordinate_chunked_invalid/).
 
 ## 5. OPEN QUESTIONS (Active Theoretical & Empirical Frontiers)
 

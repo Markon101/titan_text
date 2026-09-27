@@ -92,3 +92,26 @@
 - **Limitations**: 10 independent seeds; sampling-time adaptation only (training-time adaptive halting untested); single checkpoint; realized compute of C/D matched within ~11% mean with 3-4 truncated pairs per arm.
 - **Supporting Artifacts**: [reports/ascii_adaptive_halting_qualification.md](file:///data/data/com.termux/files/home/projects/titan_text/reports/ascii_adaptive_halting_qualification.md), [reports/raw/qualification_battery/qualification_analysis.json](file:///data/data/com.termux/files/home/projects/titan_text/reports/raw/qualification_battery/qualification_analysis.json)
 - **Commit**: (qualification report commit)
+
+---
+
+## C-COORD-015 — Explicit coordinate channel does not rescue the L=16 interior
+
+- **CLAIM**: A scalar absolute-position channel (p_i = 2i/(L-1)-1), injected at
+  every position during training, does not improve interior-slot accuracy
+  (Slots 1/2) at L=16 and does not produce models that causally depend on the
+  coordinate.
+- **STATUS**: SUPPORTED (negative result); H_COORD REFUTED (confirmatory)
+- **EVIDENCE**: Preregistered three-arm battery (baseline / training-time
+  constant sham / coordinate), 5 fresh seeds per arm (801-805), single-shot
+  1000-epoch training, 15/15 converged. InteriorMean: B-A = +0.31pp
+  [boot -3.12,+3.44], seed sign-flip p=0.938; B-C = +4.38pp (below the frozen
+  +8pp threshold; p=0.062 = exact-test floor at n=5); C-A = -4.06pp. Eval-time
+  coordinate counterfactuals (zeroed/shuffled/reversed/constant) shift interior
+  slots inconsistently (mean G_slot1 = -1.87, G_slot2 = -1.41). Baseline
+  replication gate passed (5/5 baselines interior at chance).
+- **LIMITATION**: n=5 per arm (effects < ~3pp unresolvable; p<0.05 unreachable
+  for 5/5 splits); tau=16 only; B-C decomposition ambiguity (coordinate helps
+  vs constant hurts); eval seed = training seed.
+- **Supporting Artifacts**: [reports/ippr_coordinate_channel_campaign.md](file:///data/data/com.termux/files/home/projects/titan_text/reports/ippr_coordinate_channel_campaign.md), [runs/ippr_coordinate/analysis_summary.json](file:///data/data/com.termux/files/home/projects/titan_text/runs/ippr_coordinate/analysis_summary.json), [reports/ippr_coordinate_channel_protocol.md](file:///data/data/com.termux/files/home/projects/titan_text/reports/ippr_coordinate_channel_protocol.md)
+- **Commit**: (this commit)
