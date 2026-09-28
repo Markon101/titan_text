@@ -207,9 +207,7 @@ fn impulse_probe(model: &Substrate, channels: usize, length: usize, ticks: usize
     let zero = Tensor::zeros((1, length, channels), DType::F32, &Device::Cpu)?;
     let mut values = vec![0f32; length * channels];
     // Perturb each family at source cell zero, retaining family-resolved measurements.
-    for c in 0..channels {
-        values[c] = 0.1;
-    }
+    values[..channels].fill(0.1);
     let pulse = Tensor::from_vec(values, (1, length, channels), &Device::Cpu)?;
     let mut a = model.initialize(zero)?;
     let mut b = model.initialize(pulse)?;
@@ -626,58 +624,6 @@ fn run(
     Ok(result)
 }
 
-#[cfg(test)]
-mod lab_tests {
-    use super::*;
-
-    #[test]
-    fn query_metrics_exclude_auxiliary_and_require_complete_answers() -> Result<()> {
-        let batch = TaskBatch {
-            inputs: Tensor::zeros((2, 2), DType::U32, &Device::Cpu)?,
-            targets: Tensor::new(&[[1u32, 0], [0, 1]], &Device::Cpu)?,
-            loss_mask: Tensor::new(&[[0.5f32, 1.0], [1.0, 1.0]], &Device::Cpu)?,
-            prompt_text: String::new(),
-            target_text: String::new(),
-            carry_depths: None,
-        };
-        let logits = Tensor::new(
-            &[[[2f32, 0.], [2., 0.]], [[2., 0.], [2., 0.]]],
-            &Device::Cpu,
-        )?;
-        let score = scores(&logits, &batch)?;
-        assert_eq!(score["query_accuracy"].as_f64().unwrap(), 2. / 3.);
-        assert_eq!(score["exact_accuracy"], 0.5);
-        Ok(())
-    }
-
-    #[test]
-    fn inference_detachment_preserves_logits_and_config_rejects_legacy_loader() -> Result<()> {
-        let mut cfg = TitanConfig::default();
-        cfg.field.channels = 8;
-        cfg.field.periodic_boundary = false;
-        let sub = SubstrateConfig {
-            channels: 8,
-            hidden_dim: 12,
-            ..Default::default()
-        };
-        let vm = VarMap::new();
-        let vb = VarBuilder::from_varmap(&vm, DType::F32, &Device::Cpu);
-        let model = Substrate::new(vb.clone(), &sub, &cfg.nca, &cfg.field)?;
-        let interface = TokenInterface::new(vb.pp("interface"), 99, 8)?;
-        baselines::initialize_seeded(&vm, 42)?;
-        let input = Tensor::new(&[[1u32, 2, 3, 4, 5], [5, 4, 3, 2, 1]], &Device::Cpu)?;
-        let a = forward(&model, &interface, &input, 4, &Lesions::default())?.0;
-        let b = evaluate(&model, &interface, &input, 4, &Lesions::default())?.0;
-        assert_eq!(
-            a.flatten_all()?.to_vec1::<f32>()?,
-            b.flatten_all()?.to_vec1::<f32>()?
-        );
-        cfg.substrate = Some(sub);
-        assert!(cfg.validate().is_err());
-        Ok(())
-    }
-}
-
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
     if args.len() == 2 && matches!(args[1].as_str(), "--help" | "-h") {
@@ -704,7 +650,7 @@ fn main() -> Result<()> {
             && c.batch_size >= 2
             && c.eval_examples >= 2
             && c.length >= 8
-            && c.length % 4 == 0
+            && c.length.is_multiple_of(4)
             && c.ticks > 0
             && c.stability_ticks > 0,
         "invalid campaign dimensions"
@@ -769,4 +715,56 @@ fn main() -> Result<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod lab_tests {
+    use super::*;
+
+    #[test]
+    fn query_metrics_exclude_auxiliary_and_require_complete_answers() -> Result<()> {
+        let batch = TaskBatch {
+            inputs: Tensor::zeros((2, 2), DType::U32, &Device::Cpu)?,
+            targets: Tensor::new(&[[1u32, 0], [0, 1]], &Device::Cpu)?,
+            loss_mask: Tensor::new(&[[0.5f32, 1.0], [1.0, 1.0]], &Device::Cpu)?,
+            prompt_text: String::new(),
+            target_text: String::new(),
+            carry_depths: None,
+        };
+        let logits = Tensor::new(
+            &[[[2f32, 0.], [2., 0.]], [[2., 0.], [2., 0.]]],
+            &Device::Cpu,
+        )?;
+        let score = scores(&logits, &batch)?;
+        assert_eq!(score["query_accuracy"].as_f64().unwrap(), 2. / 3.);
+        assert_eq!(score["exact_accuracy"], 0.5);
+        Ok(())
+    }
+
+    #[test]
+    fn inference_detachment_preserves_logits_and_config_rejects_legacy_loader() -> Result<()> {
+        let mut cfg = TitanConfig::default();
+        cfg.field.channels = 8;
+        cfg.field.periodic_boundary = false;
+        let sub = SubstrateConfig {
+            channels: 8,
+            hidden_dim: 12,
+            ..Default::default()
+        };
+        let vm = VarMap::new();
+        let vb = VarBuilder::from_varmap(&vm, DType::F32, &Device::Cpu);
+        let model = Substrate::new(vb.clone(), &sub, &cfg.nca, &cfg.field)?;
+        let interface = TokenInterface::new(vb.pp("interface"), 99, 8)?;
+        baselines::initialize_seeded(&vm, 42)?;
+        let input = Tensor::new(&[[1u32, 2, 3, 4, 5], [5, 4, 3, 2, 1]], &Device::Cpu)?;
+        let a = forward(&model, &interface, &input, 4, &Lesions::default())?.0;
+        let b = evaluate(&model, &interface, &input, 4, &Lesions::default())?.0;
+        assert_eq!(
+            a.flatten_all()?.to_vec1::<f32>()?,
+            b.flatten_all()?.to_vec1::<f32>()?
+        );
+        cfg.substrate = Some(sub);
+        assert!(cfg.validate().is_err());
+        Ok(())
+    }
 }

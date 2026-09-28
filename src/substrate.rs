@@ -64,7 +64,7 @@ impl SubstrateConfig {
         ensure!(self.hidden_dim > 0, "hidden_dim must be positive");
         if self.kind == SubstrateKind::Transport {
             ensure!(
-                self.channels % 4 == 0,
+                self.channels.is_multiple_of(4),
                 "transport channels must divide into equal M,L,R,X quarters"
             );
             ensure!(
@@ -444,16 +444,10 @@ mod tests {
         for tick in 1..=4 {
             s = model.step(&s, &Lesions::default())?;
             let values = model.fine(&s).to_vec3::<f32>()?;
-            for i in 0..5 {
-                assert_eq!(values[0][i][0], if i == 2 { 0.5 } else { 0.0 });
-                assert_eq!(
-                    values[0][i][2],
-                    if tick <= 2 && i == 2 - tick { 1.0 } else { 0.0 }
-                );
-                assert_eq!(
-                    values[0][i][4],
-                    if tick <= 2 && i == 2 + tick { 1.0 } else { 0.0 }
-                );
+            for (i, cell) in values[0].iter().enumerate() {
+                assert_eq!(cell[0], if i == 2 { 0.5 } else { 0.0 });
+                assert_eq!(cell[2], if tick <= 2 && i == 2 - tick { 1.0 } else { 0.0 });
+                assert_eq!(cell[4], if tick <= 2 && i == 2 + tick { 1.0 } else { 0.0 });
             }
         }
         Ok(())
