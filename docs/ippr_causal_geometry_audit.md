@@ -1,4 +1,11 @@
 # Source-Level Causal Geometry Audit: Titan Text & IPPR
+
+> 2026-09-27 qualification: the ordinary zero-boundary radius-one cone is valid
+> with viscosity, carry skips and feedback disabled. The antisymmetric gradient
+> feature permits learned directionality; mandatory symmetric diffusion is not
+> established. Exhaustive L8 enumeration gives 3/11 for b5 XOR b6 and 8/11
+> (72.73%) for its complement; the old ~71% figure reflects sampled evaluation.
+> See [reconstruction](VNEXT_RECONSTRUCTION.md) for current claim status.
 **Laboratory for Recurrent Neural-Cellular Latent Dynamics**  
 *Document Version: 1.0 · Date: 2026-09-18 · Repository: `titan_text`*
 

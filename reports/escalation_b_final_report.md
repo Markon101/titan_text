@@ -1,5 +1,11 @@
 # Definitive Scientific Report: Escalation B Campaign (Auxiliary Intermediate Supervision) & Falsification of H_OPT
 
+> 2026-09-27 correction: this protocol's negative result does not falsify
+> optimization difficulty in general. Single-model evaluation replication and
+> chunk-resume optimizer resets limit the historical interpretation below.
+> H_OPT versus transport remains UNRESOLVED; see
+> [vNext reconstruction](../docs/VNEXT_RECONSTRUCTION.md).
+
 **Laboratory for Recurrent Neural-Cellular Latent Dynamics · Titan Text**  
 *Document Version: 1.0 · Date: 2026-09-19 · Repository: `titan_text`*  
 *Authors: Antigravity Lead Agent & DeepSeek 4.1 Flash High-Context Council*

@@ -1,4 +1,12 @@
 # Controlled IPPR Learning Campaign: Final Scientific Report & Council Deliberation
+
+> 2026-09-27 correction: the 68.75% measurement and sample-identity effect are
+> recoverable, but full-prefix computation is CONFOUNDED. Five evaluation seeds
+> are not five trained models; only 11 unique L8 validation rows exist, with a
+> 72.73% local complemented-suffix shortcut. Shuffled SD is 6.629pp, not zero;
+> reported p=0.0006 is unsupported. See the
+> [independent recalculation](vnext_evidence_audit.json) and
+> [reconstruction](../docs/VNEXT_RECONSTRUCTION.md).
 **Laboratory for Recurrent Neural-Cellular Latent Dynamics · Titan Text**  
 *Document Version: 1.0 · Date: 2026-09-18 · Repository: `titan_text`*
 

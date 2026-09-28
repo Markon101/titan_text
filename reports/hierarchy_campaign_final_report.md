@@ -1,5 +1,12 @@
 # Definitive Scientific Report: 1D Micro-Macro Cellular Hierarchy Campaign & The Spectral Character Barrier
 
+> 2026-09-27 correction: measured null results are preserved, but the claimed
+> spectral impossibility and H_OPT falsification are NOT established. Hamming
+> weight determines parity modulo two; Boolean-cube parity frequency is not a
+> spatial Nyquist mode. Probe failure is not proof that all information is absent.
+> Optimizer-reset continuations and other training confounds limit interpretation.
+> See [vNext reconstruction](../docs/VNEXT_RECONSTRUCTION.md).
+
 **Laboratory for Recurrent Neural-Cellular Latent Dynamics · Titan Text**  
 *Document Version: 1.0 · Date: 2026-09-19 · Repository: `titan_text`*  
 *Lead Assistant: Antigravity · High-Context Council: DeepSeek 4.1 Flash (`adversarial-reviewer`, `dynamics-agent`)*
