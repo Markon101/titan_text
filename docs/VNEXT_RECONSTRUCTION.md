@@ -37,6 +37,15 @@ Its discriminating features should be explicit graph timing, odd-length-safe
 scale mappings, transport on every scale, checkpointed configuration, and
 scale-specific causal interventions.
 
+Independent source review also verified two legacy training limitations:
+`Trainer::train_step` uses `sample_train_batch_with_mask`, whose default stream
+seed is always zero, so algorithmic training repeats one batch. `Trainer::new`
+does not call `initialize_seeded`; CLI seed labels do not reproduce weight
+initialization. Fresh processes may still produce independent random weights,
+but the recorded seed alone is insufficient provenance. New substrate runs use
+explicit initialization and advancing data streams; their absolute accuracies
+must not be compared directly to the older training protocol.
+
 ## Compact-horizon IPPR: actual numbers and limits
 
 The historical headline is recoverable from

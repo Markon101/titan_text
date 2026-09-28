@@ -1,12 +1,21 @@
 # Titan Text: Live Scientific Claim Ledger
 
 **Campaign State**: Active Autonomous Research Campaign  
-**Last Updated**: 2026-09-22T00:30:00Z  
+**Last Updated**: 2026-09-27 (vNext evidence audit)  
 **Governing Infrastructure**: Jev Cognitive Governor & Evidence-First Protocol  
 
 ---
 
 ## 1. Executive Summary of Active Claims
+
+Current qualification: historical L8 IPPR identity dependence is supported, but
+full-prefix computation is CONFOUNDED by 11 heldout rows, local shortcuts and
+evaluation-seed pseudoreplication. Historical STE carry has a verified zero
+backward derivative. Older fixed-batch/unseeded-initialization/chunk-resume
+campaigns cannot establish intrinsic substrate impossibility. Adaptive-halting
+superiority is superseded by C-HALT-014. See
+[reconstruction](../docs/VNEXT_RECONSTRUCTION.md) and
+[auditable recalculation](vnext_evidence_audit.json).
 
 | Claim ID | Title | Status | Confidence | Empirical Basis | Primary Challenge / Confound |
 | :--- | :--- | :---: | :---: | :--- | :--- |

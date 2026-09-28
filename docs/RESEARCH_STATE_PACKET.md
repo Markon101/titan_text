@@ -1,21 +1,27 @@
 # Canonical Research-State Packet: Titan Text
 **Laboratory for Recurrent Neural-Cellular Latent Dynamics & Formal Pushdown Computation**  
-*Document Version: 3.3 · Date: 2026-09-27 · Repository: `titan_text`*  
+*Document Version: 3.4 · Date: 2026-09-27 · Repository: `titan_text`*  
 *Governed by: Evidence-First Protocol & Jev System-1 Cognitive Governor*
 
 ---
 
-## 1. ESTABLISHED (Supported by Definite Quantitative Evidence)
+## 1. Recovered evidence with current qualifications
+
+The entries below preserve historical measurements; they are not uniformly
+ESTABLISHED mechanistic claims. The [vNext reconstruction](VNEXT_RECONSTRUCTION.md)
+and [independent audit](../reports/vnext_evidence_audit.json) supersede stronger
+interpretations where explicitly noted. Prior agent agreement is not evidence.
 
 1. **Causal Necessity of Latent Recurrent Updates ($d=15.56$)**:
    - On `TaskKind::IteratedParity` ($L=16, B=32$), ablating recurrent latent ticks (Zero-Tick $\tau=0$ or State Lesion `--lesion-state`) collapses task accuracy from $53.28\% \pm 3.42\%$ to $0.00\%$ and explodes loss by $+3.35$ nats ($t(4)=34.80, p=4.07 \times 10^{-6}$, paired Cohen's $d=15.56$). Reversing the update vector ($\Delta x \to -\Delta x$) causes catastrophic divergence ($14.13$ nats, $d=-75.44$).
    - *Source*: [`reports/eval_n5_lesion_state.json`](file:///data/data/com.termux/files/home/projects/titan_text/reports/eval_n5_lesion_state.json).
 
-2. **Instance-Specific Recurrent Parity on Compact Horizons ($L=8, \tau=8, d=1.90$)**:
-   - 1D NCA learns sample-specific sequential parity on $L=8, \tau=8$ with an identity gap $G_{\text{identity}} = +18.8\% \pm 4.4\%$ across both slots (Slot 0: $68.8\%$, Slot 1: $68.8\%$ intact vs $50.0\%$ shuffled, $d=1.90$).
+2. **SUPPORTED instance dependence; full-prefix computation CONFOUNDED ($L=8, \tau=8$)**:
+   - Saved intact accuracy is 68.75% (SD 7.97pp), shuffled 50.00% (SD 6.63pp), and paired gap 18.75pp (SEM 4.42pp, d=1.897). These are five evaluation draws from one trained model, not five training replicas. The validation universe has only 11 rows; a complemented local two-bit heuristic reaches 72.73%. The later influence audit does not establish distant-prefix dependence. Reported p=0.0006 is unsupported (descriptive paired-t p=0.01324; exact sign-flip p=0.0625). Preserve the identity effect without calling it a demonstrated complete sequential algorithm.
    - *Source*: [`reports/campaign_arm2_curriculum.json`](file:///data/data/com.termux/files/home/projects/titan_text/reports/campaign_arm2_curriculum.json).
 
-3. **Empirical Correlation Length Limit of Continuous 1D NCA ($\xi \approx 4-6$ cells)**:
+3. **SUPPORTED observed local influence; universal continuous-NCA limit UNRESOLVED**:
+   - The following measurements concern particular fitted models. Failed probes do not establish absence of all information. Repeated fixed batches, uncontrolled initialization seeds and optimizer-reset continuations confound older campaigns; optimization versus transport remains open.
    - On $L=16, \tau=16..48$, Slot 0 ($k=0$, cell 3) is robustly solved ($71-86\%$), but interior slots 1 and 2 remain pinned at chance ($44-50\%$) across 1000 epochs, curriculum, coordinate channels, and single-slot supervision.
    - Carry information reliably spans 1 chunk (4 cells, $91.4\%$ MLP probe acc), but collapses to $50.8\%$ chance across 2 chunks (8 cells), invariant to unroll depth $\tau \in [16..48]$.
    - *Source*: [`reports/campaign_horizon_48.json`](file:///data/data/com.termux/files/home/projects/titan_text/reports/campaign_horizon_48.json), [`reports/escalation_b_final_report.md`](file:///data/data/com.termux/files/home/projects/titan_text/reports/escalation_b_final_report.md).
@@ -25,7 +31,8 @@
    - On iterated-sum-dense ($L=16$), ECR lifts validation accuracy from $27.3\%$ to $70.3\%$ (matching Simple RNN $70.3\%$, beating Transformer $43.8\%$).
    - *Source*: [`reports/ecr_campaign_final_report.md`](file:///data/data/com.termux/files/home/projects/titan_text/reports/ecr_campaign_final_report.md).
 
-5. **Discrete STE Quantization Eliminates Continuous Dissipation Drift**:
+5. **Historical quantized-forward results; identity-gradient STE interpretation CONFOUNDED**:
+   - `legacy_quantization_backward_is_zero_not_identity_ste` now verifies that historical `ste_sign` and `ste_round` return zero gradients through carry, not the intended identity derivative. Forward discreteness remains real. Chance-level bounded accuracy is not useful memory, and the drift mechanism was not isolated. Legacy behavior remains unchanged.
    - Discrete carry quantization (`ste_sign`) achieves higher in-distribution accuracy at $L=16$ ($58.0\% \pm 1.4\%$ vs $56.1\% \pm 2.3\%$) and eliminates sub-random drift at $L=64$, holding rock-solid stability at $50.5\% \pm 0.1\%$ where continuous baselines decay to $49.1\% \pm 2.8\%$ and bistable potential collapses to $45.8\% \pm 7.3\%$.
    - *Source*: [`reports/drift_mitigation_campaign.json`](file:///data/data/com.termux/files/home/projects/titan_text/reports/drift_mitigation_campaign.json).
 
@@ -63,7 +70,8 @@
     - *Generalization vs Memorization*: Across 96 post-training evaluations on fixed seeds (`42, 101, 202, 303, 404`), exact training match count is 0/96 ($0.0\%$ memorization), with mean nearest edit similarity shifting from $0.081$ (untrained noise) to $0.391$ (structured grammar).
     - *Source*: [`reports/ascii_generative_campaign_report.md`](file:///data/data/com.termux/files/home/projects/titan_text/reports/ascii_generative_campaign_report.md), [`runs/ascii/ascii_v1_trained_1790462724/`](file:///data/data/com.termux/files/home/projects/titan_text/runs/ascii/ascii_v1_trained_1790462724/).
 
-12. **Adaptive Recurrent Compute / Per-Token Halting Dynamics ($\tau_{eff} \approx 2.35$, +10.4% Pareto Gain vs +0.0001 Lower Bound)**:
+12. **SUPERSEDED adaptive-halting superiority interpretation (historical exploratory measurements below)**:
+    - Current ruling: qualification and fresh-seed confirmatory controls found no state-dependent advantage at matched compute; see C-HALT-014. These old interpolated comparisons do not establish causal or Pareto superiority.
     - Dynamic relative velocity halting ($\|x_t - x_{t-1}\|_2 / (\|x_t\|_2 + \epsilon) \le 0.35$, patience 2) converges to a mean compute budget of $\bar{\tau} = 2.35$ ticks per token across 135 runs.
     - *Pareto Efficiency*: At $\tau = 2.35$, adaptive halting achieves nearest edit similarity $0.4679 \pm 0.0381$, a $+10.39\%$ gain over the continuous fixed recurrence interpolation ($0.4238$).
     - *Causal Alignment vs Shuffled Control*: Comparing Arm A (Adaptive) against Arm C (identical tick multiset shuffled across positions) yields a paired difference $\Delta = +0.0768 \pm 0.0422$ with a 95% bootstrap CI of `[+0.0001, +0.1605]` (4 wins, 10 ties, 1 loss, one-tailed $p \approx 0.045$). The lower bound touching zero and high tie rate indicate suggestive, but not decisive, causal superiority.
@@ -71,7 +79,8 @@
     - *Fixed Recurrence Sweet Spot and Over-Smoothing Collapse*: Fixed recurrence peaks at $\tau = 8$ ($0.6315 \pm 0.0221$) before collapsing at $\tau = 16$ ($0.4264 \pm 0.0584$) due to contractive over-smoothing onto a low-rank manifold.
     - *Source*: [`reports/ascii_adaptive_halting_campaign.md`](file:///data/data/com.termux/files/home/projects/titan_text/reports/ascii_adaptive_halting_campaign.md), [`reports/raw/adaptive_halting/campaign_analysis.json`](file:///data/data/com.termux/files/home/projects/titan_text/reports/raw/adaptive_halting/campaign_analysis.json).
 
-13. **Calibrated Adaptive Halting Surpasses Fixed Recurrence Peak ($\theta^* = 0.25$, Pareto Efficiency +10.7% to +24.2%)**:
+13. **SUPERSEDED calibrated-halting superiority interpretation (historical measurements below)**:
+    - Current ruling: fresh seeds 701–710 gave adaptive 0.5904 versus fixed tau5 0.6342; A-minus-fixed=-0.0438, CI [-0.1144,+0.0215]. No measurable state-dependent superiority was established. Qualification and confirmatory artifacts take precedence over the old causal interpretation.
     - Calibrated relative velocity halting ($\theta^* = 0.25$, patience 2) shifts mean recurrent depth into the model's high-performance sweet spot ($\bar{\tau} \approx 4.5 - 4.6$).
     - *Absolute & Pareto Superiority*: On canonical seeds, edit similarity reaches $0.6719 \pm 0.0311$, strictly outperforming fixed $\tau=4$ ($0.5274, +27.4\%$) and matching/exceeding prior global fixed peak at $\tau=8$ ($0.6315$) while using $43.4\%$ less compute ($4.53$ vs $8.0$ ticks). Delivers $+24.16\%$ Pareto quality advantage ($+0.1307$) over interpolated fixed compute at identical budget.
     - *Held-Out Generalization Battery ($N=30$, 10 Unseen Seeds)*: Out-of-distribution evaluation confirms robust Pareto efficiency: Arm A achieves $0.5535 \pm 0.0261$ at $\bar{\tau} = 4.60$, outperforming fixed $\tau=4$ ($0.4735$) with a net Pareto gain of $+0.0535$ ($+10.71\%$).

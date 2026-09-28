@@ -8,6 +8,21 @@
 
 ## 1. Prioritized Research Debt Items
 
+2026-09-27 precedence correction: older entries that call adaptive superiority,
+infinite-horizon memory, or universal continuous/discrete separation resolved
+are historical interpretations. C-HALT-014 and the
+[vNext audit](../docs/VNEXT_RECONSTRUCTION.md) supersede those interpretations.
+RD-018 remains OPEN: failure of one auxiliary-loss experiment cannot logically
+exclude optimization difficulty or prove attenuation. The old trainer repeats
+one seed-0 batch and does not seed initialization from the advertised seed.
+
+| New debt | Status | Discriminating action |
+|---|---|---|
+| RD-019 Legacy STE gradient cancellation | VERIFIED BUG, legacy preserved | Version a correct backward estimator and retrain a matched continuous/discrete factorial; do not silently change old models |
+| RD-020 Historical training seed and repeated-batch semantics | OPEN for old CLI; corrected in substrate lab | Add an explicit opt-in versioned training policy before reinterpreting historical campaigns |
+| RD-021 Full-prefix IPPR competence | UNRESOLVED | Unique heldout panels, complete answers, train-only suffix controls, required-bit counterfactual pairs |
+| RD-022 Multiscale route utility versus geometry | OPEN | A/B/C comparison, sufficient trained ticks, up/down lesions, route-preserving sham and active-capacity controls |
+
 | Debt ID | Title / Hedged Claim | Importance | Uncertainty | Cost (s) | Priority Score | Status | Downstream Claims |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
 | **`RD-009`** | **Rate-Invariance Under Transport Conjugation**<br>*"Does continuous field contraction rate rho_H remain invariant under carry channel conjugations?"* | 0.85 | 0.05 | 120 | **0.35** | `RESOLVED` | `C-CONJUGATION-009`, `C-CARRY-002` |
