@@ -1,0 +1,52 @@
+{
+  "name": "substrate-v1-ippr-discrimination",
+  "task": "iterated-parity",
+  "seeds": [
+    42,
+    101,
+    202
+  ],
+  "arms": [
+    "nca",
+    "directional",
+    "multiscale"
+  ],
+  "length": 16,
+  "ticks": 16,
+  "steps": 300,
+  "batch_size": 16,
+  "fixed_tiny_batch": false,
+  "eval_examples": 256,
+  "eval_lengths": [
+    16,
+    32
+  ],
+  "eval_ticks": [
+    0,
+    1,
+    2,
+    4,
+    8,
+    16,
+    32
+  ],
+  "lr": 0.003,
+  "weight_decay": 0.01,
+  "channels": 32,
+  "nca_hidden": 80,
+  "transport": {
+    "kind": "transport",
+    "version": 1,
+    "scales": 16,
+    "channels": 32,
+    "hidden_dim": 48,
+    "transport": true,
+    "exchange_mode": "learned_gated_ordered_pair",
+    "boundary": "zero",
+    "state_mode": "continuous",
+    "reaction_step": 0.2,
+    "exchange_step": 0.2,
+    "state_bound": 4
+  },
+  "stability_ticks": 128
+}

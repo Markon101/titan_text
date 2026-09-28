@@ -1,0 +1,378 @@
+{
+  "schema": "titan-substrate-evidence-audit-v1",
+  "git_commit": "97f9ec45562029c67daee7c14b694cfb144c9fe1",
+  "git_dirty": true,
+  "source_sha256": {
+    "src/tasks.rs": "ca55814fa9c4bfbd81e9efa1ff3540e778a4063f860d186de9e498a027fca790",
+    "src/nca.rs": "09c0ce3be80aa4a54035fdf3101d4944ef9fe215317dc87d163cf4fc5871ce47",
+    "src/train.rs": "7f2f25afac7a58c87e69ca33ebed6685c7ef8dc0f4313005b1a0a8eae0344a77",
+    "src/dataset.rs": "90709c64a9575eccc2081fd6cfe7517bb24365300c21ac829c8dfda148de5e10",
+    "scripts/run_campaign.py": "28b6cc55c9681254be585137f1024b0cd3785257f417620da33ac760012cd045",
+    "reports/campaign_arm2_curriculum.json": "6d6821ec0d8f22d6ac53eb8e3c0f995902fa4a38a8db10481c60eeb384789a24",
+    "scripts/audit_substrate_evidence.py": "595a04d49e52ab38fbc824ea3e31e07234029dd77a0160ca7069aa0443954ff3"
+  },
+  "split_implementation": "Independent Python transcription of tasks.rs observation_hash and IPPR rows, exhaustively enumerated; no RNG resampling.",
+  "local_baseline_scope": "Suffix width counts data bits preceding each query; per-slot lookup uses position and may be more powerful than translation-invariant readout; fit only on train rows; ties/unseen contexts use documented rule.",
+  "splits": [
+    {
+      "length": 8,
+      "train_unique": 53,
+      "validation_unique": 11,
+      "overlap_unique": 0,
+      "train_only_majority_labels": [
+        0,
+        1
+      ],
+      "train_only_majority": {
+        "unique_rows": 11,
+        "correct_by_slot": [
+          5,
+          5
+        ],
+        "accuracy_by_slot": [
+          0.45454545454545453,
+          0.45454545454545453
+        ],
+        "complete_correct": 3,
+        "complete_accuracy": 0.2727272727272727
+      },
+      "train_only_local_suffix_lookup": {
+        "1": {
+          "unique_rows": 11,
+          "correct_by_slot": [
+            4,
+            5
+          ],
+          "accuracy_by_slot": [
+            0.36363636363636365,
+            0.45454545454545453
+          ],
+          "complete_correct": 2,
+          "complete_accuracy": 0.18181818181818182
+        },
+        "2": {
+          "unique_rows": 11,
+          "correct_by_slot": [
+            3,
+            3
+          ],
+          "accuracy_by_slot": [
+            0.2727272727272727,
+            0.2727272727272727
+          ],
+          "complete_correct": 1,
+          "complete_accuracy": 0.09090909090909091
+        },
+        "3": {
+          "unique_rows": 11,
+          "correct_by_slot": [
+            11,
+            3
+          ],
+          "accuracy_by_slot": [
+            1.0,
+            0.2727272727272727
+          ],
+          "complete_correct": 3,
+          "complete_accuracy": 0.2727272727272727
+        },
+        "6": {
+          "unique_rows": 11,
+          "correct_by_slot": [
+            11,
+            5
+          ],
+          "accuracy_by_slot": [
+            1.0,
+            0.45454545454545453
+          ],
+          "complete_correct": 5,
+          "complete_accuracy": 0.45454545454545453
+        }
+      },
+      "fixed_last_two_parity": {
+        "unique_rows": 11,
+        "correct_by_slot": [
+          3,
+          3
+        ],
+        "accuracy_by_slot": [
+          0.2727272727272727,
+          0.2727272727272727
+        ],
+        "complete_correct": 0,
+        "complete_accuracy": 0.0
+      },
+      "fixed_last_two_parity_complement": {
+        "unique_rows": 11,
+        "correct_by_slot": [
+          8,
+          8
+        ],
+        "accuracy_by_slot": [
+          0.7272727272727273,
+          0.7272727272727273
+        ],
+        "complete_correct": 5,
+        "complete_accuracy": 0.45454545454545453
+      },
+      "heldout_first_bit_counterfactual_pairs": 0
+    },
+    {
+      "length": 16,
+      "train_unique": 3307,
+      "validation_unique": 789,
+      "overlap_unique": 0,
+      "train_only_majority_labels": [
+        0,
+        1,
+        0,
+        0
+      ],
+      "train_only_majority": {
+        "unique_rows": 789,
+        "correct_by_slot": [
+          382,
+          378,
+          388,
+          394
+        ],
+        "accuracy_by_slot": [
+          0.4841571609632446,
+          0.4790874524714829,
+          0.4917617237008872,
+          0.49936628643852976
+        ],
+        "complete_correct": 42,
+        "complete_accuracy": 0.053231939163498096
+      },
+      "train_only_local_suffix_lookup": {
+        "1": {
+          "unique_rows": 789,
+          "correct_by_slot": [
+            382,
+            367,
+            359,
+            384
+          ],
+          "accuracy_by_slot": [
+            0.4841571609632446,
+            0.46514575411913817,
+            0.4550063371356147,
+            0.4866920152091255
+          ],
+          "complete_correct": 40,
+          "complete_accuracy": 0.050697084917617236
+        },
+        "2": {
+          "unique_rows": 789,
+          "correct_by_slot": [
+            377,
+            367,
+            359,
+            384
+          ],
+          "accuracy_by_slot": [
+            0.47782002534854245,
+            0.46514575411913817,
+            0.4550063371356147,
+            0.4866920152091255
+          ],
+          "complete_correct": 38,
+          "complete_accuracy": 0.048162230671736375
+        },
+        "3": {
+          "unique_rows": 789,
+          "correct_by_slot": [
+            789,
+            362,
+            355,
+            382
+          ],
+          "accuracy_by_slot": [
+            1.0,
+            0.458808618504436,
+            0.449936628643853,
+            0.4841571609632446
+          ],
+          "complete_correct": 81,
+          "complete_accuracy": 0.10266159695817491
+        },
+        "6": {
+          "unique_rows": 789,
+          "correct_by_slot": [
+            789,
+            789,
+            319,
+            316
+          ],
+          "accuracy_by_slot": [
+            1.0,
+            1.0,
+            0.40430925221799746,
+            0.4005069708491762
+          ],
+          "complete_correct": 153,
+          "complete_accuracy": 0.19391634980988592
+        }
+      },
+      "fixed_last_two_parity": {
+        "unique_rows": 789,
+        "correct_by_slot": [
+          412,
+          394,
+          388,
+          390
+        ],
+        "accuracy_by_slot": [
+          0.5221799746514575,
+          0.49936628643852976,
+          0.4917617237008872,
+          0.49429657794676807
+        ],
+        "complete_correct": 57,
+        "complete_accuracy": 0.07224334600760456
+      },
+      "fixed_last_two_parity_complement": {
+        "unique_rows": 789,
+        "correct_by_slot": [
+          377,
+          395,
+          401,
+          399
+        ],
+        "accuracy_by_slot": [
+          0.47782002534854245,
+          0.5006337135614702,
+          0.5082382762991128,
+          0.5057034220532319
+        ],
+        "complete_correct": 53,
+        "complete_accuracy": 0.06717363751584284
+      },
+      "heldout_first_bit_counterfactual_pairs": 68
+    }
+  ],
+  "historical": {
+    "source": "reports/campaign_arm2_curriculum.json",
+    "records": [
+      {
+        "epoch": 200,
+        "checkpoint": "checkpoints/campaign_arm2_curriculum/step_0200",
+        "intact_batches_pct": [
+          56.25,
+          65.625,
+          75.0,
+          71.875,
+          75.0
+        ],
+        "shuffle_batches_pct": [
+          53.125,
+          43.75,
+          59.375,
+          43.75,
+          50.0
+        ],
+        "intact_mean_pct": 68.75,
+        "intact_sample_sd_pct": 7.967217989988726,
+        "shuffle_mean_pct": 50.0,
+        "shuffle_sample_sd_pct": 6.629126073623883,
+        "paired_gaps_pct": [
+          3.125,
+          21.875,
+          15.625,
+          28.125,
+          25.0
+        ],
+        "gap_mean_pct": 18.75,
+        "gap_sample_sd_pct": 9.882117688026186,
+        "gap_sem_pct": 4.419417382415922,
+        "paired_cohen_d": 1.8973665961010275,
+        "paired_t_df4": 4.242640687119285,
+        "paired_t_two_sided_p": 0.013235599563682643,
+        "exact_signflip_two_sided_p": 0.0625,
+        "statistical_scope": "Five evaluation batches of one trained model; overlapping unique rows; no training-replicate inference."
+      },
+      {
+        "epoch": 500,
+        "checkpoint": "checkpoints/campaign_arm2_curriculum/step_0500",
+        "intact_batches_pct": [
+          56.25,
+          65.625,
+          75.0,
+          71.875,
+          75.0
+        ],
+        "shuffle_batches_pct": [
+          53.125,
+          43.75,
+          59.375,
+          43.75,
+          50.0
+        ],
+        "intact_mean_pct": 68.75,
+        "intact_sample_sd_pct": 7.967217989988726,
+        "shuffle_mean_pct": 50.0,
+        "shuffle_sample_sd_pct": 6.629126073623883,
+        "paired_gaps_pct": [
+          3.125,
+          21.875,
+          15.625,
+          28.125,
+          25.0
+        ],
+        "gap_mean_pct": 18.75,
+        "gap_sample_sd_pct": 9.882117688026186,
+        "gap_sem_pct": 4.419417382415922,
+        "paired_cohen_d": 1.8973665961010275,
+        "paired_t_df4": 4.242640687119285,
+        "paired_t_two_sided_p": 0.013235599563682643,
+        "exact_signflip_two_sided_p": 0.0625,
+        "statistical_scope": "Five evaluation batches of one trained model; overlapping unique rows; no training-replicate inference."
+      }
+    ]
+  },
+  "source_findings": [
+    {
+      "finding": "Legacy STE backward cancellation",
+      "status": "SOURCE_ALGEBRA_VERIFIED",
+      "source": "src/nca.rs quantize_carry ste_round/ste_sign",
+      "historical_expression": "carry + (quantized.detach() - carry)",
+      "historical_derivative": 0,
+      "intended_expression": "carry + (quantized - carry).detach()",
+      "intended_derivative": 1,
+      "scope": "Forward projection can work while recurrence gradient through quantized carry is zero. This script does not execute Candle backward."
+    },
+    {
+      "finding": "Legacy train_step repeats algorithmic batch",
+      "status": "SOURCE_VERIFIED",
+      "source": "src/train.rs train_step -> src/dataset.rs sample_train_batch_with_mask -> sample_batch_internal_with_mask seed=0",
+      "scope": "Historical Trainer path; an explicit-batch harness may avoid this."
+    },
+    {
+      "finding": "Legacy --seed does not initialize Trainer weights",
+      "status": "SOURCE_VERIFIED",
+      "source": "src/train.rs Trainer::new; no initialize_seeded or set_seed call",
+      "scope": "Fresh historical Trainer path; not the independently seeded baseline harness."
+    },
+    {
+      "finding": "Historical campaign train resumes every 100 epochs",
+      "status": "SOURCE_VERIFIED",
+      "source": "scripts/run_campaign.py run_campaign_arm and train_increment",
+      "scope": "Weights-only resume resets Adam; five evaluation seeds are not five training seeds."
+    },
+    {
+      "finding": "Radius-1 per tick is conditional",
+      "status": "SOURCE_VERIFIED",
+      "source": "src/nca.rs neighbors, dissipate, step_field; src/config.rs FieldConfig::default",
+      "scope": "Zero boundary, viscosity=0, feedback=none, carry_channels=0 needed for simple radius-1 bound. Nonzero viscosity adds ceil(viscosity*step_size/.25) hops; default boundary wraps."
+    },
+    {
+      "finding": "Symmetric spatial support does not require symmetric learned transport",
+      "status": "SOURCE_ALGEBRA_VERIFIED",
+      "source": "src/nca.rs perceive_with_feedback_and_seed",
+      "scope": "Basis [x, (right-left)/2, right-2*x+left] spans [left,x,right]; learned linear weights can distinguish direction. Audit narrative of mandatory diffusion is unsupported."
+    }
+  ],
+  "interpretation": "Historical identity dependence is supported for a limited repeated evaluation domain; full sequential parity, multi-training-seed robustness, and optimization impossibility are not established. This audit changes no task or historical output."
+}

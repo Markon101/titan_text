@@ -1729,6 +1729,19 @@ mod tests {
         Ok(())
     }
 
+    /// Record the historical gradient semantics without silently changing old
+    /// training/checkpoint behavior. These modes are NOT identity-gradient STEs.
+    #[test]
+    fn legacy_quantization_backward_is_zero_not_identity_ste() -> Result<()> {
+        for mode in ["ste_sign", "ste_round"] {
+            let x = candle_core::Var::from_slice(&[-0.7f32, 0.3, 1.2], 3, &Device::Cpu)?;
+            let loss = NeuralCellularAutomaton::quantize_carry(&x, mode)?.sum_all()?;
+            let grads = loss.backward()?;
+            assert_eq!(grads.get(&x).expect("gradient path").to_vec1::<f32>()?, vec![0.0; 3]);
+        }
+        Ok(())
+    }
+
     #[test]
     fn test_develop_adaptive_dual_halting() -> Result<()> {
         let dev = Device::Cpu;
@@ -1829,6 +1842,5 @@ mod tests {
         Ok(())
     }
 }
-
 
 

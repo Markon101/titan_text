@@ -5,6 +5,10 @@ mod baselines;
 mod checkpoint;
 mod cli;
 mod config;
+// Legacy executable only consumes the substrate metadata; execution lives in
+// titan_substrate. Keep shared structural tests available in this target too.
+#[allow(dead_code)]
+mod substrate;
 mod dataset;
 mod experiment;
 mod field;

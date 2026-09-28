@@ -333,6 +333,10 @@ fn default_model() -> String {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TitanConfig {
+    /// Explicit opt-in laboratory substrate. Historical commands reject this
+    /// field rather than accidentally interpreting transport weights as NCA.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub substrate: Option<crate::substrate::SubstrateConfig>,
     pub field: FieldConfig,
     pub nca: NcaConfig,
     pub train: TrainConfig,
@@ -348,6 +352,7 @@ pub struct TitanConfig {
 impl Default for TitanConfig {
     fn default() -> Self {
         Self {
+            substrate: None,
             field: FieldConfig::default(),
             nca: NcaConfig::default(),
             train: TrainConfig::default(),
@@ -363,6 +368,7 @@ impl TitanConfig {
     /// Validate effective settings, including values inherited from a checkpoint.
     pub fn validate(&self) -> anyhow::Result<()> {
         use anyhow::ensure;
+        ensure!(self.substrate.is_none(), "substrate manifests require titan_substrate; legacy commands cannot load them");
         ensure!(
             self.field.seq_len > 0 && self.field.seq_len <= i32::MAX as usize,
             "sequence length must be positive and fit spatial indexing"
