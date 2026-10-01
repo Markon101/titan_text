@@ -99,6 +99,8 @@ impl Command {
                 "--macro-gamma",
                 "--macro-lambda",
                 "--target-slot",
+                "--aux-supervision",
+                "--aux-sham",
                 "--carry-channels",
                 "--carry-skip-stride",
                 "--carry-bidirectional",
@@ -414,6 +416,7 @@ fn is_flag_option(name: &str) -> bool {
             | "--dyck-scramble"
             | "--dyck-balanced"
             | "--dyck-per-slot"
+            | "--aux-sham"
     )
 }
 
@@ -432,6 +435,13 @@ fn validate_value(name: &str, value: &str) -> Result<()> {
         }
         "--pause-ticks" | "--lesion-freeze" | "--lesion-reset" | "--horizon-jitter" | "--target-slot" | "--t-star" | "--dyck-gap" | "--top-k" | "--tau" => {
             let _number: usize = value.parse().with_context(invalid)?;
+        }
+        "--aux-supervision" => {
+            let number: f32 = value.parse().with_context(invalid)?;
+            ensure!(
+                number.is_finite() && number >= 0.0,
+                "{name} must be finite and non-negative"
+            );
         }
         "--seed" => {
             let _number: u64 = value.parse().with_context(invalid)?;
@@ -690,6 +700,8 @@ pub fn print_help(command: Option<Command>) {
             "--macro-gamma" => "<FLOAT>    State-derivative coupling gain gamma (default: 0.2)",
             "--macro-lambda" => "<FLOAT>   Emergent bistable potential restoring force lambda (default: 0.1)",
             "--target-slot" => "<NUM>      Supervise only a single query slot index (e.g. 3 for Slot 3 only)",
+            "--aux-supervision" => "<ALPHA>   Auxiliary deep-supervision weight at interior slots (0 = off, default)",
+            "--aux-sham" => "<BOOL>      Sham aux control: constant targets through identical machinery",
             "--carry-skip-stride" => "<NUM>   Fast carry skip stride k (default: 1; if > 1, carry channels skip k cells per tick)",
             "--carry-bidirectional" => "       Split carry channels into forward (left-to-right) and backward (right-to-left)",
             "--carry-quantization" => "<NAME>  Carry drift mitigation mode: none, ste_round, ste_sign, bistable (default: none)",

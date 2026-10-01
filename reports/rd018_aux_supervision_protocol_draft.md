@@ -56,6 +56,11 @@ Arjovsky et al. 2016 / Jing et al. 2017 (unitary/EUNN transport), Bengio et al.
 - Otherwise: inconclusive; record as such. No interpretive override.
 
 ## Required Rust changes (scoped this session)
+**IMPLEMENTED 2026-10-01, build clean, 112/112 tests pass.** Smoke-verified at
+L=16, 20 epochs, seed 901: Arm A aux=0.0000; Arm B aux CE 1.166->0.776 with
+elevated terminal loss (alpha term active); Arm C sham aux CE 1.136->0.837
+through identical machinery on constant targets. Epoch trace now carries an
+aux= column (mean interior-slot aux CE per step).
 1. src/train.rs: extend loss accumulation (multi-tick path, ~L154-181) with
    per-tick interior-slot masked CE terms: L = L_final + alpha * mean_t L_aux(t).
    Reuse apply_target_slot_filter / masked_cross_entropy_loss; add interior-slot

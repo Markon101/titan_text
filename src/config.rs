@@ -252,6 +252,14 @@ pub struct TrainConfig {
     /// Optional single query slot to supervise (e.g. 3 for Slot 3 only)
     #[serde(default)]
     pub target_slot: Option<usize>,
+    /// Auxiliary deep-supervision weight alpha: per-tick masked CE at interior
+    /// slot positions, added as L + alpha * mean(aux). 0.0 disables (default).
+    #[serde(default = "default_aux_supervision_weight")]
+    pub aux_supervision_weight: f32,
+    /// Sham auxiliary control: identical aux machinery but constant target
+    /// token id 1 (bias-absorbable control, convention of C-COORD-015).
+    #[serde(default)]
+    pub aux_sham: bool,
 }
 
 fn default_horizon_mode() -> String {
@@ -278,6 +286,9 @@ fn default_tail_equilibrium_weight() -> f32 {
 fn default_tail_equilibrium_ticks() -> usize {
     2
 }
+fn default_aux_supervision_weight() -> f32 {
+    0.0
+}
 
 impl Default for TrainConfig {
     fn default() -> Self {
@@ -299,6 +310,8 @@ impl Default for TrainConfig {
             tail_equilibrium_weight: default_tail_equilibrium_weight(),
             tail_equilibrium_ticks: default_tail_equilibrium_ticks(),
             target_slot: None,
+            aux_supervision_weight: default_aux_supervision_weight(),
+            aux_sham: false,
         }
     }
 }
@@ -453,6 +466,10 @@ impl TitanConfig {
         ensure!(
             self.train.tail_equilibrium_weight.is_finite() && self.train.tail_equilibrium_weight >= 0.0,
             "train tail_equilibrium_weight must be finite and non-negative"
+        );
+        ensure!(
+            self.train.aux_supervision_weight.is_finite() && self.train.aux_supervision_weight >= 0.0,
+            "train aux_supervision_weight must be finite and non-negative"
         );
         ensure!(
             self.train.tail_equilibrium_ticks > 0,

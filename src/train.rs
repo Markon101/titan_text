@@ -23,6 +23,8 @@ pub struct StepDiagnostics {
     pub palinstrophy: f32,
     pub bkm_norm: f32,
     pub freq_decomp: FrequencyDecomposition,
+    /// Mean auxiliary interior-slot CE this step (0.0 when aux disabled)
+    pub aux_loss: f32,
 }
 
 pub struct Trainer {
@@ -90,6 +92,43 @@ impl Trainer {
         }
     }
 
+    /// Builds a [B, L] mask with 1.0 at interior slot positions (slots 1..=num_slots-2,
+    /// i.e. excluding the boundary slot 0 and the final readout slot) for auxiliary
+    /// deep supervision. Slot chunk size is fixed at 4 by the dataset convention.
+    fn aux_interior_mask(&self, batch_size: usize) -> Result<Tensor> {
+        let l = self.config.field.seq_len;
+        let num_slots = l / 4;
+        anyhow::ensure!(
+            num_slots >= 3,
+            "--aux-supervision requires seq_len covering at least 3 slots (L >= 12)"
+        );
+        let mut mask = vec![0.0f32; batch_size * l];
+        for s in 1..=(num_slots - 2) {
+            let pos = (s + 1) * 4 - 1;
+            for b in 0..batch_size {
+                mask[b * l + pos] = 1.0;
+            }
+        }
+        Ok(Tensor::from_vec(mask, (batch_size, l), &self.device)?)
+    }
+
+    /// Auxiliary interior-slot cross-entropy on given logits. Under --aux-sham,
+    /// targets are replaced by a constant token id 1 through identical machinery.
+    fn aux_interior_loss(
+        &self,
+        logits: &Tensor,
+        targets: &Tensor,
+        aux_mask: &Tensor,
+    ) -> Result<Tensor> {
+        let aux_targets: Tensor = if self.config.train.aux_sham {
+            let (b, l) = targets.dims2()?;
+            Tensor::from_vec(vec![1u32; b * l], (b, l), &self.device)?
+        } else {
+            targets.clone()
+        };
+        self.interface.masked_cross_entropy_loss(logits, &aux_targets, aux_mask)
+    }
+
     /// Evaluates model performance on the held-out validation sequences
     pub fn evaluate_val(&self, batch_size: usize) -> Result<(f32, f32)> {
         let (val_inputs, val_targets, raw_mask) = self.dataset.sample_val_batch_with_mask(batch_size, self.config.field.seq_len, &self.device)?;
@@ -150,6 +189,16 @@ impl Trainer {
         let mut ce_loss_acc = None;
         let mut final_logits = None;
 
+        // Auxiliary deep supervision: per-tick masked CE at interior slot positions
+        let aux_weight = self.config.train.aux_supervision_weight;
+        let aux_mask = if aux_weight > 0.0 {
+            Some(self.aux_interior_mask(batch_size)?)
+        } else {
+            None
+        };
+        let mut aux_acc: Option<Tensor> = None;
+        let mut aux_count = 0f32;
+
         if is_multi {
             // Multi-tick supervision: accumulate loss from horizon_min to horizon_max
             let h_min = self.config.train.horizon_min;
@@ -174,6 +223,14 @@ impl Trainer {
                         Some(prev) => Some((&prev + &loss_t)?),
                     };
                     loss_count += 1.0;
+                    if let Some(ref am) = aux_mask {
+                        let al = self.aux_interior_loss(&logits_t, &targets, am)?;
+                        aux_acc = match aux_acc {
+                            None => Some(al),
+                            Some(prev) => Some((&prev + &al)?),
+                        };
+                        aux_count += 1.0;
+                    }
                     final_logits = Some(logits_t);
                 }
             }
@@ -196,6 +253,11 @@ impl Trainer {
                 self.interface.cross_entropy_loss(&logits_t, &targets)?
             };
             let mut tail_loss = loss_t;
+            if let Some(ref am) = aux_mask {
+                let al = self.aux_interior_loss(&logits_t, &targets, am)?;
+                aux_acc = Some(al);
+                aux_count += 1.0;
+            }
             final_logits = Some(logits_t);
 
             for _ in 0..tail_k {
@@ -211,6 +273,14 @@ impl Trainer {
                 };
                 let scaled_k = (loss_k * 0.5)?;
                 tail_loss = (&tail_loss + &scaled_k)?;
+                if let Some(ref am) = aux_mask {
+                    let al = self.aux_interior_loss(&logits_k, &targets, am)?;
+                    aux_acc = match aux_acc {
+                        None => Some(al),
+                        Some(prev) => Some((&prev + &al)?),
+                    };
+                    aux_count += 1.0;
+                }
             }
             let weight_sum = 1.0 + (tail_k as f64) * 0.5;
             ce_loss_acc = Some((tail_loss / weight_sum)?);
@@ -226,6 +296,22 @@ impl Trainer {
                 let (next_field, update_mag) = self.nca.step(&field, &self.device)?;
                 total_update_mag += update_mag;
                 steps_executed += 1;
+
+                // Aux deep supervision at ~4 evenly spaced intermediate ticks
+                if aux_weight > 0.0 {
+                    let aux_every = (t_target / 4).max(1);
+                    if step_idx % aux_every == 0 {
+                        let logits_t = self.interface.logits(&field.x)?;
+                        if let Some(ref am) = aux_mask {
+                            let al = self.aux_interior_loss(&logits_t, &targets, am)?;
+                            aux_acc = match aux_acc {
+                                None => Some(al),
+                                Some(prev) => Some((&prev + &al)?),
+                            };
+                            aux_count += 1.0;
+                        }
+                    }
+                }
 
                 if tail_eq_weight > 0.0 && step_idx >= tail_start {
                     let diff = (&next_field.x - &field.x)?;
@@ -257,10 +343,29 @@ impl Trainer {
             };
 
             ce_loss_acc = Some(combined_loss);
-            final_logits = Some(logits);
+            final_logits = Some(logits.clone());
+            if let Some(ref am) = aux_mask {
+                let al = self.aux_interior_loss(&logits, &targets, am)?;
+                aux_acc = match aux_acc {
+                    None => Some(al),
+                    Some(prev) => Some((&prev + &al)?),
+                };
+                aux_count += 1.0;
+            }
         }
 
-        let ce_loss = ce_loss_acc.ok_or_else(|| anyhow::anyhow!("training step produced no cross-entropy loss"))?;
+        // Combine auxiliary deep supervision into the total loss: L + alpha * mean(aux)
+        let mut aux_diag_value = 0.0f32;
+        let ce_loss = match (ce_loss_acc, aux_acc, aux_weight > 0.0) {
+            (Some(ce), Some(aux_acc_t), true) => {
+                let mean_aux = (aux_acc_t / (aux_count.max(1.0) as f64))?;
+                aux_diag_value = mean_aux.to_scalar::<f32>()?;
+                (&ce + &(mean_aux * (aux_weight as f64))?)?
+            }
+            (Some(ce), _, _) => ce,
+            (None, _, _) => anyhow::bail!("training step produced no cross-entropy loss"),
+        };
+
         let logits = final_logits.ok_or_else(|| anyhow::anyhow!("training step produced no logits"))?;
         let avg_update_mag = total_update_mag / steps_executed.max(1) as f32;
 
@@ -313,6 +418,7 @@ impl Trainer {
             palinstrophy,
             bkm_norm,
             freq_decomp,
+            aux_loss: aux_diag_value,
         })
     }
 }

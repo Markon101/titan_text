@@ -261,6 +261,16 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
     if let Some(ts) = args.value::<usize>("--target-slot")? {
         config.train.target_slot = Some(ts);
     }
+    if let Some(alpha) = args.value::<f32>("--aux-supervision")? {
+        config.train.aux_supervision_weight = alpha;
+    }
+    if args.flag("--aux-sham") {
+        anyhow::ensure!(
+            config.train.aux_supervision_weight > 0.0,
+            "--aux-sham requires --aux-supervision > 0"
+        );
+        config.train.aux_sham = true;
+    }
     config.validate()?;
     start_step
         .checked_add(config.train.epochs)
@@ -311,6 +321,13 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
             config.train.tail_equilibrium_weight, config.train.tail_equilibrium_ticks
         );
     }
+    if config.train.aux_supervision_weight > 0.0 {
+        println!(
+            "  Aux Supervision     : alpha={:.3}{} (per-tick interior-slot CE)",
+            config.train.aux_supervision_weight,
+            if config.train.aux_sham { ", SHAM" } else { "" }
+        );
+    }
     println!(
         "  Viscosity (nu)      : {:.4} (Navier-Stokes dissipation)",
         config.nca.viscosity
@@ -349,8 +366,7 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
         let is_log_step = epoch % config.train.log_every == 0 || epoch == config.train.epochs;
 
         if is_log_step {
-            println!(
-                "{:04}  | {:.4} ({:5.1}%) | {:.4} ({:5.1}%) | {:<9.5} | {:<7.5} | {:<6.4} | {:<9.4} | {:<8.4} | {:3.0}/{:3.0}/{:3.0}%",
+            println!("{:04}  | {:.4} ({:5.1}%) | {:.4} ({:5.1}%) | {:<9.5} | {:<7.5} | {:<6.4} | {:<9.4} | {:<8.4} | {:3.0}/{:3.0}/{:3.0}% | aux={:.4}",
                 cum_step,
                 diag.train_loss,
                 diag.train_acc * 100.0,
@@ -364,6 +380,7 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
                 diag.freq_decomp.pct_low,
                 diag.freq_decomp.pct_mid,
                 diag.freq_decomp.pct_high,
+                diag.aux_loss,
             );
         }
 
