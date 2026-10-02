@@ -122,7 +122,8 @@ impl SequenceDataset {
         self.sample_batch_internal(batch_size, seq_len, true, device)
     }
 
-    /// Samples a batch from the training set along with an optional loss mask
+    /// Samples a batch from the training set along with an optional loss mask.
+    /// Legacy entry point: uses historical fixed stream seed 0.
     #[allow(dead_code)]
     pub fn sample_train_batch_with_mask(
         &self,
@@ -130,10 +131,11 @@ impl SequenceDataset {
         seq_len: usize,
         device: &Device,
     ) -> Result<(Tensor, Tensor, Option<Tensor>)> {
-        self.sample_batch_internal_with_mask(batch_size, seq_len, false, device)
+        self.sample_batch_internal_with_mask(batch_size, seq_len, false, 0, device)
     }
 
-    /// Samples a batch from the validation set along with an optional loss mask
+    /// Samples a batch from the validation set along with an optional loss mask.
+    /// Uses the fixed evaluation seed 0 for reproducible heldout batches.
     #[allow(dead_code)]
     pub fn sample_val_batch_with_mask(
         &self,
@@ -141,7 +143,7 @@ impl SequenceDataset {
         seq_len: usize,
         device: &Device,
     ) -> Result<(Tensor, Tensor, Option<Tensor>)> {
-        self.sample_batch_internal_with_mask(batch_size, seq_len, true, device)
+        self.sample_batch_internal_with_mask(batch_size, seq_len, true, 0, device)
     }
 
     fn sample_batch_internal(
@@ -152,7 +154,7 @@ impl SequenceDataset {
         device: &Device,
     ) -> Result<(Tensor, Tensor)> {
         let (inputs, targets, _) =
-            self.sample_batch_internal_with_mask(batch_size, seq_len, is_val, device)?;
+            self.sample_batch_internal_with_mask(batch_size, seq_len, is_val, 0, device)?;
         Ok((inputs, targets))
     }
 
@@ -161,9 +163,10 @@ impl SequenceDataset {
         batch_size: usize,
         seq_len: usize,
         is_val: bool,
+        stream_seed: usize,
         device: &Device,
     ) -> Result<(Tensor, Tensor, Option<Tensor>)> {
-        self.sample_batch_seeded_with_mask(batch_size, seq_len, is_val, 0, device)
+        self.sample_batch_seeded_with_mask(batch_size, seq_len, is_val, stream_seed, device)
     }
 
     /// Explicit stream seed for fresh reproducible algorithmic training batches.
@@ -287,5 +290,47 @@ impl SequenceDataset {
         let input_tensor = Tensor::from_slice(&inputs, (batch_size, seq_len), device)?;
         let target_tensor = Tensor::from_slice(&targets, (batch_size, seq_len), device)?;
         Ok((input_tensor, target_tensor, None))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// RD-018b: consecutive training stream seeds draw different algorithmic
+    /// rows, while identical seeds and the fixed validation path stay
+    /// reproducible.
+    #[test]
+    fn test_seeded_train_stream_advances_and_val_is_fixed() -> Result<()> {
+        let dev = Device::Cpu;
+        let ds = SequenceDataset::new("iterated-parity");
+
+        let (in_a, _, _) = ds.sample_batch_seeded_with_mask(4, 16, false, 0, &dev)?;
+        let (in_b, _, _) = ds.sample_batch_seeded_with_mask(4, 16, false, 1, &dev)?;
+        assert_ne!(
+            in_a.to_vec2::<u32>()?,
+            in_b.to_vec2::<u32>()?,
+            "consecutive stream seeds must draw different training rows"
+        );
+
+        let (in_a2, _, _) = ds.sample_batch_seeded_with_mask(4, 16, false, 0, &dev)?;
+        assert_eq!(
+            in_a.to_vec2::<u32>()?,
+            in_a2.to_vec2::<u32>()?,
+            "the same stream seed must be reproducible"
+        );
+
+        let (val_1, _, mask_1) = ds.sample_batch_seeded_with_mask(4, 16, true, 0, &dev)?;
+        let (val_2, _, mask_2) = ds.sample_batch_seeded_with_mask(4, 16, true, 0, &dev)?;
+        assert_eq!(
+            val_1.to_vec2::<u32>()?,
+            val_2.to_vec2::<u32>()?,
+            "validation batches must be reproducible at a fixed eval seed"
+        );
+        assert_eq!(
+            mask_1.map(|m| m.to_vec2::<f32>()).transpose()?,
+            mask_2.map(|m| m.to_vec2::<f32>()).transpose()?
+        );
+        Ok(())
     }
 }

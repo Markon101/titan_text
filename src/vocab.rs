@@ -170,6 +170,10 @@ impl Vocab {
 pub struct TokenInterface {
     pub embedding: Embedding,
     pub projection: Linear,
+    /// RD-018b dedicated auxiliary-supervision head (channels -> vocab).
+    /// Attached only on the seeded vNext path; `None` keeps the legacy
+    /// variable set (and therefore old checkpoints) loadable unchanged.
+    pub aux_projection: Option<Linear>,
     pub vocab_size: usize,
     pub channels: usize,
 }
@@ -181,9 +185,23 @@ impl TokenInterface {
         Ok(Self {
             embedding,
             projection,
+            aux_projection: None,
             vocab_size,
             channels,
         })
+    }
+
+    /// RD-018b: create and attach the dedicated auxiliary head. Must be
+    /// called on a fresh VarMap before deterministic weight initialization so
+    /// the new parameters are seeded from the same stream.
+    pub fn attach_aux_head(&mut self, vb: VarBuilder) -> Result<()> {
+        anyhow::ensure!(
+            self.aux_projection.is_none(),
+            "auxiliary head is already attached"
+        );
+        let aux_projection = linear(self.channels, self.vocab_size, vb.pp("aux_proj"))?;
+        self.aux_projection = Some(aux_projection);
+        Ok(())
     }
 
     /// Embeds a batch of token ids into continuous field vectors [batch, seq_len, channels]
@@ -194,6 +212,16 @@ impl TokenInterface {
     /// Projects cell states [batch, seq_len, channels] to token logits [batch, seq_len, vocab_size]
     pub fn logits(&self, states: &Tensor) -> Result<Tensor> {
         Ok(self.projection.forward(states)?)
+    }
+
+    /// Logits for auxiliary deep supervision. Uses the dedicated aux head
+    /// when attached (RD-018b) and falls back to the shared terminal
+    /// projection on the legacy path, where both projections coincide.
+    pub fn aux_logits(&self, states: &Tensor) -> Result<Tensor> {
+        match &self.aux_projection {
+            Some(projection) => Ok(projection.forward(states)?),
+            None => Ok(self.projection.forward(states)?),
+        }
     }
 
     /// Computes cross-entropy loss against target token ids [batch, seq_len]
@@ -262,5 +290,52 @@ impl TokenInterface {
             return Ok(0.0);
         }
         Ok(matches as f32 / total_active as f32)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use candle_core::Device;
+    use candle_nn::VarMap;
+
+    /// RD-018b: the dedicated auxiliary head is a distinct parameter set from
+    /// the shared terminal projection; legacy interfaces keep the fallback.
+    #[test]
+    fn test_aux_head_is_distinct_from_terminal_projection() -> Result<()> {
+        let dev = Device::Cpu;
+        let varmap = VarMap::new();
+        let vb = VarBuilder::from_varmap(&varmap, DType::F32, &dev);
+        let mut interface = TokenInterface::new(vb.pp("interface"), 7, 4)?;
+
+        // Legacy default: no aux head, so aux logits fall back to the shared
+        // terminal projection (historical semantics unchanged).
+        assert!(interface.aux_projection.is_none());
+        let states = Tensor::randn(0.0f32, 1.0f32, (1, 3, 4), &dev)?;
+        let terminal_before = interface.logits(&states)?.to_vec3::<f32>()?;
+        let fallback = interface.aux_logits(&states)?.to_vec3::<f32>()?;
+        assert_eq!(terminal_before, fallback);
+
+        // Attach the RD-018b head: separate variables, separate logits.
+        let vb_aux = VarBuilder::from_varmap(&varmap, DType::F32, &dev);
+        interface.attach_aux_head(vb_aux.pp("interface"))?;
+        assert!(interface.aux_projection.is_some());
+        let aux = interface.aux_logits(&states)?.to_vec3::<f32>()?;
+        let terminal = interface.logits(&states)?.to_vec3::<f32>()?;
+        assert_ne!(
+            aux, terminal,
+            "auxiliary and terminal projections must be distinct parameters"
+        );
+
+        let names = {
+            let data = varmap.data().lock().unwrap();
+            let mut names: Vec<String> = data.keys().cloned().collect();
+            names.sort();
+            names
+        };
+        assert!(names.contains(&"interface.aux_proj.weight".to_string()));
+        assert!(names.contains(&"interface.aux_proj.bias".to_string()));
+        assert!(names.contains(&"interface.proj.weight".to_string()));
+        Ok(())
     }
 }

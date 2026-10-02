@@ -260,6 +260,20 @@ pub struct TrainConfig {
     /// token id 1 (bias-absorbable control, convention of C-COORD-015).
     #[serde(default)]
     pub aux_sham: bool,
+    /// RD-018b clean-substrate marker. Fresh runs through the seeded vNext
+    /// path record this in their manifests (deterministic initialization from
+    /// `seed`, advancing training data stream, gradient clipping, dedicated
+    /// auxiliary head, post-update auxiliary supervision). Defaults to false
+    /// so legacy checkpoints and their continuations keep the historical
+    /// training semantics unchanged.
+    #[serde(default)]
+    pub vnext_substrate: bool,
+    /// RD-018b: maximum global L2 gradient norm for the vNext path; when the
+    /// total gradient norm exceeds this bound, all gradients are rescaled
+    /// before the optimizer step (0.0 disables clipping). Ignored by the
+    /// legacy path.
+    #[serde(default = "default_grad_clip_norm")]
+    pub grad_clip_norm: f32,
 }
 
 fn default_horizon_mode() -> String {
@@ -289,6 +303,9 @@ fn default_tail_equilibrium_ticks() -> usize {
 fn default_aux_supervision_weight() -> f32 {
     0.0
 }
+fn default_grad_clip_norm() -> f32 {
+    1.0
+}
 
 impl Default for TrainConfig {
     fn default() -> Self {
@@ -312,6 +329,8 @@ impl Default for TrainConfig {
             target_slot: None,
             aux_supervision_weight: default_aux_supervision_weight(),
             aux_sham: false,
+            vnext_substrate: false,
+            grad_clip_norm: default_grad_clip_norm(),
         }
     }
 }
@@ -470,6 +489,10 @@ impl TitanConfig {
         ensure!(
             self.train.aux_supervision_weight.is_finite() && self.train.aux_supervision_weight >= 0.0,
             "train aux_supervision_weight must be finite and non-negative"
+        );
+        ensure!(
+            self.train.grad_clip_norm.is_finite() && self.train.grad_clip_norm >= 0.0,
+            "train grad_clip_norm must be finite and non-negative"
         );
         ensure!(
             self.train.tail_equilibrium_ticks > 0,

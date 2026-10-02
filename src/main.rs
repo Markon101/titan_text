@@ -271,6 +271,13 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
         );
         config.train.aux_sham = true;
     }
+    // RD-018b: fresh runs use the clean substrate (seeded init, advancing
+    // stream, gradient clipping, dedicated aux head). The marker is recorded
+    // in the manifest so checkpoint continuation stays on the same protocol;
+    // legacy checkpoints keep their historical training semantics.
+    if load_dir.is_none() {
+        config.train.vnext_substrate = true;
+    }
     config.validate()?;
     start_step
         .checked_add(config.train.epochs)
@@ -338,8 +345,20 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
             config.train.horizon_min, config.train.horizon_max, config.train.horizon_jitter, config.train.stability_tail);
     }
     println!("  Save Directory      : {}", save_dir);
+    if config.train.vnext_substrate {
+        println!(
+            "  Protocol            : RD-018b clean substrate (seed={}, advancing stream, grad clip {:.3})",
+            config.train.seed, config.train.grad_clip_norm
+        );
+    } else {
+        println!("  Protocol            : legacy (historical semantics)");
+    }
 
-    let mut trainer = Trainer::new(config.clone(), &task, device)?;
+    let mut trainer = if config.train.vnext_substrate {
+        Trainer::new_seeded(config.clone(), &task, device, config.train.seed)?
+    } else {
+        Trainer::new(config.clone(), &task, device)?
+    };
     let total_params: usize = trainer
         .varmap
         .all_vars()
@@ -351,6 +370,10 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
     if let Some(ref dir) = load_dir {
         println!("Loading checkpoint weights from '{}'...", dir);
         CheckpointManager::load_weights(dir, &mut trainer.varmap, device)?;
+        if trainer.vnext_substrate {
+            // Continue the RD-018b data stream at the cumulative step.
+            trainer.step_count = start_step;
+        }
     }
 
     let start_time = Instant::now();
@@ -382,6 +405,15 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
                 diag.freq_decomp.pct_high,
                 diag.aux_loss,
             );
+            if !diag.aux_tick_indices.is_empty() {
+                let ticks: Vec<String> = diag
+                    .aux_tick_indices
+                    .iter()
+                    .zip(diag.aux_tick_losses.iter())
+                    .map(|(tick, loss)| format!("{}:{:.4}", tick, loss))
+                    .collect();
+                println!("      aux per-tick CE : {}", ticks.join("  "));
+            }
         }
 
         if epoch % config.train.save_every == 0 || epoch == config.train.epochs {
@@ -440,6 +472,22 @@ fn cmd_train(args: &cli::Options, device: &Device) -> Result<()> {
         println!("  • State Energy   : {:.4}", final_d.state_energy);
         println!("  • Enstrophy (Ω)  : {:.4}", final_d.enstrophy);
         println!("  • BKM Norm (B)   : {:.4}", final_d.bkm_norm);
+    }
+
+    if trainer.vnext_substrate {
+        let heldout = trainer.evaluate_val_exhaustive(config.train.batch_size.max(1))?;
+        let slot_acc: Vec<String> = heldout
+            .per_slot_accuracy
+            .iter()
+            .map(|acc| format!("{:.1}%", acc * 100.0))
+            .collect();
+        println!(
+            "\n✓ RD-018b heldout panel : {} unique rows | loss {:.4} | accuracy {:.1}% | per-slot [{}]",
+            heldout.rows,
+            heldout.loss,
+            heldout.accuracy * 100.0,
+            slot_acc.join(", ")
+        );
     }
 
     // Run post-training diagnostics
@@ -2335,7 +2383,9 @@ fn cmd_benchmark(args: &cli::Options, device: &Device) -> Result<()> {
         if let Some(ref sn) = state_norm_opt {
             nca_cfg_train.nca.state_norm = sn.clone();
         }
-        let mut trainer = Trainer::new(nca_cfg_train, &task_name, device)?;
+        // RD-018b: benchmark's NCA arm uses the seeded clean substrate so
+        // --seeds actually reproduces weight initialization and training data.
+        let mut trainer = Trainer::new_seeded(nca_cfg_train, &task_name, device, base_seed)?;
         let mut last_nca_diag = None;
         for _ in 1..=train_epochs {
             last_nca_diag = Some(trainer.train_step(batch_size)?);
