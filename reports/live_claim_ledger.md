@@ -124,3 +124,31 @@ superiority is superseded by C-HALT-014. See
   vs constant hurts); eval seed = training seed.
 - **Supporting Artifacts**: [reports/ippr_coordinate_channel_campaign.md](file:///data/data/com.termux/files/home/projects/titan_text/reports/ippr_coordinate_channel_campaign.md), [runs/ippr_coordinate/analysis_summary.json](file:///data/data/com.termux/files/home/projects/titan_text/runs/ippr_coordinate/analysis_summary.json), [reports/ippr_coordinate_channel_protocol.md](file:///data/data/com.termux/files/home/projects/titan_text/reports/ippr_coordinate_channel_protocol.md)
 - **Commit**: (this commit)
+
+---
+
+## RD-018 — Training-time auxiliary deep supervision does not rescue the L=16 interior
+
+- **CLAIM (tested)**: Per-tick auxiliary supervision at interior slots (alpha=0.3,
+  true intermediate parity targets through dedicated readouts) improves
+  terminal interior-slot accuracy (InteriorMean) at L=16 by >= +8pp over
+  baseline, with >=4/5 seed-level wins (H_OPT discriminator).
+- **STATUS**: PRIMARY NULL (preregistered threshold decisively not met);
+  H_OPT NOT supported; H_ATTENUATION preliminary direction only, NOT claimable
+  pending mandatory positive controls (a) aux-head grad norms and (b) frozen-model
+  linear probe on final-state interior cells.
+- **EVIDENCE**: Preregistered three-arm battery (baseline / true-aux / constant
+  sham), fresh seeds 901-915, single-shot 1000-epoch, exact replication of
+  coordinate-campaign config. 12/15 converged (A: 902,905 diverged; B: 907
+  diverged; C: 0/5). InteriorMean: A 44.27 (n=3), B 44.14 (n=4), C 39.38 (n=5);
+  B-A = -0.13pp, perm p=1.0000; C-A = -4.90pp (p=0.269). OBSERVED: Arm B aux CE
+  declines sharply (e.g. 0.693->0.104; 1.296->0.214; 0.851->0.159) — intermediate-
+  state parity IS decodable by dedicated readouts; terminal interior readout
+  still fails. Divergence asymmetry (A 2/5 worst, C 0/5) recorded as data.
+- **LIMITATION**: Arm A replication gate compromised (2/5 diverged; 3 converged
+  seeds all interior-at-chance but gate as frozen requires >=4/5). Prereg
+  telemetry item 3 (aux-head grad norm manifest fields) NOT implemented —
+  control (a) numerically unevaluated; grad clip 1.0 on aux terms not
+  implemented. n=3-5 per arm; tau=16 only.
+- **Supporting Artifacts**: [reports/rd018_battery_report.md](file:///data/data/com.termux/files/home/projects/titan_text/reports/rd018_battery_report.md), [reports/rd018_aux_supervision_protocol_draft.md](file:///data/data/com.termux/files/home/projects/titan_text/reports/rd018_aux_supervision_protocol_draft.md), `runs/rd018_aux_supervision/` (raw, gitignored)
+- **Commit**: (this commit)
