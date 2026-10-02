@@ -25,7 +25,7 @@ run() {
   echo "=== TRAIN ${arm} seed ${seed} T=8 $(date +%T) ===" >> $OUT/driver.log
   if [ -f "$dir/manifest.json" ]; then echo "skip (exists)" >> $OUT/driver.log; return; fi
   $BIN train --task iterated-parity --epochs 1000 --seq-len 16 --dev-steps 8 \
-    --batch-size 8 --seed "$seed" --zero-boundary --save-dir "$dir" "$@" \
+    --batch-size 8 --seed "$seed" --zero-boundary --state-norm bounded --save-dir "$dir" "$@" \
     >> $OUT/${arm}_train_${seed}.log 2>&1
   [ $? -ne 0 ] && echo "TRAIN_FAIL ${arm} ${seed}" >> $OUT/driver.log
   python3 - "$dir/manifest.json" >> $OUT/driver.log 2>&1 <<'PYEOF'
