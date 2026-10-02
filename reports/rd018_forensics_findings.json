@@ -1,0 +1,41 @@
+{
+  "rd018_forensics_findings": {
+    "worktree": "/data/data/com.termux/files/home/projects/titan_forensics",
+    "main_tree_touched": false,
+    "original_artifacts": "sha256 recorded before and verified unchanged after (original_hashes_prefix.txt)",
+    "eval_seed_provenance": {
+      "main_rs_default": "cmd_sweep: seeds default vec![0]; only --seeds changes it",
+      "empirical": "audit reproduction with seed=0 matches historical A_baseline_eval_901 exactly (intact acc 0.53125/loss 3.1216, lesion acc 0.0/loss 4.1412)",
+      "conclusion": "RD-018 sweep evals used default eval seed 0 for ALL checkpoints, NOT the training seed"
+    },
+    "lesion": {
+      "mechanism": "disable_recurrent zeroes raw_delta (latent.rs apply_to_delta); plain NCA (carry_channels=0) -> state frozen at token embedding for all 16 ticks; verified state max_dev=0",
+      "query_inputs": "all 128 masked positions have input token '?' (verified)",
+      "frozen_logit_structure": "3 distinct logit vectors over all 512 lattice positions (one per distinct input token '0','1','?'); query-site logits identical across all 32 sequences (max_dev=0); NOT constant over entire sequence",
+      "A_901": {"lesion_acc": 0.0, "const_pred": ">", "distinct_preds": 1, "confusion_t_x_p": [[0,0,68],[0,0,60],[0,0,0]], "frac_other": 1.0, "logit_max_abs": 4.016},
+      "A_903": {"lesion_acc": 0.0, "const_pred": "4", "distinct_preds": 1, "frac_other": 1.0, "logit_max_abs": 3.139},
+      "C_911": {"lesion_acc": 0.0, "const_pred": "(pad/bos/eos/unk ·)", "distinct_preds": 1, "frac_other": 1.0, "logit_max_abs": 5.651},
+      "B_908": {"lesion_acc": 0.53125, "const_pred": "0", "distinct_preds": 1, "confusion": [[68,0,0],[60,0,0],[0,0,0]], "frac_inverted": 0.469, "logit_max_abs": 8.068},
+      "B_910": {"lesion_acc": 0.53125, "const_pred": "0", "distinct_preds": 1, "frac_inverted": 0.469, "logit_max_abs": 8.009},
+      "target_base_rate_zeros": "68/128 = 0.53125",
+      "verdict": "NOT class inversion and NOT saturation. Every lesion prediction is a single constant token (a pure function of the frozen '?' embedding). Accuracy = base rate of that constant token among targets: 0.0 when the token is not a parity symbol, 0.53125 for B when the token is '0' (== target '0' base rate). The A-vs-B lesion contrast carries no information about learned recurrence."
+    },
+    "aux_chronology_regression": {
+      "test": "train::tests::test_aux_chronology_pre_update_vs_post_update (worktree, passes)",
+      "executed_term_set": "states {0,1,2,3,4} = pre-update state at step_idx 1..=4 PLUS terminal state_4 duplicate (aux_every=1 at t_target=4)",
+      "literal_candidate": "states {1,2,3,4} (post-update, skip final step) per docs/rd018_post_battery_tick_alignment_fix.patch",
+      "result": "executed aux loss matches pre-update set and differs from literal candidate; chronology off-by-one confirmed and pinned"
+    },
+    "nan_replay": {
+      "determinism": "Trainer::new does not seed weight init (no set_seed/initialize_seeded in train path); two independent seed-902 3-epoch runs gave epoch-1 loss 10.29 vs 13.64 -> exact replay impossible; replay is non-exact",
+      "runs": {
+        "A_baseline_902": {"diverged": true, "first_nonfinite_epoch": 810, "first_nonfinite_tensor": "grad_interface.embed.weight", "forward_at_fatal_epoch": "FINITE (all 16 tick states, final logits max_abs 25.0, loss 0.2754)", "nonfinite_at_fatal_epoch": "7 recurrent-path grads (embed + all nca.*) and grad_norm; readout proj.* grads finite; param_pre_* finite", "next_epoch": "epoch 811 forward becomes nonfinite (params polluted by NaN-step)", "historical_NaN_onset_window": "last finite 860, first NaN 870"},
+        "A_baseline_905": {"diverged": false, "final_train_loss": 0.1266, "val_acc": 0.46875, "historical_window": "800->810"},
+        "B_aux_907": {"diverged": false, "final_train_loss": 0.0744, "val_acc": 0.625, "historical_window": "640->650"}
+      },
+      "mechanism_evidence": "First nonfinite tensors are recurrent-path gradients while forward state, logits, loss and pre-step params are finite. Premature gradient-norm spikes (up to 125 early, oscillating 2-37 near onset) are NOT a monotone precursor; the fatal step had a finite forward with NaN gradients, so the failure lives in the backward unroll, not an observed forward state explosion.",
+      "limitations": ["exact replay impossible (unseeded init)", "AdamW moment buffers not exposed by candle 0.4.1 -> used param_pre/param_post as proxy", "no per-op backward hooks: exact op that produces NaN not localized", "detector initially used max_abs which under-reports all-NaN tensors; recovered via rms (nonfinite rms <=> nonfinite tensor); code fixed and recompiled", "1/3 independent replays diverged"]
+    },
+    "skeptic_alternative": "If the original 'lesion proves recurrence necessary / A collapses while B survives' reading is wrong, the data are equally consistent with: the lesion metric is a degenerate constant predictor whose value is fixed by whichever token the frozen '?' readout argmaxes to plus the skewed target prior. It cannot discriminate recurrent computation. Cross-path caveat: rollout/benchmark (nca.rs develop_with_intervention) never calls apply_to_delta, so 'lesion' means different things on the two code paths."
+  }
+}

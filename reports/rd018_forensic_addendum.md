@@ -122,3 +122,107 @@ Ranked, cheapest first:
 All cited arXiv IDs independently verified present with matching topics (two
 sources: direct web fetch of each abs page + local `agy`/Gemini cross-check). No
 fabrication. See `docs/lit_review_interior_stagnation_2026.md`.
+
+---
+
+# Round 2 — Worktree Forensics (2026-10-02, isolated `titan_forensics` @ 3f83688)
+
+Instrumented in an isolated worktree; **main tree and all 9 original checkpoint/log
+SHA-256 verified byte-identical before and after reads**. Patch +
+`forensic_runs/rd018_forensics_findings.json` live in the worktree (not merged into
+the executed tree).
+
+## R2.1 Lesion anomaly is RESOLVED — it is a degenerate constant predictor
+Command `audit-lesion` (worktree-only) dumped per-example predictions under
+`--lesion-state` (sweep path: state frozen, max_dev = 0). All 128 masked query
+inputs are `'?'`. Frozen logits are constant AT query sites but not across the
+lattice: **3 distinct logit vectors over 512 positions** (one per input symbol
+`'0'`,`'1'`,`'?'`) vs ~478-480 intact. Every lesion prediction is ONE constant
+token (`distinct_preds = 1`):
+
+| ckpt | lesion acc | constant pred | pred==1-target | confusion (t0,t1,tother x p0,p1,pother) | logit max_abs |
+|---|---|---|---|---|---|
+| A_901 | 0.0 | `'>'` (id 34) | 0.0 | [[0,0,68],[0,0,60],[0,0,0]] | 4.02 |
+| A_903 | 0.0 | `'4'` | 0.0 | same | 3.14 |
+| C_911 | 0.0 | id 0-3 (`·`) | 0.0 | same | 5.65 |
+| B_908 | 0.53125 | `'0'` | 0.469 | [[68,0,0],[60,0,0],[0,0,0]] | 8.07 |
+| B_910 | 0.53125 | `'0'` | 0.469 | same | 8.01 |
+
+**Conclusions (VERIFIED):**
+- The A/C 0.0 is a **constant NON-PARITY token**, not class inversion
+  (`pred == 1-target` is 0.0 everywhere) and not logit saturation (max |logit| <= 8).
+- **B's ~53% lesion "survival" is pure class-prior**: B emits `'0'`, whose target
+  base rate is exactly 68/128 = 0.53125. It is NOT input-dependent and NOT evidence
+  of surviving recurrent computation.
+- Therefore the `--lesion-state` counterfactual is **degenerate in the sweep path**:
+  it measures the frozen readout's constant output against the target class prior.
+  It cannot support any recurrence-dependence or "collapse to chance" guard. This
+  also retroactively weakens earlier campaigns' lesion-based causal claims.
+
+## R2.2 NaN mechanism: nonfinite GRADIENTS with FINITE forward
+Exact replay is impossible (unseeded init confirmed empirically: two independent
+seed-902 3-epoch runs gave epoch-1 loss 10.29 vs 13.64). Instrumented non-exact
+replay (per-epoch finiteness: inputs -> every NCA tick -> aux/final logits -> loss
+-> per-param grads -> grad_norm -> pre/post params):
+
+| seed | diverged | first nonfinite epoch | first nonfinite tensor | forward at fatal epoch |
+|---|---|---|---|---|
+| A 902 | yes | 810 | `grad_interface.embed.weight` (+ all `grad_nca.*`, 7 grads) | **FINITE** (16 ticks, logits max_abs 25.0, loss 0.2754) |
+| A 905 | no | - | - | converged |
+| B 907 | no | - | - | converged |
+
+- The fatal step has **finite forward state/logits/loss/pre-step params but NaN
+  recurrent-path gradients** (readout `proj.*` grads stay finite). The poisoned
+  optimizer step makes forward nonfinite one epoch later.
+- Historical logs only bound onset windows (A902 860->870, A905 800->810,
+  B907 640->650); 1/3 independent replays diverged. No single causal op localized
+  (candle 0.4.1 exposes no per-op backward hooks; AdamW moments not accessible).
+- This is a **backward-pass instability in the recurrent/embedding path**, not a
+  forward blow-up — a concrete, testable target for the corrected RD-018b (e.g.
+  gradient clipping on the recurrent path, which the prereg already anticipated).
+
+## R2.3 Aux chronology confirmed; off-by-one is UNIQUE to the fixed branch
+- Fixed regime (the regime the battery ran): aux fires at `step_idx % 4 == 0`
+  (train.rs:303) but reads `field.x` BEFORE `field = next_field` (:328), so it
+  supervises **pre-update** states. Executed set = **{S3,S7,S11,S15} in-loop
+  + S16 terminal = 5 terms**, `aux_count=5`, per-term weight alpha/5 = 0.06.
+  Intended {4,8,12} are supervised ZERO times; S15/S16 are adjacent near-duplicates
+  and S16 is supervised TWICE (terminal CE :330 + aux term :347).
+- **multi_tick (:208-236) and stability_tail (:240-284) are ALIGNED** (post-update).
+  The off-by-one exists only in the fixed branch.
+- Worktree regression test `test_aux_chronology_pre_update_vs_post_update` PASSES
+  (fails under the old pre-update behavior, passes under post-update).
+
+## R2.4 Prereg scope deviation (new)
+The frozen prereg scoped the aux change to the **multi-tick path**
+("extend loss accumulation (multi-tick path, ~L154-181)..."), but the battery ran
+**`horizon_mode='fixed'`**. The aux implementation therefore lives in a code path
+the prereg never described. Combined with the "4 evenly spaced" schedule appearing
+ONLY in a code comment (not the frozen text), the executed intervention is
+under-specified relative to its preregistration.
+
+## R2.5 Telemetry identifiability gap (important)
+`aux=` is the **mean over all 5 terms including the S16 terminal term**. Since
+CE >= 0, an observed mean of 0.104 (seed 906) bounds the S16 term at <= 0.52, i.e.
+below binary chance (0.693) — meaning the shared readout decodes parity from the
+**final training state** better than chance, yet held-out terminal interior is
+~44%. So the battery report's claim that the aux trajectory shows "TRUE
+intermediate parity from intermediate states" is **not identifiable** from a
+5-term mean. Required evidence: per-tick aux CE separating {S3,S7,S11,S15} from
+{S16}. (Either a train->eval memorization gap, or intermediates dominate the mean.)
+
+## R2.6 Eval-seed provenance confirmed empirically
+Reproducing A_901 with **seed 0** matched the historical eval JSON exactly
+(intact 0.53125/3.1216, lesion 0.0/4.1412); seed 901 did not. All RD-018 sweep
+evals used the default `--seeds 0`, not the training seed.
+
+## R2.7 Adjusted conclusions
+- The lesion control is **invalid as a causal test** in this code path (R2.1), so
+  no recurrence-necessity claim can rest on it here.
+- Divergence is a **backward-gradient instability** (R2.2), reproducible in
+  direction but not exactly (unseeded init); it is not aux-caused (A 902/905 have
+  aux = 0.0) and not forward-caused.
+- "Aux decodes intermediate parity" remains **unidentifiable** (R2.5) pending
+  per-tick aux telemetry.
+- Everything in sections 1-5 above stands; these round-2 findings sharpen, not
+  overturn, the SUSPENDED status of H_OPT/H_ATTENUATION.
