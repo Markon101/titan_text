@@ -69,15 +69,49 @@ pub struct NcaConfig {
     /// Explicit Carry Register (ECR): number of dedicated carry channels Cc in state x (default: 0)
     #[serde(default)]
     pub carry_channels: usize,
-    /// Fast carry skip stride k (default: 1; if > 1, carry channels include k-cell skip transport)
+    /// Carry transport speed k in cells/tick (default: 1).
+    ///
+    /// Transport reads cell i-k (forward) / i+k (backward). Launch boundary:
+    /// - legacy zero-pad (default): cells 0..k-1 read zero, so a value seeded at
+    ///   cell 0 only reaches query cells q with q ≡ 0 (mod k) through the k-hop
+    ///   path (arrival t = q/k); off-lattice queries (q mod k != 0) need the
+    ///   1-cell slow channels and effectively cannot be reached by the k-hop
+    ///   path ("launch dead-zone").
+    /// - clamped launch (`carry_launch_clamp`, or forced by Relay-Fold mode
+    ///   "fold"): every cell reads the boundary cell instead of zero, so a value
+    ///   seeded at cell 0 reaches any q in ceil(q/k) ticks.
+    ///
+    /// In legacy modes k applies to only HALF the carry channels (slow/fast
+    /// half-split); Relay-Fold Transport ("fold") applies k uniformly to ALL
+    /// carry channels, which makes a k in {1,2,4} sweep a real speed knob.
     #[serde(default = "default_carry_skip_stride")]
     pub carry_skip_stride: usize,
     /// Whether carry channels are bidirectional (split between forward left-to-right and backward right-to-left)
     #[serde(default)]
     pub carry_bidirectional: bool,
-    /// Discrete carry projection / drift mitigation mode: "none", "ste_round", "ste_sign", "bistable"
+    /// Carry write / drift-mitigation mode:
+    /// - "none" (default): historical hyperbolic advection + additive delta write.
+    /// - "ste_round" | "ste_sign": HISTORICAL zero-gradient STE projections.
+    ///   `carry + (x.detach() - carry)` makes dy/dcarry == 0, so carry channels
+    ///   receive no gradient. Kept byte-identical for old checkpoints; do not
+    ///   use for learning.
+    /// - "ste_round_ide" | "ste_sign_ide": identity-gradient STEs
+    ///   `carry + (x - carry).detach()` (dy/dcarry == 1, trainable).
+    /// - "bistable": continuous cubic Ginzburg-Landau restoring potential.
+    /// - "fold": Relay-Fold Transport (RFT) write. At every cell the carry
+    ///   channel is re-written as a gated fold of the incoming transported
+    ///   carry and the cell's local perception-derived features
+    ///   (sigmoid gate + tanh candidate), instead of advecting a stale value;
+    ///   speed k becomes uniform and the launch is clamped (see above).
     #[serde(default = "default_carry_quantization")]
     pub carry_quantization: String,
+    /// Clamped launch for carry transport: when true, skip reads clamp to the
+    /// boundary cell (`k_left_neighbor_clamped` / `k_right_neighbor_clamped`)
+    /// instead of zero-padding, so the first (last) k cells can relay. Off by
+    /// default: legacy zero-pad launch stays byte-identical for old checkpoints.
+    /// Relay-Fold Transport (carry_quantization = "fold") always clamps.
+    #[serde(default)]
+    pub carry_launch_clamp: bool,
     /// Persistent Input: whether to concatenate initial token seed embedding to perception vector
     #[serde(default)]
     pub persistent_input: bool,
@@ -172,6 +206,30 @@ impl NcaConfig {
     pub fn is_hierarchy(&self) -> bool {
         self.feedback_mode == "hierarchy"
     }
+
+    /// Relay-Fold Transport (RFT) write mode: carry_quantization == "fold" with
+    /// an explicit carry register. RFT re-writes every carry cell as a gated
+    /// fold of the incoming transported carry and local features (see
+    /// `NeuralCellularAutomaton::carry_fold_write`), applies speed k uniformly
+    /// to all carry channels, and clamps the launch boundary.
+    pub fn carry_fold_mode(&self) -> bool {
+        self.carry_channels > 0 && self.carry_quantization == "fold"
+    }
+
+    /// Clamped carry launch (boundary cell read instead of zero-pad).
+    /// RFT ("fold") always clamps so the first/last k cells can relay; other
+    /// modes opt in via `carry_launch_clamp`, off by default so legacy
+    /// zero-pad semantics stay byte-identical.
+    pub fn carry_clamped_launch(&self) -> bool {
+        self.carry_channels > 0 && (self.carry_launch_clamp || self.carry_fold_mode())
+    }
+
+    /// Uniform carry transport speed: RFT applies `carry_skip_stride` k to
+    /// every carry channel; legacy modes keep the historical slow/fast
+    /// half-channel split.
+    pub fn carry_uniform_stride(&self) -> bool {
+        self.carry_fold_mode()
+    }
 }
 
 impl Default for NcaConfig {
@@ -195,6 +253,7 @@ impl Default for NcaConfig {
             carry_skip_stride: 1,
             carry_bidirectional: false,
             carry_quantization: default_carry_quantization(),
+            carry_launch_clamp: false,
             persistent_input: false,
             macro_stride: default_macro_stride(),
             macro_period: default_macro_period(),
@@ -547,5 +606,73 @@ impl TitanConfig {
             "model must be nca, transformer, gru, rnn, or simple-recurrent"
         );
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Old checkpoints must load unchanged: config payloads without the new
+    /// `carry_launch_clamp` field deserialize with the legacy default (false)
+    /// and their carry transport semantics stay byte-identical.
+    #[test]
+    fn legacy_nca_config_without_new_carry_fields_loads_with_legacy_defaults() -> anyhow::Result<()> {
+        let legacy_json = r#"{
+            "hidden_dim": 96, "step_size": 0.5, "update_rate": 1.0, "activation": "gelu",
+            "viscosity": 0.0, "feedback_mode": "none", "feedback_weight": 0.2,
+            "state_norm": "none", "bound_threshold": 1.5, "damping_alpha": 1.0,
+            "leaky_lambda": 0.0, "coord_channel": false, "causal_stencil": true,
+            "carry_channels": 32, "carry_skip_stride": 4, "carry_bidirectional": true,
+            "carry_quantization": "ste_sign", "persistent_input": false,
+            "macro_stride": 2, "macro_period": 2, "macro_channels": 32,
+            "macro_downsampler": "walsh", "macro_coupling": "state_derivative",
+            "macro_gamma": 0.2, "macro_lambda": 0.1
+        }"#;
+        let cfg: NcaConfig = serde_json::from_str(legacy_json)?;
+        assert_eq!(cfg.carry_channels, 32);
+        assert_eq!(cfg.carry_skip_stride, 4);
+        assert!(cfg.carry_bidirectional);
+        assert_eq!(cfg.carry_quantization, "ste_sign");
+        // New field defaults must leave legacy transport semantics untouched.
+        assert!(!cfg.carry_launch_clamp);
+        assert!(!cfg.carry_fold_mode());
+        assert!(!cfg.carry_clamped_launch());
+        assert!(!cfg.carry_uniform_stride());
+        Ok(())
+    }
+
+    #[test]
+    fn relay_fold_mode_requires_carry_and_forces_uniform_clamped_transport() {
+        let cfg = NcaConfig {
+            carry_channels: 16,
+            carry_skip_stride: 4,
+            carry_bidirectional: true,
+            carry_quantization: "fold".to_string(),
+            ..NcaConfig::default()
+        };
+        assert!(cfg.carry_fold_mode());
+        assert!(cfg.carry_clamped_launch());
+        assert!(cfg.carry_uniform_stride());
+
+        // "fold" without a carry register is inert (default behavior unchanged).
+        let no_carry = NcaConfig {
+            carry_quantization: "fold".to_string(),
+            ..NcaConfig::default()
+        };
+        assert!(!no_carry.carry_fold_mode());
+        assert!(!no_carry.carry_clamped_launch());
+        assert!(!no_carry.carry_uniform_stride());
+
+        // The standalone clamp opt-in is independent of fold mode.
+        let clamp_only = NcaConfig {
+            carry_channels: 4,
+            carry_skip_stride: 2,
+            carry_launch_clamp: true,
+            ..NcaConfig::default()
+        };
+        assert!(!clamp_only.carry_fold_mode());
+        assert!(clamp_only.carry_clamped_launch());
+        assert!(!clamp_only.carry_uniform_stride());
     }
 }

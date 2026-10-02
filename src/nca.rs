@@ -9,6 +9,11 @@ pub struct NeuralCellularAutomaton {
     pub dense1: Linear,
     pub dense_delta: Linear,
     pub dense_gate: Linear,
+    /// Relay-Fold Transport projections (Some only when carry_quantization = "fold").
+    /// Gate: sigmoid map from [incoming_carry ; h1_act] to carry gates.
+    /// Candidate: tanh map from [incoming_carry ; h1_act] to the folded carry.
+    pub carry_fold_gate: Option<Linear>,
+    pub carry_fold_cand: Option<Linear>,
     pub macro_dense1: Option<Linear>,
     pub macro_dense_delta: Option<Linear>,
     pub macro_inject: Option<Linear>,
@@ -25,6 +30,8 @@ impl NeuralCellularAutomaton {
             dense1: self.dense1.clone(),
             dense_delta: self.dense_delta.clone(),
             dense_gate: self.dense_gate.clone(),
+            carry_fold_gate: self.carry_fold_gate.clone(),
+            carry_fold_cand: self.carry_fold_cand.clone(),
             macro_dense1: self.macro_dense1.clone(),
             macro_dense_delta: self.macro_dense_delta.clone(),
             macro_inject: self.macro_inject.clone(),
@@ -61,6 +68,19 @@ impl NeuralCellularAutomaton {
         let dense_delta = linear(nca_cfg.hidden_dim, field_cfg.channels, vb.pp("dense_delta"))?;
         let dense_gate = linear(nca_cfg.hidden_dim, field_cfg.channels, vb.pp("dense_gate"))?;
 
+        // Relay-Fold Transport (RFT) projections: only created for the "fold"
+        // carry mode so all other configurations keep their exact var sets.
+        let (carry_fold_gate, carry_fold_cand) = if nca_cfg.carry_fold_mode() {
+            let c_carry = nca_cfg.carry_channels.min(field_cfg.channels);
+            let fold_in = c_carry + nca_cfg.hidden_dim;
+            (
+                Some(linear(fold_in, c_carry, vb.pp("carry_fold_gate"))?),
+                Some(linear(fold_in, c_carry, vb.pp("carry_fold_cand"))?),
+            )
+        } else {
+            (None, None)
+        };
+
         let (macro_dense1, macro_dense_delta, macro_inject) = if is_hierarchy {
             let micro_pool_dim = if nca_cfg.macro_downsampler == "walsh" && nca_cfg.macro_stride == 2 {
                 field_cfg.channels * 2
@@ -85,6 +105,8 @@ impl NeuralCellularAutomaton {
             dense1,
             dense_delta,
             dense_gate,
+            carry_fold_gate,
+            carry_fold_cand,
             macro_dense1,
             macro_dense_delta,
             macro_inject,
@@ -131,6 +153,13 @@ impl NeuralCellularAutomaton {
         }
         if self.nca_cfg.carry_channels > 0 {
             breakdown.push(("explicit_carry_register".to_string(), 0));
+        }
+        if let (Some(gate_proj), Some(cand_proj)) = (&self.carry_fold_gate, &self.carry_fold_cand) {
+            let p = gate_proj.weight().elem_count()
+                + gate_proj.bias().map_or(0, |b| b.elem_count())
+                + cand_proj.weight().elem_count()
+                + cand_proj.bias().map_or(0, |b| b.elem_count());
+            breakdown.push(("carry_relay_fold_transport".to_string(), p));
         }
         breakdown
     }
@@ -390,11 +419,145 @@ impl NeuralCellularAutomaton {
         Ok(Tensor::cat(&[&x.narrow(1, k, l - k)?, &zero], 1)?)
     }
 
+    /// Multi-hop left skip neighbor with CLAMPED launch: x_{max(i-k, 0)}.
+    /// Cells 0..k-1 read the boundary cell x_0 instead of zero, so the first
+    /// cell can always launch and a value seeded at cell 0 reaches every cell q
+    /// in ceil(q/k) ticks (as opposed to the legacy zero-pad `k_left_neighbor`,
+    /// which reaches only q ≡ 0 (mod k) through the k-hop path). Opt-in via
+    /// `carry_launch_clamp`, always on for Relay-Fold Transport ("fold").
+    pub fn k_left_neighbor_clamped(&self, x: &Tensor, k: usize) -> Result<Tensor> {
+        let (_, l, _) = x.dims3()?;
+        let kk = k.min(l);
+        // out[0..kk] = x_0, out[kk..L] = x[0..L-kk]
+        let first = x.narrow(1, 0, 1)?.repeat((1, kk, 1))?;
+        if kk >= l {
+            return Ok(first);
+        }
+        let tail = x.narrow(1, 0, l - kk)?;
+        Ok(Tensor::cat(&[&first, &tail], 1)?)
+    }
+
+    /// Multi-hop right skip neighbor with CLAMPED launch: x_{min(i+k, L-1)}.
+    /// Symmetric to [`Self::k_left_neighbor_clamped`]: cells L-k..L-1 read the
+    /// boundary cell x_{L-1} instead of zero.
+    pub fn k_right_neighbor_clamped(&self, x: &Tensor, k: usize) -> Result<Tensor> {
+        let (_, l, _) = x.dims3()?;
+        let kk = k.min(l);
+        // out[0..L-kk] = x[kk..L], out[L-kk..L] = x_{L-1}
+        let last = x.narrow(1, l - 1, 1)?.repeat((1, kk, 1))?;
+        if kk >= l {
+            return Ok(last);
+        }
+        let head = x.narrow(1, kk, l - kk)?;
+        Ok(Tensor::cat(&[&head, &last], 1)?)
+    }
+
+    /// Explicit Carry Register transport: hyperbolic upwind advection of the
+    /// carry channels by up to k cells per tick.
+    ///
+    /// - Legacy modes (every carry_quantization value except "fold") keep the
+    ///   historical slow/fast half-channel split byte-identical: with k > 1,
+    ///   half the carry channels hop 1 cell/tick and half hop k cells/tick,
+    ///   zero-padded at the borders. `carry_launch_clamp` optionally switches
+    ///   the launch boundary from zero-pad to clamp (off by default).
+    /// - Relay-Fold Transport ("fold") applies k uniformly to ALL carry
+    ///   channels (a k sweep is a real speed knob) and clamps the launch so the
+    ///   first/last k cells can relay.
+    pub fn shift_carry(&self, c: &Tensor) -> Result<Tensor> {
+        let k = self.nca_cfg.carry_skip_stride.max(1);
+        let uniform = self.nca_cfg.carry_uniform_stride();
+        let clamp = self.nca_cfg.carry_clamped_launch();
+
+        let left1 = |t: &Tensor| -> Result<Tensor> {
+            if clamp { self.k_left_neighbor_clamped(t, 1) } else { self.left_neighbor(t) }
+        };
+        let leftk = |t: &Tensor| -> Result<Tensor> {
+            if clamp { self.k_left_neighbor_clamped(t, k) } else { self.k_left_neighbor(t, k) }
+        };
+        let right1 = |t: &Tensor| -> Result<Tensor> {
+            if clamp { self.k_right_neighbor_clamped(t, 1) } else { self.right_neighbor(t) }
+        };
+        let rightk = |t: &Tensor| -> Result<Tensor> {
+            if clamp { self.k_right_neighbor_clamped(t, k) } else { self.k_right_neighbor(t, k) }
+        };
+
+        let (_, _, cn) = c.dims3()?;
+        if uniform {
+            // RFT: speed k on every carry channel.
+            if self.nca_cfg.carry_bidirectional {
+                let half = cn / 2;
+                let c_fwd = c.narrow(2, 0, half)?;
+                let c_bwd = c.narrow(2, half, cn - half)?;
+                let fwd_shifted = leftk(&c_fwd)?;
+                let bwd_shifted = rightk(&c_bwd)?;
+                Ok(Tensor::cat(&[&fwd_shifted, &bwd_shifted], 2)?)
+            } else {
+                leftk(c)
+            }
+        } else if self.nca_cfg.carry_bidirectional {
+            // Legacy bidirectional slow/fast split.
+            let half = cn / 2;
+            let c_fwd = c.narrow(2, 0, half)?;
+            let c_bwd = c.narrow(2, half, cn - half)?;
+            let fwd_shifted = if k > 1 {
+                let half_fwd = half / 2;
+                if half_fwd > 0 {
+                    let c_fwd_slow = c_fwd.narrow(2, 0, half - half_fwd)?;
+                    let c_fwd_fast = c_fwd.narrow(2, half - half_fwd, half_fwd)?;
+                    let slow_shift = left1(&c_fwd_slow)?;
+                    let fast_shift = leftk(&c_fwd_fast)?;
+                    Tensor::cat(&[&slow_shift, &fast_shift], 2)?
+                } else {
+                    left1(&c_fwd)?
+                }
+            } else {
+                left1(&c_fwd)?
+            };
+            let bwd_shifted = if k > 1 {
+                let bwd_len = cn - half;
+                let half_bwd = bwd_len / 2;
+                if half_bwd > 0 {
+                    let c_bwd_slow = c_bwd.narrow(2, 0, bwd_len - half_bwd)?;
+                    let c_bwd_fast = c_bwd.narrow(2, bwd_len - half_bwd, half_bwd)?;
+                    let slow_shift = right1(&c_bwd_slow)?;
+                    let fast_shift = rightk(&c_bwd_fast)?;
+                    Tensor::cat(&[&slow_shift, &fast_shift], 2)?
+                } else {
+                    right1(&c_bwd)?
+                }
+            } else {
+                right1(&c_bwd)?
+            };
+            Ok(Tensor::cat(&[&fwd_shifted, &bwd_shifted], 2)?)
+        } else if k > 1 {
+            // Legacy unidirectional slow/fast split.
+            let half = cn / 2;
+            if half > 0 {
+                let c_slow = c.narrow(2, 0, cn - half)?;
+                let c_fast = c.narrow(2, cn - half, half)?;
+                let slow_shift = left1(&c_slow)?;
+                let fast_shift = leftk(&c_fast)?;
+                Ok(Tensor::cat(&[&slow_shift, &fast_shift], 2)?)
+            } else {
+                left1(c)
+            }
+        } else {
+            left1(c)
+        }
+    }
+
     /// Discrete carry projection / drift mitigation to preserve clean discrete signals over deep horizons (L >= 64).
     /// - "none": standard continuous floating-point propagation.
-    /// - "ste_round": straight-through estimator integer rounding: c + (round(c) - c).detach().
-    /// - "ste_sign": straight-through estimator discrete sign {-1, 0, 1}: c + (sign(c) - c).detach().
+    /// - "ste_round": HISTORICAL zero-gradient STE: `carry + (round(carry).detach() - carry)`.
+    ///   Forward = integer rounding, but dy/dcarry == 0, so carry channels receive
+    ///   NO gradient. Kept byte-identical for old checkpoints; not usable for learning.
+    /// - "ste_sign": HISTORICAL zero-gradient STE for sign {-1, 0, 1}; same caveat.
+    /// - "ste_round_ide": identity-gradient STE: `carry + (round(carry) - carry).detach()`.
+    ///   Forward = integer rounding, dy/dcarry == 1 (trainable).
+    /// - "ste_sign_ide": identity-gradient STE for sign {-1, 0, 1}, dy/dcarry == 1.
     /// - "bistable": continuous cubic Ginzburg-Landau restoring potential: c + 0.1 * c * (1 - c^2).
+    /// - "fold": NOT a post-hoc projection: Relay-Fold Transport is a carry WRITE
+    ///   mode applied inside `step_with_forcing`; calling this directly is an error.
     pub fn quantize_carry(carry: &Tensor, mode: &str) -> Result<Tensor> {
         match mode {
             "none" => Ok(carry.clone()),
@@ -410,13 +573,62 @@ impl NeuralCellularAutomaton {
                 let diff = (sign.detach() - carry)?;
                 Ok((carry + diff)?)
             }
+            "ste_round_ide" => {
+                let rounded = carry.round()?;
+                let diff = (rounded - carry)?.detach();
+                Ok((carry + diff)?)
+            }
+            "ste_sign_ide" => {
+                let pos = carry.gt(0.0)?.to_dtype(carry.dtype())?;
+                let neg = carry.lt(0.0)?.to_dtype(carry.dtype())?;
+                let sign = (&pos - &neg)?;
+                let diff = (sign - carry)?.detach();
+                Ok((carry + diff)?)
+            }
             "bistable" => {
                 let one = Tensor::ones_like(carry)?;
                 let one_minus_c2 = (one - carry.sqr()?)?;
                 let restoring = carry.mul(&one_minus_c2)?;
                 Ok((carry + (restoring * 0.1)?)?)
             }
+            "fold" => anyhow::bail!(
+                "'fold' is a Relay-Fold Transport write mode applied inside step_with_forcing, not a post-hoc carry projection"
+            ),
             other => anyhow::bail!("unknown carry_quantization mode '{}'", other),
+        }
+    }
+
+    /// Relay-Fold Transport write for the Explicit Carry Register.
+    ///
+    /// At every relay cell the carry channel is re-written from the incoming
+    /// transported carry c_{i-k} and the cell's own perception-derived hidden
+    /// feature h_i (which itself reads the left neighbor, i.e. the incoming
+    /// carry, through the causal stencil):
+    ///
+    ///   g   = sigmoid(W_g . [c_{i-k} ; h_i] + b_g)
+    ///   z   = tanh(W_c . [c_{i-k} ; h_i] + b_c)
+    ///   c_i = g (*) c_{i-k} + (1 - g) (*) z
+    ///
+    /// The candidate z is a NONLINEAR function of the incoming carry AND the
+    /// local content jointly, so the accumulated value is re-folded at each hop
+    /// (accumulator semantics: prefix combine at every relay), instead of being
+    /// copied and additively perturbed. Local + translation-equivariant
+    /// (shared projections, elementwise gating).
+    pub fn carry_fold_write(&self, incoming: &Tensor, h_act: &Tensor) -> Result<Tensor> {
+        match (&self.carry_fold_gate, &self.carry_fold_cand) {
+            (Some(gate_proj), Some(cand_proj)) => {
+                let feats = Tensor::cat(&[incoming, h_act], 2)?;
+                let gate = candle_nn::ops::sigmoid(&gate_proj.forward(&feats)?)?;
+                let cand = cand_proj.forward(&feats)?.tanh()?;
+                let keep = gate.mul(incoming)?;
+                let one = Tensor::ones_like(&gate)?;
+                let refresh = (one - &gate)?.mul(&cand)?;
+                Ok((keep + refresh)?)
+            }
+            _ => anyhow::bail!(
+                "relay fold write requested but fold projections are not initialized \
+                 (carry_quantization='fold' requires carry_channels > 0 at model construction)"
+            ),
         }
     }
 
@@ -553,7 +765,8 @@ impl NeuralCellularAutomaton {
 
         // 5. Residual active drift integration with optional damping, leaky contraction, and Explicit Carry Register (ECR):
         // For stationary channels: base_h = (1 - lambda) * h_i^t
-        // For carry channels: base_c = c_{i-1}^t (hyperbolic upwind advection shift)
+        // For carry channels: base_c = transport(c)_i (hyperbolic upwind advection shift;
+        // see shift_carry for legacy slow/fast split vs Relay-Fold Transport semantics)
         let alpha = (self.nca_cfg.step_size * self.nca_cfg.damping_alpha) as f64;
         let scaled_delta = (effective_delta * alpha)?;
         let base_x = if self.nca_cfg.carry_channels > 0 {
@@ -562,54 +775,7 @@ impl NeuralCellularAutomaton {
             let c_hidden = c_total - c_carry;
             let h = x.narrow(2, 0, c_hidden)?;
             let c = x.narrow(2, c_hidden, c_carry)?;
-            let shifted_c = if self.nca_cfg.carry_bidirectional {
-                let half = c_carry / 2;
-                let c_fwd = c.narrow(2, 0, half)?;
-                let c_bwd = c.narrow(2, half, c_carry - half)?;
-                let fwd_shifted = if self.nca_cfg.carry_skip_stride > 1 {
-                    let half_fwd = half / 2;
-                    if half_fwd > 0 {
-                        let c_fwd_slow = c_fwd.narrow(2, 0, half - half_fwd)?;
-                        let c_fwd_fast = c_fwd.narrow(2, half - half_fwd, half_fwd)?;
-                        let slow_shift = self.left_neighbor(&c_fwd_slow)?;
-                        let fast_shift = self.k_left_neighbor(&c_fwd_fast, self.nca_cfg.carry_skip_stride)?;
-                        Tensor::cat(&[&slow_shift, &fast_shift], 2)?
-                    } else {
-                        self.left_neighbor(&c_fwd)?
-                    }
-                } else {
-                    self.left_neighbor(&c_fwd)?
-                };
-                let bwd_shifted = if self.nca_cfg.carry_skip_stride > 1 {
-                    let bwd_len = c_carry - half;
-                    let half_bwd = bwd_len / 2;
-                    if half_bwd > 0 {
-                        let c_bwd_slow = c_bwd.narrow(2, 0, bwd_len - half_bwd)?;
-                        let c_bwd_fast = c_bwd.narrow(2, bwd_len - half_bwd, half_bwd)?;
-                        let slow_shift = self.right_neighbor(&c_bwd_slow)?;
-                        let fast_shift = self.k_right_neighbor(&c_bwd_fast, self.nca_cfg.carry_skip_stride)?;
-                        Tensor::cat(&[&slow_shift, &fast_shift], 2)?
-                    } else {
-                        self.right_neighbor(&c_bwd)?
-                    }
-                } else {
-                    self.right_neighbor(&c_bwd)?
-                };
-                Tensor::cat(&[&fwd_shifted, &bwd_shifted], 2)?
-            } else if self.nca_cfg.carry_skip_stride > 1 {
-                let half = c_carry / 2;
-                if half > 0 {
-                    let c_slow = c.narrow(2, 0, c_carry - half)?;
-                    let c_fast = c.narrow(2, c_carry - half, half)?;
-                    let slow_shift = self.left_neighbor(&c_slow)?;
-                    let fast_shift = self.k_left_neighbor(&c_fast, self.nca_cfg.carry_skip_stride)?;
-                    Tensor::cat(&[&slow_shift, &fast_shift], 2)?
-                } else {
-                    self.left_neighbor(&c)?
-                }
-            } else {
-                self.left_neighbor(&c)?
-            };
+            let shifted_c = self.shift_carry(&c)?;
 
             let base_h = if self.nca_cfg.leaky_lambda > 0.0 {
                 (h * (1.0 - self.nca_cfg.leaky_lambda.clamp(0.0, 0.99) as f64))?
@@ -623,6 +789,22 @@ impl NeuralCellularAutomaton {
             x.clone()
         };
         let mut interim_x = (&base_x + &scaled_delta)?;
+
+        // 5b. Relay-Fold Transport write (carry_quantization = "fold"):
+        // The carry channels are NOT advected + additively perturbed; they are
+        // re-written at every cell as a gated fold of the incoming transported
+        // carry and the local perception-derived feature h1_act (see
+        // carry_fold_write). The additive delta path is hidden-only under RFT.
+        if self.nca_cfg.carry_fold_mode() {
+            let (_, _, c_total) = interim_x.dims3()?;
+            let c_carry = self.nca_cfg.carry_channels.min(c_total);
+            let c_hidden = c_total - c_carry;
+            let h_new = interim_x.narrow(2, 0, c_hidden)?;
+            let c_in = x.narrow(2, c_hidden, c_carry)?;
+            let incoming = self.shift_carry(&c_in)?;
+            let folded = self.carry_fold_write(&incoming, &h1_act)?;
+            interim_x = Tensor::cat(&[&h_new, &folded], 2)?;
+        }
 
         // State-derivative macro injection (Track 1 / Path A):
         if self.nca_cfg.is_hierarchy() && self.nca_cfg.macro_coupling == "state_derivative" {
@@ -700,7 +882,12 @@ impl NeuralCellularAutomaton {
         };
 
         // 7b. Carry register quantization / drift mitigation
-        if self.nca_cfg.carry_channels > 0 && self.nca_cfg.carry_quantization != "none" {
+        // (skipped under Relay-Fold Transport: the fold write is already a
+        // bounded tanh re-encoding, not an advective copy to project)
+        if self.nca_cfg.carry_channels > 0
+            && self.nca_cfg.carry_quantization != "none"
+            && !self.nca_cfg.carry_fold_mode()
+        {
             let (_, _, c_total) = new_x.dims3()?;
             let c_carry = self.nca_cfg.carry_channels.min(c_total);
             let c_hidden = c_total - c_carry;
@@ -864,6 +1051,8 @@ impl NeuralCellularAutomaton {
         anyhow::ensure!(c == self.field_cfg.channels, "ping-pong channels mismatch");
 
         // Fast path for standard causal stencil without macro hierarchy / feedback / viscosity / spatial norm
+        // Relay-Fold Transport, uniform stride, and clamped launch are not
+        // modeled by the fused row-walk; they fall back to step_field.
         let can_use_fast_fused = self.nca_cfg.causal_stencil
             && !self.nca_cfg.is_hierarchy()
             && !self.nca_cfg.has_feedback()
@@ -871,7 +1060,9 @@ impl NeuralCellularAutomaton {
             && !self.nca_cfg.persistent_input
             && self.nca_cfg.state_norm == "none"
             && self.nca_cfg.viscosity <= 0.0
-            && self.nca_cfg.update_rate >= 0.999;
+            && self.nca_cfg.update_rate >= 0.999
+            && !self.nca_cfg.carry_fold_mode()
+            && !self.nca_cfg.carry_launch_clamp;
 
         if can_use_fast_fused {
             let alpha = (self.nca_cfg.step_size * self.nca_cfg.damping_alpha) as f32;
@@ -994,10 +1185,10 @@ impl NeuralCellularAutomaton {
 
                                 let mut updated = base_val + alpha * delta_vec[idx];
                                 match self.nca_cfg.carry_quantization.as_str() {
-                                    "ste_sign" | "sign" => {
+                                    "ste_sign" | "sign" | "ste_sign_ide" => {
                                         updated = if updated > 0.0 { 1.0 } else if updated < 0.0 { -1.0 } else { 0.0 };
                                     }
-                                    "ste_round" | "round" => {
+                                    "ste_round" | "round" | "ste_round_ide" => {
                                         updated = updated.round();
                                     }
                                     "bistable" => {
@@ -1837,6 +2028,589 @@ mod tests {
             max_diff < 1e-5,
             "PingPongField developed output diverged from naive develop: max_diff = {}",
             max_diff
+        );
+
+        Ok(())
+    }
+
+    // ==================================================================
+    // Relay-Fold Transport (RFT) battery
+    // ==================================================================
+
+    fn zero_all_vars(varmap: &VarMap) -> Result<()> {
+        for var in varmap.all_vars() {
+            let zeros = Tensor::zeros(var.dims().to_vec(), var.dtype(), var.device())?;
+            var.set(&zeros)?;
+        }
+        Ok(())
+    }
+
+    fn set_var(varmap: &VarMap, name: &str, value: &Tensor) -> Result<()> {
+        let data = varmap.data().lock().unwrap();
+        let var = data
+            .get(name)
+            .ok_or_else(|| anyhow::anyhow!("variable '{name}' not found in VarMap"))?;
+        var.set(value)?;
+        Ok(())
+    }
+
+    /// Identity-gradient STE modes must match the legacy forward projection but
+    /// propagate dy/dcarry == 1 (the legacy modes keep dy/dcarry == 0).
+    #[test]
+    fn test_identity_ste_modes_have_unit_gradient() -> Result<()> {
+        let dev = Device::Cpu;
+        for (mode, legacy) in [("ste_round_ide", "ste_round"), ("ste_sign_ide", "ste_sign")] {
+            let x = candle_core::Var::from_slice(&[-0.7f32, 0.3, 1.2], 3, &dev)?;
+            let q = NeuralCellularAutomaton::quantize_carry(&x, mode)?;
+            let q_vals = q.to_vec1::<f32>()?;
+            let legacy_vals =
+                NeuralCellularAutomaton::quantize_carry(&x, legacy)?.to_vec1::<f32>()?;
+            assert_eq!(q_vals, legacy_vals, "{mode} forward must match {legacy}");
+            let loss = q.sum_all()?;
+            let grads = loss.backward()?;
+            let g = grads.get(&x).expect("gradient path").to_vec1::<f32>()?;
+            assert_eq!(
+                g,
+                vec![1.0f32; 3],
+                "{mode} must have identity STE gradient (dy/dcarry == 1)"
+            );
+        }
+        Ok(())
+    }
+
+    /// `carry_quantization = "fold"` (RFT) applies speed k UNIFORMLY to every
+    /// carry channel (front advances exactly k cells/tick); legacy k>1 modes
+    /// keep the mixed slow/fast half-split so k is not a uniform speed there.
+    #[test]
+    fn test_uniform_carry_stride_speed_knob() -> Result<()> {
+        let dev = Device::Cpu;
+        let l = 16usize;
+        let channels = 24usize; // 8 hidden + 16 carry
+        let hidden = 8usize;
+        let cc = 16usize;
+        let field_cfg = FieldConfig {
+            seq_len: l,
+            channels,
+            periodic_boundary: false,
+        };
+
+        // (a) unidirectional RFT: every carry channel's transported front
+        //     advances exactly k cells per tick.
+        for k in [1usize, 2, 4] {
+            let cfg = NcaConfig {
+                hidden_dim: 8,
+                causal_stencil: true,
+                carry_channels: cc,
+                carry_skip_stride: k,
+                carry_quantization: "fold".to_string(),
+                ..NcaConfig::default()
+            };
+            let varmap = VarMap::new();
+            let vb = VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+            let nca = NeuralCellularAutomaton::new(vb, &cfg, &field_cfg)?;
+            zero_all_vars(&varmap)?;
+
+            let mut data = vec![0f32; l * channels];
+            for ch in hidden..channels {
+                data[ch] = 1.0; // single-hot seed, cell 0 only
+            }
+            let initial = MorphogenicField::from_tensor(
+                Tensor::from_vec(data, (1, l, channels), &dev)?,
+                &field_cfg,
+            );
+
+            for t in 1..=3usize {
+                let rolled = nca.develop(&initial, t, &dev)?;
+                let vals = rolled.x.to_vec3::<f32>()?;
+                let front = t * k;
+                for ch in hidden..channels {
+                    let mut farthest = None;
+                    for i in 0..l {
+                        if vals[0][i][ch].abs() > 1e-6 {
+                            farthest = Some(i);
+                        }
+                    }
+                    assert_eq!(
+                        farthest,
+                        Some(front),
+                        "uniform k={k}, tick {t}: carry channel {ch} must reach exactly cell {front}"
+                    );
+                }
+            }
+
+            // Acceptance readback: after 1 tick the seed value is AT cell k
+            // (transported, gate=1/2 fixed by the zeroed fold gate) and has not
+            // passed beyond it.
+            let rolled1 = nca.develop(&initial, 1, &dev)?;
+            let v1 = rolled1.x.to_vec3::<f32>()?;
+            for ch in hidden..channels {
+                assert!(
+                    (v1[0][k][ch] - 0.5).abs() < 1e-6,
+                    "k={k}: transported value must sit on cell {k} after 1 tick"
+                );
+                if k + 1 < l {
+                    assert_eq!(v1[0][k + 1][ch], 0.0, "k={k}: nothing beyond cell {k} after 1 tick");
+                }
+            }
+        }
+
+        // (b) bidirectional RFT: both directions advance at the same speed k.
+        {
+            let k = 2usize;
+            let cfg = NcaConfig {
+                hidden_dim: 8,
+                causal_stencil: true,
+                carry_channels: cc,
+                carry_skip_stride: k,
+                carry_bidirectional: true,
+                carry_quantization: "fold".to_string(),
+                ..NcaConfig::default()
+            };
+            let varmap = VarMap::new();
+            let vb = VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+            let nca = NeuralCellularAutomaton::new(vb, &cfg, &field_cfg)?;
+            zero_all_vars(&varmap)?;
+
+            let mut data = vec![0f32; l * channels];
+            for ch in hidden..channels {
+                data[ch] = 1.0; // cell 0 seed
+                data[(l - 1) * channels + ch] = 1.0; // cell 15 seed
+            }
+            let initial = MorphogenicField::from_tensor(
+                Tensor::from_vec(data, (1, l, channels), &dev)?,
+                &field_cfg,
+            );
+
+            for t in 1..=2usize {
+                let rolled = nca.develop(&initial, t, &dev)?;
+                let vals = rolled.x.to_vec3::<f32>()?;
+                for ch in hidden..hidden + cc / 2 {
+                    let mut farthest = 0usize;
+                    for i in 0..l {
+                        if vals[0][i][ch].abs() > 1e-6 {
+                            farthest = i;
+                        }
+                    }
+                    assert_eq!(farthest, t * k, "fwd channel {ch} front at tick {t}");
+                }
+                for ch in hidden + cc / 2..channels {
+                    let mut nearest = l - 1;
+                    for i in 0..l {
+                        if vals[0][i][ch].abs() > 1e-6 {
+                            nearest = i;
+                            break;
+                        }
+                    }
+                    assert_eq!(nearest, l - 1 - t * k, "bwd channel {ch} front at tick {t}");
+                }
+            }
+        }
+
+        // (c) Contrast: legacy (non-fold) k>1 keeps the historical slow/fast
+        //     half-channel split — k is a MIXTURE, not a uniform speed knob.
+        {
+            let cfg = NcaConfig {
+                hidden_dim: 8,
+                causal_stencil: true,
+                carry_channels: cc,
+                carry_skip_stride: 2,
+                carry_quantization: "none".to_string(),
+                ..NcaConfig::default()
+            };
+            let varmap = VarMap::new();
+            let vb = VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+            let nca = NeuralCellularAutomaton::new(vb, &cfg, &field_cfg)?;
+            zero_all_vars(&varmap)?;
+            let mut data = vec![0f32; l * channels];
+            for ch in hidden..channels {
+                data[ch] = 1.0;
+            }
+            let initial = MorphogenicField::from_tensor(
+                Tensor::from_vec(data, (1, l, channels), &dev)?,
+                &field_cfg,
+            );
+            let rolled = nca.develop(&initial, 1, &dev)?;
+            let vals = rolled.x.to_vec3::<f32>()?;
+            let farthest = |ch: usize| -> usize {
+                let mut f = 0usize;
+                for i in 0..l {
+                    if vals[0][i][ch].abs() > 1e-6 {
+                        f = i;
+                    }
+                }
+                f
+            };
+            assert_eq!(farthest(hidden), 1, "legacy slow half hops 1 cell/tick");
+            assert_eq!(farthest(hidden + cc - 1), 2, "legacy fast half hops k cells/tick");
+            assert_ne!(
+                farthest(hidden),
+                farthest(hidden + cc - 1),
+                "legacy k>1 is a mixed slow/fast speed, not a uniform knob"
+            );
+        }
+
+        Ok(())
+    }
+
+    /// Relay-Fold Transport accumulates: every relay cell folds its own known
+    /// bit into the incoming carry. Engineered readout makes the far-cell value
+    /// a closed-form weighted fold of ALL bits on the path, while pure additive
+    /// (advective) transport copies the seed and leaves interior bits invisible.
+    #[test]
+    fn test_relay_fold_accumulates_known_bits_exactly() -> Result<()> {
+        let dev = Device::Cpu;
+        let l = 16usize;
+        let channels = 8usize; // 7 hidden + 1 carry
+        let hidden = 8usize; // hidden_dim
+        let t_max = 8usize;
+        let field_cfg = FieldConfig {
+            seq_len: l,
+            channels,
+            periodic_boundary: false,
+        };
+
+        // Engineering: dense1 row 0 computes pre = 2*bit - 1 from the identity
+        // read of state channel 0 (activation = tanh => h1_act[0] = s*tanh(1),
+        // s = sign of the bit); the fold candidate reads h1_act[0] with unit
+        // weight; the fold gate stays all-zero => g = sigmoid(0) = 1/2 exactly.
+        // The relay rule therefore is exactly c_i = 1/2 c_{i-1} + 1/2 tanh(tanh(s_i)).
+        let fold_cfg = NcaConfig {
+            hidden_dim: hidden,
+            activation: "tanh".to_string(),
+            causal_stencil: true,
+            carry_channels: 1,
+            carry_quantization: "fold".to_string(),
+            ..NcaConfig::default()
+        };
+        let varmap = VarMap::new();
+        let vb = VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+        let nca = NeuralCellularAutomaton::new(vb, &fold_cfg, &field_cfg)?;
+        zero_all_vars(&varmap)?;
+
+        let mut w1 = vec![0f32; hidden * 3 * channels];
+        w1[0] = 2.0; // row 0, col 0 = identity channel of bit channel
+        set_var(
+            &varmap,
+            "dense1.weight",
+            &Tensor::from_vec(w1, (hidden, 3 * channels), &dev)?,
+        )?;
+        let mut b1 = vec![0f32; hidden];
+        b1[0] = -1.0;
+        set_var(&varmap, "dense1.bias", &Tensor::from_vec(b1, hidden, &dev)?)?;
+        let fold_in = 1 + hidden;
+        let mut wc = vec![0f32; fold_in];
+        wc[1] = 1.0; // [incoming(1) ; h1_act(hidden)] -> h1_act[0]
+        set_var(
+            &varmap,
+            "carry_fold_cand.weight",
+            &Tensor::from_vec(wc, (1, fold_in), &dev)?,
+        )?;
+
+        let make_initial = |bits: &[f32]| -> Result<MorphogenicField> {
+            let mut data = vec![0f32; l * channels];
+            for (idx, &bit) in bits.iter().enumerate() {
+                data[(idx + 1) * channels] = bit; // bits live at cells 1..=len
+            }
+            data[channels - 1] = 0.5; // cell 0, carry channel: c0 = 1/2
+            Ok(MorphogenicField::from_tensor(
+                Tensor::from_vec(data, (1, l, channels), &dev)?,
+                &field_cfg,
+            ))
+        };
+        let read_carry = |f: &MorphogenicField, cell: usize| -> Result<f32> {
+            Ok(f.x
+                .narrow(1, cell, 1)?
+                .narrow(2, channels - 1, 1)?
+                .flatten_all()?
+                .to_vec1::<f32>()?[0])
+        };
+
+        let all_ones = vec![1.0f32; t_max];
+        let kappa = (1.0f64.tanh()).tanh(); // |tanh(tanh(s))| for s in {-1, +1}
+        let expected = |t: usize, bits: &[f32]| -> f64 {
+            let mut v = 0.5f64.powi(t as i32) * 0.5; // 0.5^t * c0
+            for m in 1..=t {
+                let s = if bits[m - 1] > 0.5 { 1.0 } else { -1.0 };
+                v += 0.5f64.powi((t - m + 1) as i32) * kappa * s;
+            }
+            v
+        };
+
+        // (a) Diagonal: after t ticks the t-th cell holds the folded prefix.
+        for t in 1..=t_max {
+            let rolled = nca.develop(&make_initial(&all_ones)?, t, &dev)?;
+            let got = read_carry(&rolled, t)? as f64;
+            let want = expected(t, &all_ones);
+            assert!(
+                (got - want).abs() < 1e-4,
+                "fold prefix at tick {t}: got {got}, expected {want}"
+            );
+        }
+
+        // (b) Flipping ONE interior bit changes the far cell by the exact
+        //     predicted coefficient 2*kappa*0.5^(T-j+1) — the far cell reflects
+        //     the folded sum of every known bit on the path.
+        let rolled_ones = nca.develop(&make_initial(&all_ones)?, t_max, &dev)?;
+        let got_ones = read_carry(&rolled_ones, t_max)? as f64;
+        let mut flipped = all_ones.clone();
+        flipped[3] = 0.0; // cell 4 bit flips (s_4: +1 -> -1)
+        let rolled_flip = nca.develop(&make_initial(&flipped)?, t_max, &dev)?;
+        let got_flip = read_carry(&rolled_flip, t_max)? as f64;
+        assert!(
+            (got_flip - expected(t_max, &flipped)).abs() < 1e-4,
+            "flipped-bit fold: got {got_flip}, expected {}",
+            expected(t_max, &flipped)
+        );
+        let predicted_delta = -2.0 * kappa * 0.5f64.powi(5); // 0.5^(8-4+1)
+        assert!(
+            ((got_flip - got_ones) - predicted_delta).abs() < 1e-4,
+            "flip at cell 4 must shift the far carry by {predicted_delta}, got {}",
+            got_flip - got_ones
+        );
+
+        // (c) Pure additive (advective) transport with the same engineered
+        //     readout does NOT absorb interior bits: the far cell is a copy of
+        //     the seed and the flip leaves NO trace.
+        let add_cfg = NcaConfig {
+            hidden_dim: hidden,
+            activation: "tanh".to_string(),
+            causal_stencil: true,
+            carry_channels: 1,
+            carry_quantization: "none".to_string(),
+            ..NcaConfig::default()
+        };
+        let varmap2 = VarMap::new();
+        let vb2 = VarBuilder::from_varmap(&varmap2, candle_core::DType::F32, &dev);
+        let nca_add = NeuralCellularAutomaton::new(vb2, &add_cfg, &field_cfg)?;
+        zero_all_vars(&varmap2)?;
+        let mut w1b = vec![0f32; hidden * 3 * channels];
+        w1b[0] = 2.0;
+        set_var(
+            &varmap2,
+            "dense1.weight",
+            &Tensor::from_vec(w1b, (hidden, 3 * channels), &dev)?,
+        )?;
+        let mut b1b = vec![0f32; hidden];
+        b1b[0] = -1.0;
+        set_var(&varmap2, "dense1.bias", &Tensor::from_vec(b1b, hidden, &dev)?)?;
+
+        let rolled_add = nca_add.develop(&make_initial(&all_ones)?, t_max, &dev)?;
+        let got_add = read_carry(&rolled_add, t_max)?;
+        assert!(
+            (got_add - 0.5).abs() < 1e-6,
+            "pure advection only copies the seed, got {got_add}"
+        );
+        let rolled_add_flip = nca_add.develop(&make_initial(&flipped)?, t_max, &dev)?;
+        let got_add_flip = read_carry(&rolled_add_flip, t_max)?;
+        assert!(
+            (got_add_flip - got_add).abs() < 1e-6,
+            "pure advection leaves interior bits invisible (delta {})",
+            got_add_flip - got_add
+        );
+
+        Ok(())
+    }
+
+    /// RFT fold projections must be trainable: gradients flow back through the
+    /// relay write (unlike the historical zero-gradient STE carry path).
+    #[test]
+    fn test_relay_fold_backward_gradients_flow() -> Result<()> {
+        let dev = Device::Cpu;
+        let channels = 24usize;
+        let cc = 16usize;
+        let field_cfg = FieldConfig {
+            seq_len: 16,
+            channels,
+            periodic_boundary: false,
+        };
+        let cfg = NcaConfig {
+            hidden_dim: 16,
+            causal_stencil: true,
+            carry_channels: cc,
+            carry_skip_stride: 2,
+            carry_bidirectional: true,
+            carry_quantization: "fold".to_string(),
+            ..NcaConfig::default()
+        };
+        let varmap = VarMap::new();
+        let vb = VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+        let nca = NeuralCellularAutomaton::new(vb, &cfg, &field_cfg)?;
+        let initial = MorphogenicField::from_tensor(
+            Tensor::randn(0.0f32, 1.0f32, (1, 16, channels), &dev)?,
+            &field_cfg,
+        );
+        let out = nca.develop(&initial, 4, &dev)?;
+        let loss = out.x.narrow(2, channels - cc, cc)?.sum_all()?;
+        let grads = loss.backward()?;
+        let data = varmap.data().lock().unwrap();
+        for name in [
+            "carry_fold_gate.weight",
+            "carry_fold_gate.bias",
+            "carry_fold_cand.weight",
+            "carry_fold_cand.bias",
+        ] {
+            let var = data.get(name).expect("fold projection var exists");
+            let g = grads.get(var).expect("gradient path to fold projection");
+            let sum_abs = g.abs()?.sum_all()?.to_scalar::<f32>()?;
+            assert!(
+                sum_abs > 1e-8,
+                "RFT fold projection '{name}' must receive gradient, got sum|g| = {sum_abs}"
+            );
+        }
+        Ok(())
+    }
+
+    /// Launch dead-zone: legacy zero-pad only reaches q ≡ 0 (mod k); the
+    /// clamped launch (opt-in field, forced by RFT) reaches every q in
+    /// ceil(q/k) ticks.
+    #[test]
+    fn test_launch_dead_zone_and_clamped_launch() -> Result<()> {
+        let dev = Device::Cpu;
+
+        // (a) helper semantics on a small probe tensor.
+        let probe_cfg = NcaConfig::default();
+        let probe_field = FieldConfig {
+            seq_len: 6,
+            channels: 1,
+            periodic_boundary: false,
+        };
+        let varmap0 = VarMap::new();
+        let vb0 = VarBuilder::from_varmap(&varmap0, candle_core::DType::F32, &dev);
+        let nca0 = NeuralCellularAutomaton::new(vb0, &probe_cfg, &probe_field)?;
+        let x = Tensor::from_vec(vec![1f32, 2., 3., 4., 5., 6.], (1, 6, 1), &dev)?;
+        assert_eq!(
+            nca0.k_left_neighbor(&x, 2)?.flatten_all()?.to_vec1::<f32>()?,
+            vec![0., 0., 1., 2., 3., 4.]
+        );
+        assert_eq!(
+            nca0.k_left_neighbor_clamped(&x, 2)?.flatten_all()?.to_vec1::<f32>()?,
+            vec![1., 1., 1., 2., 3., 4.]
+        );
+        assert_eq!(
+            nca0.k_right_neighbor(&x, 2)?.flatten_all()?.to_vec1::<f32>()?,
+            vec![3., 4., 5., 6., 0., 0.]
+        );
+        assert_eq!(
+            nca0.k_right_neighbor_clamped(&x, 2)?.flatten_all()?.to_vec1::<f32>()?,
+            vec![3., 4., 5., 6., 6., 6.]
+        );
+
+        // (b) integration on the fast-half k=4 carry channels of the legacy
+        //     (non-fold) transport, contrasting zero-pad vs clamped launch.
+        let l = 16usize;
+        let channels = 12usize;
+        let hidden = 8usize;
+        let cc = 4usize;
+        let field_cfg = FieldConfig {
+            seq_len: l,
+            channels,
+            periodic_boundary: false,
+        };
+        for clamp in [false, true] {
+            let cfg = NcaConfig {
+                hidden_dim: 8,
+                causal_stencil: true,
+                carry_channels: cc,
+                carry_skip_stride: 4,
+                carry_launch_clamp: clamp,
+                ..NcaConfig::default()
+            };
+            let varmap = VarMap::new();
+            let vb = VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+            let nca = NeuralCellularAutomaton::new(vb, &cfg, &field_cfg)?;
+            zero_all_vars(&varmap)?;
+            let mut data = vec![0f32; l * channels];
+            for ch in hidden..channels {
+                data[ch] = 1.0; // seed cell 0 only
+            }
+            let initial = MorphogenicField::from_tensor(
+                Tensor::from_vec(data, (1, l, channels), &dev)?,
+                &field_cfg,
+            );
+
+            let fast = hidden + 2; // carry-local channels 2,3 hop k cells (fast half)
+            let t2 = nca.develop(&initial, 2, &dev)?;
+            let v2 = t2.x.to_vec3::<f32>()?;
+            if clamp {
+                // 7 = 3 + 4 is off-lattice (7 mod 4 != 0): reachable at ceil(7/4)=2
+                assert!(
+                    (v2[0][7][fast] - 1.0).abs() < 1e-6,
+                    "clamped launch must relay into cell 7 at tick 2"
+                );
+            } else {
+                // dead zone: cell 7's k-hop lineage roots at cell 3 < k, which reads zero
+                assert_eq!(
+                    v2[0][7][fast], 0.0,
+                    "legacy zero-pad cannot launch to off-lattice cell 7"
+                );
+                assert!(
+                    (v2[0][8][fast] - 1.0).abs() < 1e-6,
+                    "aligned cell 8 = 2k is still reached at tick 2"
+                );
+            }
+            let t4 = nca.develop(&initial, 4, &dev)?;
+            let v4 = t4.x.to_vec3::<f32>()?;
+            if clamp {
+                assert!(
+                    (v4[0][15][fast] - 1.0).abs() < 1e-6,
+                    "clamped launch reaches q=15 in ceil(15/4)=4 ticks"
+                );
+            } else {
+                assert_eq!(
+                    v4[0][15][fast], 0.0,
+                    "legacy zero-pad never reaches q=15 (15 mod 4 != 0)"
+                );
+            }
+        }
+
+        Ok(())
+    }
+
+    /// The fused ping-pong row-walk must stay numerically equivalent to the
+    /// general path for the new identity-gradient STE modes.
+    #[test]
+    fn test_ping_pong_equivalence_with_identity_ste() -> Result<()> {
+        let dev = Device::Cpu;
+        let varmap = VarMap::new();
+        let vs = candle_nn::VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &dev);
+
+        let nca_cfg = NcaConfig {
+            hidden_dim: 96,
+            step_size: 0.5,
+            update_rate: 1.0,
+            activation: "gelu".to_string(),
+            viscosity: 0.0,
+            leaky_lambda: 0.0,
+            causal_stencil: true,
+            carry_channels: 32,
+            carry_skip_stride: 4,
+            carry_bidirectional: true,
+            carry_quantization: "ste_sign_ide".to_string(),
+            ..NcaConfig::default()
+        };
+        let field_cfg = FieldConfig {
+            seq_len: 16,
+            channels: 64,
+            periodic_boundary: false,
+        };
+        let nca = NeuralCellularAutomaton::new(vs, &nca_cfg, &field_cfg)?;
+
+        let initial_data = Tensor::randn(0.0f32, 1.0f32, (1, 16, 64), &dev)?;
+        let initial_field = MorphogenicField::from_tensor(initial_data, &field_cfg);
+
+        let naive_out = nca.develop(&initial_field, 8, &dev)?;
+        let mut pp = PingPongField::from_morphogenic_field(&initial_field)?;
+        nca.develop_ping_pong(&mut pp, 8, &dev)?;
+        let pp_out = pp.to_morphogenic_field(&dev)?;
+
+        let max_diff = (&naive_out.x - &pp_out.x)?
+            .abs()?
+            .flatten_all()?
+            .max(0)?
+            .to_scalar::<f32>()?;
+        assert!(
+            max_diff < 1e-5,
+            "ste_sign_ide ping-pong must match develop: max_diff = {max_diff}"
         );
 
         Ok(())

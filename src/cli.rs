@@ -505,8 +505,11 @@ fn validate_value(name: &str, value: &str) -> Result<()> {
         }
         "--carry-quantization" => {
             ensure!(
-                matches!(value, "none" | "ste_round" | "ste_sign" | "bistable"),
-                "invalid --carry-quantization '{value}'; expected none, ste_round, ste_sign, or bistable"
+                matches!(
+                    value,
+                    "none" | "ste_round" | "ste_sign" | "bistable" | "ste_round_ide" | "ste_sign_ide" | "fold"
+                ),
+                "invalid --carry-quantization '{value}'; expected none, ste_round, ste_sign, bistable, ste_round_ide, ste_sign_ide, or fold"
             );
         }
         "--coord-mode" => {
@@ -704,7 +707,7 @@ pub fn print_help(command: Option<Command>) {
             "--aux-sham" => "<BOOL>      Sham aux control: constant targets through identical machinery",
             "--carry-skip-stride" => "<NUM>   Fast carry skip stride k (default: 1; if > 1, carry channels skip k cells per tick)",
             "--carry-bidirectional" => "       Split carry channels into forward (left-to-right) and backward (right-to-left)",
-            "--carry-quantization" => "<NAME>  Carry drift mitigation mode: none, ste_round, ste_sign, bistable (default: none)",
+            "--carry-quantization" => "<NAME>  Carry mode: none, ste_round, ste_sign, bistable, ste_round_ide, ste_sign_ide (identity-STE), fold (relay-fold) (default: none)",
             "--channels" => "<NUM>         Number of channels (or comma-separated list of channel indices)",
             "--dyck-depth" => "<NUM>       Maximum nesting depth for Dyck language evaluation",
             "--dyck-gap" => "<NUM>         Inter-bracket gap distance for Dyck evaluation",
