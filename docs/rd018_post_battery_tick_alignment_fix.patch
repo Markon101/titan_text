@@ -1,0 +1,22 @@
+diff --git a/src/train.rs b/src/train.rs
+index 66cbb8c..60eed2e 100644
+--- a/src/train.rs
++++ b/src/train.rs
+@@ -297,11 +297,14 @@ impl Trainer {
+                 total_update_mag += update_mag;
+                 steps_executed += 1;
+ 
+-                // Aux deep supervision at ~4 evenly spaced intermediate ticks
+-                if aux_weight > 0.0 {
++                // Aux deep supervision at ~4 evenly spaced intermediate ticks.
++                // Supervise the POST-update state (next_field) so step_idx k
++                // corresponds to tick k; skip the final step here since the
++                // terminal aux term below already covers the last state.
++                if aux_weight > 0.0 && step_idx < t_target {
+                     let aux_every = (t_target / 4).max(1);
+                     if step_idx % aux_every == 0 {
+-                        let logits_t = self.interface.logits(&field.x)?;
++                        let logits_t = self.interface.logits(&next_field.x)?;
+                         if let Some(ref am) = aux_mask {
+                             let al = self.aux_interior_loss(&logits_t, &targets, am)?;
+                             aux_acc = match aux_acc {

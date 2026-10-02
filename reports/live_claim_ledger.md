@@ -152,3 +152,18 @@ superiority is superseded by C-HALT-014. See
   implemented. n=3-5 per arm; tau=16 only.
 - **Supporting Artifacts**: [reports/rd018_battery_report.md](file:///data/data/com.termux/files/home/projects/titan_text/reports/rd018_battery_report.md), [reports/rd018_aux_supervision_protocol_draft.md](file:///data/data/com.termux/files/home/projects/titan_text/reports/rd018_aux_supervision_protocol_draft.md), `runs/rd018_aux_supervision/` (raw, gitignored)
 - **Commit**: (this commit)
+
+### RD-018 FORENSIC CORRECTION (2026-10-02) — supersedes the STATUS line above
+The "H_OPT NOT supported / H_ATTENUATION preliminary" ruling above is **SUSPENDED**,
+not established. Forensic audit ([rd018_forensic_addendum.md](rd018_forensic_addendum.md))
+showed the battery cannot discriminate the two hypotheses: training uses ONE fixed
+8-row batch every epoch (dataset stream seed hardcoded 0) with unseeded weight init,
+so train acc ~1.0 is memorization and heldout chance is predicted by BOTH H_OPT and
+H_ATTENUATION. Additional verified defects: aux shares the terminal projection (no
+dedicated aux head); some aux (tick,cell) targets are outside the causal light cone
+(unrecoverable); prereg control (b) is impossible (carry_channels=0); the sham target
+is `<bos>` (id 1) not digit '1'; the "identity-gradient STE" premise is factually
+wrong (gradient is exactly 0, test at src/nca.rs:1735). Exhaustive 789-row heldout
+confirms B-A ~ -0.8pp (null) but reveals C_sham interior = 44.04 BELOW chance — the
+sham is CONTAMINATED, so B-C is driven by sham damage, not aux benefit. The claimed
+4/5 paired-win gate is not computable (disjoint seed pools). DISC_2 remains DEFERRED.

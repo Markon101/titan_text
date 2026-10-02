@@ -1,0 +1,964 @@
+{
+ "artifact": "runs/rd018_aux_supervision",
+ "generated_by": "rd018_analysis.py",
+ "unit_of_analysis": "trained run",
+ "interior_slots": [
+  1,
+  2
+ ],
+ "runs": {
+  "A_baseline": {
+   "901": {
+    "arm": "A_baseline",
+    "seed": 901,
+    "manifest_sha": "8717f2882f2f",
+    "train_accuracy": 0.96875,
+    "train_loss": 0.04807225,
+    "grad_norm": 0.050717413,
+    "converged": true,
+    "manifest_seed_field": 901,
+    "intact_sha": "f365eeeeeccf",
+    "intact_ticks": 16,
+    "intact_full": 0.53125,
+    "intact_per_slot": [
+     0.71875,
+     0.3125,
+     0.53125,
+     0.5625
+    ],
+    "intact_interior": 0.421875,
+    "intact_ce": 3.1216369,
+    "intact_conf": 0.07498513,
+    "lesion_sha": "4d26c2fd9ec1",
+    "lesion_ticks": 16,
+    "lesion_full": 0.0,
+    "lesion_per_slot": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "lesion_interior": 0.0,
+    "lesion_ce": 4.141241,
+    "lesion_conf": 0.00042936334,
+    "train_log_sha": "6190d1366b7a",
+    "aux_series_n": 100,
+    "aux_first": 0.0,
+    "aux_last": 0.0,
+    "first_nan_log_row": null
+   },
+   "902": {
+    "arm": "A_baseline",
+    "seed": 902,
+    "manifest_sha": "a1813b27208f",
+    "train_accuracy": 0.0,
+    "train_loss": null,
+    "grad_norm": null,
+    "converged": false,
+    "manifest_seed_field": 902,
+    "intact_sha": "2f96c96d2a4f",
+    "intact_ticks": 16,
+    "intact_full": 0.0,
+    "intact_per_slot": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "intact_interior": 0.0,
+    "intact_ce": null,
+    "intact_conf": 0.0,
+    "lesion_sha": "2f96c96d2a4f",
+    "lesion_ticks": 16,
+    "lesion_full": 0.0,
+    "lesion_per_slot": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "lesion_interior": 0.0,
+    "lesion_ce": null,
+    "lesion_conf": 0.0,
+    "train_log_sha": "a239763a723d",
+    "aux_series_n": 100,
+    "aux_first": 0.0,
+    "aux_last": 0.0,
+    "first_nan_log_row": null
+   },
+   "903": {
+    "arm": "A_baseline",
+    "seed": 903,
+    "manifest_sha": "c92f809e33d1",
+    "train_accuracy": 0.9375,
+    "train_loss": 0.087889366,
+    "grad_norm": 0.4408192,
+    "converged": true,
+    "manifest_seed_field": 903,
+    "intact_sha": "cf48b31452ee",
+    "intact_ticks": 16,
+    "intact_full": 0.546875,
+    "intact_per_slot": [
+     0.8125,
+     0.40625,
+     0.40625,
+     0.5625
+    ],
+    "intact_interior": 0.40625,
+    "intact_ce": 4.1021605,
+    "intact_conf": 0.08152358,
+    "lesion_sha": "53cc207ec39e",
+    "lesion_ticks": 16,
+    "lesion_full": 0.0,
+    "lesion_per_slot": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "lesion_interior": 0.0,
+    "lesion_ce": 5.2767944,
+    "lesion_conf": 0.0002890045,
+    "train_log_sha": "5f4d56529a8d",
+    "aux_series_n": 100,
+    "aux_first": 0.0,
+    "aux_last": 0.0,
+    "first_nan_log_row": null
+   },
+   "904": {
+    "arm": "A_baseline",
+    "seed": 904,
+    "manifest_sha": "5898d55f0aad",
+    "train_accuracy": 0.96875,
+    "train_loss": 0.05562564,
+    "grad_norm": 1.9664599,
+    "converged": true,
+    "manifest_seed_field": 904,
+    "intact_sha": "7752bcba8e11",
+    "intact_ticks": 16,
+    "intact_full": 0.5625,
+    "intact_per_slot": [
+     0.75,
+     0.5,
+     0.5,
+     0.5
+    ],
+    "intact_interior": 0.5,
+    "intact_ce": 3.922905,
+    "intact_conf": 0.061725687,
+    "lesion_sha": "5dbc9c09327d",
+    "lesion_ticks": 16,
+    "lesion_full": 0.0,
+    "lesion_per_slot": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "lesion_interior": 0.0,
+    "lesion_ce": 6.026052,
+    "lesion_conf": 0.00046327442,
+    "train_log_sha": "9ae0c6fa1376",
+    "aux_series_n": 100,
+    "aux_first": 0.0,
+    "aux_last": 0.0,
+    "first_nan_log_row": null
+   },
+   "905": {
+    "arm": "A_baseline",
+    "seed": 905,
+    "manifest_sha": "ebf2369fcd01",
+    "train_accuracy": 0.0,
+    "train_loss": null,
+    "grad_norm": null,
+    "converged": false,
+    "manifest_seed_field": 905,
+    "intact_sha": "2f96c96d2a4f",
+    "intact_ticks": 16,
+    "intact_full": 0.0,
+    "intact_per_slot": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "intact_interior": 0.0,
+    "intact_ce": null,
+    "intact_conf": 0.0,
+    "lesion_sha": "2f96c96d2a4f",
+    "lesion_ticks": 16,
+    "lesion_full": 0.0,
+    "lesion_per_slot": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "lesion_interior": 0.0,
+    "lesion_ce": null,
+    "lesion_conf": 0.0,
+    "train_log_sha": "41ebbc4aaad7",
+    "aux_series_n": 100,
+    "aux_first": 0.0,
+    "aux_last": 0.0,
+    "first_nan_log_row": null
+   }
+  },
+  "B_aux": {
+   "906": {
+    "arm": "B_aux",
+    "seed": 906,
+    "manifest_sha": "ec9fcca1362c",
+    "train_accuracy": 1.0,
+    "train_loss": 0.074308336,
+    "grad_norm": 0.74043864,
+    "converged": true,
+    "manifest_seed_field": 906,
+    "intact_sha": "057520fb4c4c",
+    "intact_ticks": 16,
+    "intact_full": 0.5234375,
+    "intact_per_slot": [
+     0.78125,
+     0.3125,
+     0.53125,
+     0.46875
+    ],
+    "intact_interior": 0.421875,
+    "intact_ce": 5.1698623,
+    "intact_conf": 0.16199182,
+    "lesion_sha": "7f89ff932bde",
+    "lesion_ticks": 16,
+    "lesion_full": 0.46875,
+    "lesion_per_slot": [
+     0.4375,
+     0.53125,
+     0.40625,
+     0.5
+    ],
+    "lesion_interior": 0.46875,
+    "lesion_ce": 1.1520019,
+    "lesion_conf": 0.0002672722,
+    "train_log_sha": "ac8ac6e3d6ed",
+    "aux_series_n": 100,
+    "aux_first": 0.6934,
+    "aux_last": 0.1042,
+    "first_nan_log_row": null
+   },
+   "907": {
+    "arm": "B_aux",
+    "seed": 907,
+    "manifest_sha": "d2d04837bda1",
+    "train_accuracy": 0.0,
+    "train_loss": null,
+    "grad_norm": null,
+    "converged": false,
+    "manifest_seed_field": 907,
+    "intact_sha": "2f96c96d2a4f",
+    "intact_ticks": 16,
+    "intact_full": 0.0,
+    "intact_per_slot": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "intact_interior": 0.0,
+    "intact_ce": null,
+    "intact_conf": 0.0,
+    "lesion_sha": "2f96c96d2a4f",
+    "lesion_ticks": 16,
+    "lesion_full": 0.0,
+    "lesion_per_slot": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "lesion_interior": 0.0,
+    "lesion_ce": null,
+    "lesion_conf": 0.0,
+    "train_log_sha": "2636fc8f263a",
+    "aux_series_n": 100,
+    "aux_first": 0.7209,
+    "aux_last": 0.3206,
+    "first_nan_log_row": 65
+   },
+   "908": {
+    "arm": "B_aux",
+    "seed": 908,
+    "manifest_sha": "01f79fc4cdf3",
+    "train_accuracy": 0.90625,
+    "train_loss": 0.19537036,
+    "grad_norm": 0.7989557,
+    "converged": true,
+    "manifest_seed_field": 908,
+    "intact_sha": "eac9415456f6",
+    "intact_ticks": 16,
+    "intact_full": 0.53125,
+    "intact_per_slot": [
+     0.71875,
+     0.40625,
+     0.5,
+     0.5
+    ],
+    "intact_interior": 0.453125,
+    "intact_ce": 4.963312,
+    "intact_conf": 0.11600267,
+    "lesion_sha": "a3888e6d911e",
+    "lesion_ticks": 16,
+    "lesion_full": 0.53125,
+    "lesion_per_slot": [
+     0.5625,
+     0.46875,
+     0.59375,
+     0.5
+    ],
+    "lesion_interior": 0.53125,
+    "lesion_ce": 1.8833548,
+    "lesion_conf": 0.00041910322,
+    "train_log_sha": "8f0a9488eea1",
+    "aux_series_n": 100,
+    "aux_first": 1.2962,
+    "aux_last": 0.2139,
+    "first_nan_log_row": null
+   },
+   "909": {
+    "arm": "B_aux",
+    "seed": 909,
+    "manifest_sha": "0f0ec4a61003",
+    "train_accuracy": 0.9375,
+    "train_loss": 0.17232125,
+    "grad_norm": 0.1784983,
+    "converged": true,
+    "manifest_seed_field": 909,
+    "intact_sha": "b23cfdaae729",
+    "intact_ticks": 16,
+    "intact_full": 0.5234375,
+    "intact_per_slot": [
+     0.71875,
+     0.34375,
+     0.46875,
+     0.5625
+    ],
+    "intact_interior": 0.40625,
+    "intact_ce": 3.5809927,
+    "intact_conf": 0.17219666,
+    "lesion_sha": "b1c465ff4e5f",
+    "lesion_ticks": 16,
+    "lesion_full": 0.46875,
+    "lesion_per_slot": [
+     0.4375,
+     0.53125,
+     0.40625,
+     0.5
+    ],
+    "lesion_interior": 0.46875,
+    "lesion_ce": 1.1999836,
+    "lesion_conf": 0.00029081787,
+    "train_log_sha": "d8c56f34c54a",
+    "aux_series_n": 100,
+    "aux_first": 0.756,
+    "aux_last": 0.1972,
+    "first_nan_log_row": null
+   },
+   "910": {
+    "arm": "B_aux",
+    "seed": 910,
+    "manifest_sha": "63962585a8f9",
+    "train_accuracy": 0.9375,
+    "train_loss": 0.13510989,
+    "grad_norm": 0.022900896,
+    "converged": true,
+    "manifest_seed_field": 910,
+    "intact_sha": "4d6acceb1f70",
+    "intact_ticks": 16,
+    "intact_full": 0.5546875,
+    "intact_per_slot": [
+     0.6875,
+     0.4375,
+     0.53125,
+     0.5625
+    ],
+    "intact_interior": 0.484375,
+    "intact_ce": 4.9730597,
+    "intact_conf": 0.8149608,
+    "lesion_sha": "59523f7e5d8b",
+    "lesion_ticks": 16,
+    "lesion_full": 0.53125,
+    "lesion_per_slot": [
+     0.5625,
+     0.46875,
+     0.59375,
+     0.5
+    ],
+    "lesion_interior": 0.53125,
+    "lesion_ce": 0.91673326,
+    "lesion_conf": 0.00067294674,
+    "train_log_sha": "7945e5d6fcf0",
+    "aux_series_n": 100,
+    "aux_first": 0.8511,
+    "aux_last": 0.1594,
+    "first_nan_log_row": null
+   }
+  },
+  "C_sham": {
+   "911": {
+    "arm": "C_sham",
+    "seed": 911,
+    "manifest_sha": "9a01a71e50b0",
+    "train_accuracy": 0.9375,
+    "train_loss": 0.299519,
+    "grad_norm": 0.27903736,
+    "converged": true,
+    "manifest_seed_field": 911,
+    "intact_sha": "fce2bf716369",
+    "intact_ticks": 16,
+    "intact_full": 0.53125,
+    "intact_per_slot": [
+     0.75,
+     0.40625,
+     0.46875,
+     0.5
+    ],
+    "intact_interior": 0.4375,
+    "intact_ce": 3.4023561,
+    "intact_conf": 0.13149658,
+    "lesion_sha": "86b93858189d",
+    "lesion_ticks": 16,
+    "lesion_full": 0.0,
+    "lesion_per_slot": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "lesion_interior": 0.0,
+    "lesion_ce": 4.1672926,
+    "lesion_conf": 0.0007186349,
+    "train_log_sha": "ab7435240955",
+    "aux_series_n": 100,
+    "aux_first": 1.9394,
+    "aux_last": 0.4608,
+    "first_nan_log_row": null
+   },
+   "912": {
+    "arm": "C_sham",
+    "seed": 912,
+    "manifest_sha": "fdeccf9ffbe1",
+    "train_accuracy": 0.9375,
+    "train_loss": 0.35724708,
+    "grad_norm": 1.0487567,
+    "converged": true,
+    "manifest_seed_field": 912,
+    "intact_sha": "b8384243143b",
+    "intact_ticks": 16,
+    "intact_full": 0.453125,
+    "intact_per_slot": [
+     0.65625,
+     0.28125,
+     0.375,
+     0.5
+    ],
+    "intact_interior": 0.328125,
+    "intact_ce": 2.835538,
+    "intact_conf": 0.1463597,
+    "lesion_sha": "7b3cde57deea",
+    "lesion_ticks": 16,
+    "lesion_full": 0.0,
+    "lesion_per_slot": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "lesion_interior": 0.0,
+    "lesion_ce": 7.0983,
+    "lesion_conf": 0.0029702496,
+    "train_log_sha": "486b97778d1c",
+    "aux_series_n": 100,
+    "aux_first": 1.9092,
+    "aux_last": 0.5093,
+    "first_nan_log_row": null
+   },
+   "913": {
+    "arm": "C_sham",
+    "seed": 913,
+    "manifest_sha": "effc0e1c82e7",
+    "train_accuracy": 0.96875,
+    "train_loss": 0.25836417,
+    "grad_norm": 0.077145964,
+    "converged": true,
+    "manifest_seed_field": 913,
+    "intact_sha": "d65a6f2ffae3",
+    "intact_ticks": 16,
+    "intact_full": 0.5078125,
+    "intact_per_slot": [
+     0.71875,
+     0.375,
+     0.4375,
+     0.5
+    ],
+    "intact_interior": 0.40625,
+    "intact_ce": 3.5885515,
+    "intact_conf": 0.21340981,
+    "lesion_sha": "cb38f9da8cf8",
+    "lesion_ticks": 16,
+    "lesion_full": 0.0,
+    "lesion_per_slot": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "lesion_interior": 0.0,
+    "lesion_ce": 4.8684435,
+    "lesion_conf": 0.00096643844,
+    "train_log_sha": "85232221d945",
+    "aux_series_n": 100,
+    "aux_first": 1.8399,
+    "aux_last": 0.4641,
+    "first_nan_log_row": null
+   },
+   "914": {
+    "arm": "C_sham",
+    "seed": 914,
+    "manifest_sha": "dd7fb327f355",
+    "train_accuracy": 0.9375,
+    "train_loss": 0.35062677,
+    "grad_norm": 6.0447493,
+    "converged": true,
+    "manifest_seed_field": 914,
+    "intact_sha": "b3263b9a1fbb",
+    "intact_ticks": 16,
+    "intact_full": 0.5390625,
+    "intact_per_slot": [
+     0.78125,
+     0.46875,
+     0.34375,
+     0.5625
+    ],
+    "intact_interior": 0.40625,
+    "intact_ce": 2.5706697,
+    "intact_conf": 0.06807043,
+    "lesion_sha": "d950966ff0f5",
+    "lesion_ticks": 16,
+    "lesion_full": 0.0,
+    "lesion_per_slot": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "lesion_interior": 0.0,
+    "lesion_ce": 7.7421274,
+    "lesion_conf": 0.0041160462,
+    "train_log_sha": "8b39c34fe1be",
+    "aux_series_n": 100,
+    "aux_first": 2.148,
+    "aux_last": 0.6507,
+    "first_nan_log_row": null
+   },
+   "915": {
+    "arm": "C_sham",
+    "seed": 915,
+    "manifest_sha": "6f785a9fd023",
+    "train_accuracy": 0.96875,
+    "train_loss": 0.49304947,
+    "grad_norm": 8.53597,
+    "converged": true,
+    "manifest_seed_field": 915,
+    "intact_sha": "a4563a4d426d",
+    "intact_ticks": 16,
+    "intact_full": 0.5,
+    "intact_per_slot": [
+     0.71875,
+     0.4375,
+     0.34375,
+     0.5
+    ],
+    "intact_interior": 0.390625,
+    "intact_ce": 3.371383,
+    "intact_conf": 0.13100392,
+    "lesion_sha": "d7f4e99835b7",
+    "lesion_ticks": 16,
+    "lesion_full": 0.0,
+    "lesion_per_slot": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "lesion_interior": 0.0,
+    "lesion_ce": 8.961794,
+    "lesion_conf": 0.0052685975,
+    "train_log_sha": "f0d16fbcdebd",
+    "aux_series_n": 100,
+    "aux_first": 1.1108,
+    "aux_last": 1.4815,
+    "first_nan_log_row": null
+   }
+  }
+ },
+ "analyses": {
+  "endpoint_converged": {
+   "A_baseline": {
+    "per_run_interior": [
+     0.421875,
+     0.40625,
+     0.5
+    ],
+    "mean": 0.4427083333333333,
+    "n": 3,
+    "seeds": [
+     901,
+     903,
+     904
+    ]
+   },
+   "B_aux": {
+    "per_run_interior": [
+     0.421875,
+     0.453125,
+     0.40625,
+     0.484375
+    ],
+    "mean": 0.44140625,
+    "n": 4,
+    "seeds": [
+     906,
+     908,
+     909,
+     910
+    ]
+   },
+   "C_sham": {
+    "per_run_interior": [
+     0.4375,
+     0.328125,
+     0.40625,
+     0.40625,
+     0.390625
+    ],
+    "mean": 0.39375,
+    "n": 5,
+    "seeds": [
+     911,
+     912,
+     913,
+     914,
+     915
+    ]
+   }
+  },
+  "endpoint_converged_full": {
+   "A_baseline": {
+    "mean": 0.546875,
+    "values": [
+     0.53125,
+     0.546875,
+     0.5625
+    ]
+   },
+   "B_aux": {
+    "mean": 0.533203125,
+    "values": [
+     0.5234375,
+     0.53125,
+     0.5234375,
+     0.5546875
+    ]
+   },
+   "C_sham": {
+    "mean": 0.50625,
+    "values": [
+     0.53125,
+     0.453125,
+     0.5078125,
+     0.5390625,
+     0.5
+    ]
+   }
+  },
+  "contrasts_converged": {
+   "B-A": {
+    "mean_diff_pp": -0.13020833333333148,
+    "perm": {
+     "kind": "exact",
+     "p": 1.0,
+     "combos": 35
+    },
+    "bootstrap_ci95_pp": {
+     "lo": -5.859375,
+     "hi": 4.947916666666669
+    },
+    "cartesian_win_frac": 0.4166666666666667,
+    "cartesian_ties": 2,
+    "n_x": 4,
+    "n_y": 3
+   },
+   "C-A": {
+    "mean_diff_pp": -4.895833333333332,
+    "perm": {
+     "kind": "exact",
+     "p": 0.26785714285714285,
+     "combos": 56
+    },
+    "bootstrap_ci95_pp": {
+     "lo": -10.833333333333334,
+     "hi": 0.2083333333333326
+    },
+    "cartesian_win_frac": 0.13333333333333333,
+    "cartesian_ties": 2,
+    "n_x": 5,
+    "n_y": 3
+   },
+   "B-C": {
+    "mean_diff_pp": 4.765625000000001,
+    "perm": {
+     "kind": "exact",
+     "p": 0.11904761904761904,
+     "combos": 126
+    },
+    "bootstrap_ci95_pp": {
+     "lo": 0.6249999999999978,
+     "hi": 9.218749999999998
+    },
+    "cartesian_win_frac": 0.8,
+    "cartesian_ties": 2,
+    "n_x": 4,
+    "n_y": 5
+   }
+  },
+  "arbitrary_index_paired_B_minus_A_pp": {
+   "values": [
+    0.0,
+    4.6875,
+    -9.375
+   ],
+   "note": "index pairing across disjoint seed pools is arbitrary; descriptive only"
+  },
+  "failure_coding_sensitivity": {
+   "A_baseline": {
+    "mean": 0.265625,
+    "assumption": "diverged==0.0 (no endpoint outcome)",
+    "values": [
+     0.421875,
+     0.0,
+     0.40625,
+     0.5,
+     0.0
+    ]
+   },
+   "B_aux": {
+    "mean": 0.353125,
+    "assumption": "diverged==0.0 (no endpoint outcome)",
+    "values": [
+     0.421875,
+     0.0,
+     0.453125,
+     0.40625,
+     0.484375
+    ]
+   },
+   "C_sham": {
+    "mean": 0.39375,
+    "assumption": "diverged==0.0 (no endpoint outcome)",
+    "values": [
+     0.4375,
+     0.328125,
+     0.40625,
+     0.40625,
+     0.390625
+    ]
+   },
+   "B_minus_A_pp": 8.750000000000002
+  },
+  "lesion_rows": {
+   "A_baseline": [
+    {
+     "seed": 901,
+     "intact": 0.421875,
+     "lesion": 0.0,
+     "intact_full": 0.53125,
+     "lesion_full": 0.0,
+     "lesion_ce": 4.141241
+    },
+    {
+     "seed": 903,
+     "intact": 0.40625,
+     "lesion": 0.0,
+     "intact_full": 0.546875,
+     "lesion_full": 0.0,
+     "lesion_ce": 5.2767944
+    },
+    {
+     "seed": 904,
+     "intact": 0.5,
+     "lesion": 0.0,
+     "intact_full": 0.5625,
+     "lesion_full": 0.0,
+     "lesion_ce": 6.026052
+    }
+   ],
+   "B_aux": [
+    {
+     "seed": 906,
+     "intact": 0.421875,
+     "lesion": 0.46875,
+     "intact_full": 0.5234375,
+     "lesion_full": 0.46875,
+     "lesion_ce": 1.1520019
+    },
+    {
+     "seed": 908,
+     "intact": 0.453125,
+     "lesion": 0.53125,
+     "intact_full": 0.53125,
+     "lesion_full": 0.53125,
+     "lesion_ce": 1.8833548
+    },
+    {
+     "seed": 909,
+     "intact": 0.40625,
+     "lesion": 0.46875,
+     "intact_full": 0.5234375,
+     "lesion_full": 0.46875,
+     "lesion_ce": 1.1999836
+    },
+    {
+     "seed": 910,
+     "intact": 0.484375,
+     "lesion": 0.53125,
+     "intact_full": 0.5546875,
+     "lesion_full": 0.53125,
+     "lesion_ce": 0.91673326
+    }
+   ],
+   "C_sham": [
+    {
+     "seed": 911,
+     "intact": 0.4375,
+     "lesion": 0.0,
+     "intact_full": 0.53125,
+     "lesion_full": 0.0,
+     "lesion_ce": 4.1672926
+    },
+    {
+     "seed": 912,
+     "intact": 0.328125,
+     "lesion": 0.0,
+     "intact_full": 0.453125,
+     "lesion_full": 0.0,
+     "lesion_ce": 7.0983
+    },
+    {
+     "seed": 913,
+     "intact": 0.40625,
+     "lesion": 0.0,
+     "intact_full": 0.5078125,
+     "lesion_full": 0.0,
+     "lesion_ce": 4.8684435
+    },
+    {
+     "seed": 914,
+     "intact": 0.40625,
+     "lesion": 0.0,
+     "intact_full": 0.5390625,
+     "lesion_full": 0.0,
+     "lesion_ce": 7.7421274
+    },
+    {
+     "seed": 915,
+     "intact": 0.390625,
+     "lesion": 0.0,
+     "intact_full": 0.5,
+     "lesion_full": 0.0,
+     "lesion_ce": 8.961794
+    }
+   ]
+  },
+  "aux_trajectories": {
+   "A_baseline": {
+    "901": {
+     "first": 0.0,
+     "last": 0.0,
+     "n": 100
+    },
+    "903": {
+     "first": 0.0,
+     "last": 0.0,
+     "n": 100
+    },
+    "904": {
+     "first": 0.0,
+     "last": 0.0,
+     "n": 100
+    }
+   },
+   "B_aux": {
+    "906": {
+     "first": 0.6934,
+     "last": 0.1042,
+     "n": 100
+    },
+    "908": {
+     "first": 1.2962,
+     "last": 0.2139,
+     "n": 100
+    },
+    "909": {
+     "first": 0.756,
+     "last": 0.1972,
+     "n": 100
+    },
+    "910": {
+     "first": 0.8511,
+     "last": 0.1594,
+     "n": 100
+    }
+   },
+   "C_sham": {
+    "911": {
+     "first": 1.9394,
+     "last": 0.4608,
+     "n": 100
+    },
+    "912": {
+     "first": 1.9092,
+     "last": 0.5093,
+     "n": 100
+    },
+    "913": {
+     "first": 1.8399,
+     "last": 0.4641,
+     "n": 100
+    },
+    "914": {
+     "first": 2.148,
+     "last": 0.6507,
+     "n": 100
+    },
+    "915": {
+     "first": 1.1108,
+     "last": 1.4815,
+     "n": 100
+    }
+   }
+  }
+ },
+ "diverged_seeds": {
+  "A_baseline": [
+   902,
+   905
+  ],
+  "B_aux": [
+   907
+  ],
+  "C_sham": []
+ },
+ "converged_n": {
+  "A_baseline": 3,
+  "B_aux": 4,
+  "C_sham": 5
+ }
+}
