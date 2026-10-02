@@ -1,6 +1,6 @@
-# RD-018 Protocol Draft: Auxiliary Deep Supervision at Interior Slots (L=16 Iterated Parity)
+# RD-018 Protocol: Auxiliary Deep Supervision at Interior Slots (L=16 Iterated Parity)
 
-**Status**: DRAFT preregistration — not yet frozen. Commit-freeze before any run.
+**Status**: FROZEN 2026-10-01 (Git-anchored before battery launch). Any change after this commit invalidates the battery.
 **Date**: 2026-10-01. Session: agy literature pull + 7-specialist research meeting.
 
 ## Question (RD-018, open)
